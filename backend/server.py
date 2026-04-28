@@ -289,20 +289,64 @@ async def station_now() -> datetime:
 
 
 async def resolve_active_advertiser() -> Optional[dict]:
+    """Resolve current advertiser to display.
+    - If active_advertiser_id is a specific id, returns that ad (manual pin).
+    - If "AUTO", computes a weighted round-robin rotation among eligible advertisers
+      (those whose schedule covers NOW) using spots_per_hour, priority, and
+      spot_duration_sec to time-slice within an hourly cycle.
+    """
     settings = await get_settings_doc()
     aid = (settings.get("active_advertiser_id") or "").strip()
     if aid and aid != "AUTO":
         adv = await db.advertisers.find_one({"id": aid}, {"_id": 0})
         if adv:
             return adv
-    if aid == "AUTO":
-        now = await station_now()
-        cursor = db.advertisers.find({}, {"_id": 0})
-        async for adv in cursor:
-            for slot in adv.get("schedule") or []:
-                if time_in_slot(now, slot):
-                    return adv
-    return None
+        return None
+    if aid != "AUTO":
+        return None
+
+    now = await station_now()
+    # Collect all advertisers whose schedule covers NOW
+    eligible: list[dict] = []
+    cursor = db.advertisers.find({}, {"_id": 0})
+    async for adv in cursor:
+        for slot in adv.get("schedule") or []:
+            if time_in_slot(now, slot):
+                eligible.append(adv)
+                break
+
+    if not eligible:
+        return None
+    if len(eligible) == 1:
+        return eligible[0]
+
+    # Build a deterministic weighted round-robin rotation list.
+    # Each ad appears `spots_per_hour` times in the rotation.
+    # Higher-priority ads are placed first within each round (so they air sooner).
+    eligible.sort(key=lambda a: (-int(a.get("priority", 5) or 5), str(a.get("id", ""))))
+    remaining = {adv["id"]: max(1, int(adv.get("spots_per_hour", 4) or 4)) for adv in eligible}
+    rotation: list[dict] = []
+    while sum(remaining.values()) > 0:
+        for adv in eligible:
+            if remaining[adv["id"]] > 0:
+                rotation.append(adv)
+                remaining[adv["id"]] -= 1
+
+    # Cycle duration = sum of spot_duration_sec for each occurrence in the rotation
+    cycle_duration = sum(max(5, int(adv.get("spot_duration_sec", 30) or 30)) for adv in rotation)
+    if cycle_duration <= 0:
+        return rotation[0]
+
+    epoch_seconds = int(now.timestamp())
+    seconds_in_cycle = epoch_seconds % cycle_duration
+
+    # Walk rotation to find the ad covering the current second
+    elapsed = 0
+    for adv in rotation:
+        elapsed += max(5, int(adv.get("spot_duration_sec", 30) or 30))
+        if seconds_in_cycle < elapsed:
+            return adv
+    return rotation[-1]
 
 
 async def resolve_live_host() -> Optional[dict]:

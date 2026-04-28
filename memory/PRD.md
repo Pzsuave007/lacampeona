@@ -1,75 +1,91 @@
 # KWIP La Campeona — PRD
 
 ## Original Problem Statement
-Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanish radio station from Dallas, Oregon. Focus on engagement and monetization with sticky live radio player, dynamic advertiser system (with scheduling and Smart CTA popups), host/DJ scheduling with dynamic hero, WhatsApp integration, World Cup 2026 schedule page, advertiser sales landing page, and an Events system.
+Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanish radio station from Dallas, Oregon. Engagement + monetization with sticky live player, dynamic advertiser system (radio-style scheduling + SmartCTA popup), DJ scheduling, WhatsApp integration, World Cup 2026 page, advertiser sales landing, **Events system with multi-day support and dedicated landing pages**, and **Click Analytics dashboards** (admin overview + per-advertiser/event public reports).
 
 ## User Language
-**Spanish (es)** — all UI copy and agent communication must be in Spanish.
+**Spanish (es)** — all UI copy and agent communication in Spanish.
 
 ## Core Architecture
-- **Frontend**: React + Tailwind + Shadcn UI (mobile-first)
+- **Frontend**: React + Tailwind + Shadcn UI + Recharts (mobile-first)
 - **Backend**: FastAPI on `/api/*`
-- **DB**: MongoDB (users, hosts, advertisers, events, settings)
-- **Storage**: Emergent Object Storage (banners/images/flyers)
-- **Auth**: JWT (admin only)
+- **DB**: MongoDB (users, hosts, advertisers, events, settings, **cta_events**)
+- **Storage**: Emergent Object Storage (banners/flyers/galleries)
+- **Auth**: JWT (admin only); **opaque report_token** for public per-entity reports
 
-## Implemented Features (as of Feb 2026)
+## Implemented Features (Feb 2026)
 
 ### Live Radio
-- Sticky radio player streaming KWIP La Campeona (mobile no rounded corners, attached to SmartCTA)
-- Player height stable (eq-bars rendered always with opacity toggle, error message moved to absolute)
+- Sticky player streaming KWIP La Campeona (mobile no rounded corners, attached to SmartCTA, stable height)
 
 ### Hosts / DJs
-- Dynamic HostHero — auto-updates by DJ schedule + station timezone (`America/Los_Angeles`)
-- WeeklyScheduleGrid for Hosts in Admin
-- Default Hero (when no live host)
+- Dynamic HostHero by station timezone schedule
+- WeeklyScheduleGrid in Admin
+- Default Hero fallback
 
-### Advertisers (Anunciantes)
-- Advanced advertiser scheduling (radio-style: spots/hour, duration_sec, priority 1–10)
-- **WEIGHTED ROUND-ROBIN ROTATION** — each advertiser appears `spots_per_hour` times in cycle, sorted by priority desc, time-sliced by `spot_duration_sec`. Cycle length = sum(duration × spots_per_hour). Rotation index = `epoch_seconds % cycle_duration`.
-- SmartCTA floating popup — mobile-friendly (collapsed by default, attached to player, full-width edge-to-edge)
-- "Anúnciate aquí" CTA in Anunciantes destacados section
-- AdminDashboard tab "Anunciantes" with full CRUD
+### Advertisers
+- Radio-style scheduling: spots/hour, spot_duration_sec, priority 1–10
+- **Weighted round-robin rotation** with **configurable pause** between spots (default 60s — `cta_pause_seconds` in settings)
+- "Anúnciate aquí" CTA on Home
 
-### Events (NEW Feb 2026)
-- Event model: title, date, start/end time, location, description, image, ticket_url, category (concierto/promocion/comunidad)
-- Public `/eventos` page with cards
-- Home teaser section (next 3 upcoming events)
-- Auto-hide past events (date < today)
-- **Promote as SmartCTA** — events with `promoted_as_cta=true` join the rotation alongside advertisers, with their own priority/spots/duration; promotion window = `promote_from_date` to `event_date`+`end_time` (default: 7 days before event)
-- Admin tab "Eventos" with full CRUD (AdminEventForm.jsx)
-- Navbar link both desktop + mobile
+### Events
+- Full CRUD: title, **multi-day** (event_date + end_date), times, location, **address** for Maps, description, image, **gallery** (multi-photo), ticket_url, category
+- Public `/eventos` listing (auto-hides past events) + Home teaser
+- **Dedicated landing `/eventos/:slug`** with hero + gallery navigation, info card (date/time/location), Buy tickets / Get directions / Share buttons
+- Promote as SmartCTA flotante (joins rotation alongside ads in promotion window)
+
+### SmartCTA
+- Floating popup, mobile-friendly (collapsed by default, attached to player)
+- Renders both advertisers and events polymorphically
+- Minimize button, never dismissible
+- 3-line collapsed view: "PROMOCIÓN · Toca para abrir" + name + offer
+
+### Click Analytics (NEW)
+- **Tracking**: POST `/api/track` records `impression | call | whatsapp | directions | visit | tickets` per entity
+- 30-second per-session impression dedupe to prevent inflation from polling
+- **Admin overview**: GET `/api/admin/analytics/overview` — totals + sorted entity ranking with name enrichment
+- **Per-entity drilldown**: GET `/api/admin/analytics/{type}/{id}` — 30-day daily series
+- **Public report**: GET `/api/report/{token}` — opaque token-based dashboard, no auth required
+- **Frontend**:
+  - Admin "Reportes" tab with overview + entities table + drilldown (Recharts line chart)
+  - "Copiar link" per entity to share with business owners
+  - Public `/reporte/:token` page with same dashboard, branded with entity hero
+  - Period selector: 7/14/30/90 days
+- **Privacy**: `report_token` and `owner_email` stripped from public `/api/advertisers`, `/api/events`, `/api/active`. Admin-only `/api/admin/advertisers` returns full data.
 
 ### Pages
-- `/` — Home (HostHero/DefaultHero + Mundial teaser + Events teaser + Advertisers + Community CTA)
+- `/` — Home (HostHero/Default + Mundial + Events teaser + Advertisers + Community CTA)
 - `/eventos` — Events listing
-- `/mundial` — World Cup 2026 schedule (static)
-- `/anuncia` — Advertising sales pitch (static)
-- `/advertisers` — Advertisers list
-- `/a/:slug` — Advertiser detail
-- `/admin` — Admin dashboard (4 tabs)
-- `/login` — Admin auth
+- `/eventos/:slug` — Event landing
+- `/reporte/:token` — Public analytics dashboard
+- `/mundial` — World Cup 2026 schedule
+- `/anuncia` — Advertising sales pitch
+- `/advertisers` + `/a/:slug` — Advertisers
+- `/admin` — Admin dashboard (5 tabs: Radio, Locutores, Anunciantes, Eventos, Reportes)
 
-## Backlog / Roadmap
+## Backlog
 ### P1
-- Click analytics on SmartCTA actions (calls, WhatsApp, maps) for ROI reporting
 - Visual Weekly Schedule Grid for Advertisers in Admin
+- Add `owner_email` field to AdminAdvertiserForm/AdminEventForm with copy-link button inline
 
 ### P2
-- Stripe-powered advertiser self-serve portal
-- Refactor polling → WebSocket/SSE for real-time updates at scale
-- Split server.py into routers (auth, admin, events, advertisers, hosts)
+- Stripe-powered self-serve advertiser portal
+- Reorder gallery images (drag & drop)
+- Token rotation: `POST /admin/{type}/{id}/rotate-token`
+- Mongo aggregation pipeline for analytics (currently in-memory aggregation)
+- Rate limiting on `/api/track`
+- Refactor server.py into routers (auth, advertisers, events, hosts, analytics, settings, files)
 - Replace native date/time pickers with shadcn Calendar in AdminEventForm
 
 ## Key Files
 - `/app/backend/server.py` — all API
-- `/app/backend/tests/test_events_rotation.py` — pytest 22/22 (rotation + events)
-- `/app/frontend/src/components/SmartCTA.jsx` — floating advertiser/event popup
-- `/app/frontend/src/components/HostHero.jsx`, `WeeklyScheduleGrid.jsx`
-- `/app/frontend/src/pages/Home.jsx`, `AdminDashboard.jsx`, `Eventos.jsx`, `AdminEventForm.jsx`
-- `/app/frontend/src/contexts/StationContext.jsx` — polling + active state
-- `/app/frontend/src/hooks/useEvents.js`, `useAdvertisers.js`, `useHosts.js`
-- `/app/frontend/src/data/staticContent.js` — Mundial matches + Anuncia pricing (static)
+- `/app/backend/tests/test_radio_api.py`, `test_events_rotation.py`, `test_tracking_analytics.py` — pytest 60+ tests passing
+- `/app/frontend/src/components/SmartCTA.jsx` — floating popup with tracking
+- `/app/frontend/src/components/ReportDashboard.jsx` — shared analytics UI
+- `/app/frontend/src/pages/AdminDashboard.jsx` — 5-tab admin including ReportsTab
+- `/app/frontend/src/pages/EventoLanding.jsx` — event landing
+- `/app/frontend/src/pages/ReportePublic.jsx` — public report
+- `/app/frontend/src/lib/tracking.js` — track() helper
 
 ## Test Credentials
 See `/app/memory/test_credentials.md` (admin@radiolatina.fm / admin123).

@@ -62,14 +62,14 @@ export default function RadioPlayer() {
           {/* Logo / live indicator */}
           <div className="relative shrink-0">
             <div
-              className={`w-14 h-14 rounded-full bg-black flex items-center justify-center overflow-hidden ring-2 ring-amber-300/50 ${
+              className={`w-14 h-14 rounded-full bg-white flex items-center justify-center overflow-hidden ring-2 ring-amber-300/60 shadow-md ${
                 playing ? "vinyl-spin" : ""
               }`}
             >
               <img
                 src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png"
                 alt="La Campeona"
-                className="w-full h-full object-contain p-1.5"
+                className="w-full h-full object-contain p-1"
               />
             </div>
             <span className="absolute -top-1 -right-1 inline-flex items-center gap-1 bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">

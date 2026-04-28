@@ -28,22 +28,18 @@ export default function Navbar() {
         <Link
           to="/"
           data-testid="nav-home-logo"
-          className="flex items-center gap-2.5 group"
+          className="flex items-center gap-2 group"
         >
-          <span className="block h-12 sm:h-14 rounded-xl overflow-hidden bg-black flex items-center justify-center px-1 shadow-md ring-1 ring-black/10 group-hover:scale-105 transition">
-            <img
-              src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png"
-              alt="La Campeona 880 AM"
-              className="h-full w-auto object-contain"
-            />
-          </span>
-          <span className="hidden sm:inline-flex h-12 sm:h-14 items-center bg-black rounded-xl overflow-hidden px-1 shadow-md ring-1 ring-black/10 group-hover:scale-105 transition">
-            <img
-              src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/2nch7aix_LaCampeona-fuego-logot-big%20%281%29.png"
-              alt="Campeona Fuego 103.9 FM"
-              className="h-full w-auto object-contain"
-            />
-          </span>
+          <img
+            src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png"
+            alt="La Campeona 880 AM"
+            className="h-14 sm:h-16 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_4px_8px_rgba(0,0,0,0.12)]"
+          />
+          <img
+            src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/2nch7aix_LaCampeona-fuego-logot-big%20%281%29.png"
+            alt="Campeona Fuego 103.9 FM"
+            className="hidden sm:block h-11 w-auto object-contain opacity-90 group-hover:scale-105 transition drop-shadow-[0_4px_8px_rgba(0,0,0,0.12)]"
+          />
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">

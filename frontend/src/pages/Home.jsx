@@ -337,7 +337,7 @@ function BrandPolaroid({ src, caption, tone = "amber", className = "" }) {
     <div
       className={`bg-white p-3 pb-5 rounded-md shadow-2xl shadow-black/40 transition duration-300 cursor-default ${className}`}
     >
-      <div className="aspect-square overflow-hidden rounded-sm bg-black flex items-center justify-center p-3">
+      <div className="aspect-square overflow-hidden rounded-sm bg-white flex items-center justify-center p-3">
         <img src={src} alt={caption} className="w-full h-full object-contain" />
       </div>
       <p className={`mt-2 text-center font-script text-3xl ${toneCls}`}>{caption}</p>

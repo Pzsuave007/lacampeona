@@ -110,15 +110,13 @@ export default function Eventos() {
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7" data-testid="events-grid">
-          {upcoming.map((ev, idx) => {
+          {upcoming.map((ev) => {
             const meta = CATEGORY_META[ev.category] || CATEGORY_META.concierto;
             return (
               <article
                 key={ev.id}
                 data-testid={`event-card-${ev.slug}`}
-                className={`group relative bg-white rounded-3xl shadow-xl shadow-slate-900/10 overflow-hidden border border-slate-100 transition duration-300 hover:-translate-y-2 hover:shadow-2xl ${
-                  idx % 3 === 1 ? "md:translate-y-3" : ""
-                }`}
+                className="group relative bg-white rounded-3xl shadow-xl shadow-slate-900/10 overflow-hidden border border-slate-100 transition duration-300 hover:-translate-y-2 hover:shadow-2xl"
               >
                 <span
                   className="absolute z-10 top-3 right-3 wiggle px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-lg"

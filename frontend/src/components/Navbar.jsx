@@ -49,6 +49,9 @@ export default function Navbar() {
           <NavLink to="/mundial" className={linkClass} data-testid="nav-mundial-link">
             <span className="inline-flex items-center gap-1">🏆 Mundial</span>
           </NavLink>
+          <NavLink to="/eventos" className={linkClass} data-testid="nav-eventos-link">
+            <span className="inline-flex items-center gap-1">📅 {lang === "es" ? "Eventos" : "Events"}</span>
+          </NavLink>
           <NavLink to="/anuncia" className={linkClass} data-testid="nav-anuncia-link">
             {lang === "es" ? "Anúnciate" : "Advertise"}
           </NavLink>
@@ -116,6 +119,9 @@ export default function Navbar() {
             </NavLink>
             <NavLink to="/mundial" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-mundial">
               🏆 Mundial
+            </NavLink>
+            <NavLink to="/eventos" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-eventos">
+              📅 {lang === "es" ? "Eventos" : "Events"}
             </NavLink>
             <NavLink to="/anuncia" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-anuncia">
               {lang === "es" ? "Anúnciate" : "Advertise"}

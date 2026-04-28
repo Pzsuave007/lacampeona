@@ -18,6 +18,7 @@ import { useAdvertisers } from "../hooks/useAdvertisers";
 import { bannerUrl, telLink, waLink, mapsLink } from "../lib/api";
 import MarqueeStrip from "../components/MarqueeStrip";
 import HostHero from "../components/HostHero";
+import { useEvents } from "../hooks/useEvents";
 
 const HERO_BG = "https://images.pexels.com/photos/32213239/pexels-photo-32213239.jpeg";
 const POLA_1 = "https://images.pexels.com/photos/4651036/pexels-photo-4651036.jpeg";
@@ -28,6 +29,7 @@ export default function Home() {
   const { settings, liveHost } = useStation();
   const { t, lang } = useLanguage();
   const { advertisers } = useAdvertisers();
+  const { events } = useEvents();
 
   const stationWa = waLink(settings?.station_whatsapp, t.home.heardOnRadio);
   const stationName = settings?.station_name || "KWIP La Campeona";
@@ -76,6 +78,9 @@ export default function Home() {
 
       {/* Mundial 2026 teaser */}
       <MundialTeaser lang={lang} />
+
+      {/* Upcoming events teaser */}
+      {events && events.length > 0 && <EventsTeaser events={events} lang={lang} />}
 
       {/* Vibe / "what's the show" section with photos */}
       <VibeSection settings={settings} lang={lang} />
@@ -516,6 +521,105 @@ function ActiveHero({ active, t }) {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* --------------------- Events teaser --------------------- */
+function EventsTeaser({ events, lang }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = (events || []).filter((e) => (e.event_date || "") >= today).slice(0, 3);
+  if (upcoming.length === 0) return null;
+
+  const fmt = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString(lang === "es" ? "es-MX" : "en-US", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  return (
+    <section
+      data-testid="events-teaser"
+      className="relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#3F0A0A] to-[#7F1D1D] text-white py-14 md:py-18"
+    >
+      <div className="absolute -top-24 -right-20 w-96 h-96 rounded-full bg-amber-400/15 blur-3xl blob-b pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-96 h-96 rounded-full bg-rose-500/20 blur-3xl blob-a pointer-events-none" />
+      <div className="absolute inset-0 stripes-y opacity-[0.05] pointer-events-none" />
+
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-300 mb-2 inline-flex items-center gap-2">
+              📅 {lang === "es" ? "Cartelera" : "Lineup"}
+            </p>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tighter">
+              {lang === "es" ? "Próximos " : "Upcoming "}
+              <span className="font-script font-normal italic text-amber-300 text-4xl sm:text-5xl lg:text-6xl">
+                {lang === "es" ? "eventos" : "events"}
+              </span>
+            </h2>
+          </div>
+          <Link
+            to="/eventos"
+            data-testid="home-events-cta"
+            className="inline-flex items-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-5 py-3 transition active:scale-95 shadow-[0_15px_40px_rgba(252,211,77,0.25)] hover:-translate-y-0.5 whitespace-nowrap"
+          >
+            {lang === "es" ? "Ver todos" : "See all"}
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5" data-testid="events-teaser-grid">
+          {upcoming.map((ev) => {
+            const meta = { concierto: "🎶", promocion: "🎁", comunidad: "🤝" }[ev.category] || "📅";
+            return (
+              <Link
+                key={ev.id}
+                to="/eventos"
+                data-testid={`event-teaser-${ev.slug}`}
+                className="group bg-white/8 hover:bg-white/15 backdrop-blur-sm border border-white/15 rounded-2xl overflow-hidden transition hover:-translate-y-1"
+              >
+                <div className="aspect-[16/10] bg-white/5 overflow-hidden">
+                  {ev.image_path ? (
+                    <img
+                      src={bannerUrl(ev.image_path)}
+                      alt={ev.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full flex items-center justify-center text-6xl"
+                      style={{ backgroundColor: ev.color || "#7F1D1D", opacity: 0.4 }}
+                    >
+                      {meta}
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-amber-300">
+                    {fmt(ev.event_date)} · {ev.start_time}
+                  </p>
+                  <h3 className="mt-1 text-lg font-extrabold leading-tight line-clamp-2">
+                    {ev.title}
+                  </h3>
+                  {ev.location && (
+                    <p className="mt-1 text-xs text-white/70 truncate">{ev.location}</p>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

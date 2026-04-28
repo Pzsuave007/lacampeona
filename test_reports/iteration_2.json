@@ -1,0 +1,46 @@
+{
+  "summary": "Tested rotation bug fix + new Eventos feature end-to-end. Backend: 22/22 pytest tests passed (Auth, public Events filter, Admin Events CRUD, Active rotation, eligibility window). Frontend: Eventos tab in /admin works, /eventos page lists upcoming events only, EventsTeaser shows on Home, Navbar links exist (desktop + mobile), SmartCTA rotates between advertisers (verified Café Aroma -> Unidos Marketing across calls). Event form loads with all fields.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/active rotation", "issue": "Cycle duration can be very long when many advertisers/events have spots_per_hour x spot_duration_sec >> 60s. With existing 3 ads (4 spots x 30s = 120s each) + events, full cycle can be 6-10 minutes. Items with low spots_per_hour are visited rarely and may not appear within a few minutes — confusing for ops users. Consider clamping cycle_duration to <=3600s (1h) or normalizing weights so spots_per_hour represents actual hourly frequency."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminEventForm", "issue": "Missing data-testid on title and date inputs (event-form-title, event-form-date were specified in spec). Only event-form-save-btn is present.", "selector": "[data-testid=\"event-form-title\"]", "priority": "LOW"},
+      {"component": "Various pages", "issue": "Console warning: 'An empty string (\"\") was passed to the src attribute' — an <img src=\"\"> is being rendered (likely host/event with no photo_path/image_path). Should render null or fallback instead.", "selector": "img[src='']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AdminEventForm", "issues": ["Uses native browser date/time pickers (input type='date'/'time') instead of shadcn Calendar component — inconsistent with the rest of the design system and produces inconsistent UX across browsers."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_events_rotation.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(LOW) Add data-testid to title and date inputs in AdminEventForm: event-form-title, event-form-date.",
+    "(LOW) Replace native <input type='date'> with shadcn Calendar in AdminEventForm to match design system.",
+    "(LOW) Avoid rendering <img src=''> when image_path/photo_path is empty — render null or a placeholder.",
+    "(OPTIONAL) Consider clamping or normalizing the rotation cycle so low-spots_per_hour items don't get hidden behind multi-minute cycles."
+  ],
+  "critical_code_review_comments": [
+    "Rotation cycle in resolve_active_advertiser() multiplies spots_per_hour by spot_duration_sec for every eligible item, producing real cycles of many minutes — fine algorithmically but will surprise users who set spots_per_hour expecting per-hour frequency.",
+    "is_event_eligible_for_cta uses 'now' (already station-local datetime) but constructs from_date in date math correctly — OK.",
+    "/api/admin/upload accepts EMERGENT_LLM_KEY-backed storage; if EMERGENT_LLM_KEY missing it returns 500 rather than a clearer 503 'storage unavailable' — minor.",
+    "server.py is ~860 lines — consider splitting into routers (auth, admin, events, advertisers, hosts) for maintainability.",
+    "Public /api/events filters past events only by date string comparison (event_date < today). Same-day events with end_time already passed are still returned — minor (matches spec 'today included')."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_events_rotation.py (new)"
+  ],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "~95% (all critical flows working; 2 minor missing testids + 1 design choice)"},
+  "test_credentials": "admin@radiolatina.fm / admin123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Tests create TEST_-prefixed events and clean them up via DELETE /api/admin/events/{id} in finally blocks.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest file at /app/backend/tests/test_events_rotation.py. Run with: REACT_APP_BACKEND_URL=<url> pytest backend/tests/test_events_rotation.py -v. The rotation cycle test waits up to 60-90s; allow 2-3 min for full suite. Existing 'Noche de Banda en Vivo' event (promoted_as_cta=true, 2026-04-30) is the seed event used by Frontend Eventos teaser/page. Settings active_advertiser_id should be 'AUTO' for rotation tests. Old test file /app/backend/tests/test_radio_api.py from iteration 1 still exists.",
+  "rca of the issue": "Original advertiser rotation bug: previous resolve_active_advertiser likely returned the first eligible item only. New implementation builds a weighted round-robin rotation list and picks based on (epoch_seconds % cycle_duration), which deterministically rotates per spot_duration_sec window. Verified via test_rotation_cycles_over_time (saw >=2 distinct items in 60s). Event integration into rotation works (validated by test_promoted_event_within_default_window and test_custom_promote_from_date_includes_event)."
+}

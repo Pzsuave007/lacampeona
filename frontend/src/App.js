@@ -16,6 +16,7 @@ import Login from "@/pages/Login";
 import AdminDashboard from "@/pages/AdminDashboard";
 import Mundial from "@/pages/Mundial";
 import Anuncia from "@/pages/Anuncia";
+import Eventos from "@/pages/Eventos";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/mundial" element={<Mundial />} />
                   <Route path="/anuncia" element={<Anuncia />} />
+                  <Route path="/eventos" element={<Eventos />} />
                   <Route path="/advertisers" element={<AdvertisersList />} />
                   <Route path="/a/:slug" element={<AdvertiserDetail />} />
                   <Route path="/login" element={<Login />} />

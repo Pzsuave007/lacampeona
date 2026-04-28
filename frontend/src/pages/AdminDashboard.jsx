@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2, Calendar, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -8,6 +8,7 @@ import { useStation } from "../contexts/StationContext";
 import { api, bannerUrl } from "../lib/api";
 import AdvertiserForm from "./AdminAdvertiserForm";
 import AdminHostForm from "./AdminHostForm";
+import AdminEventForm from "./AdminEventForm";
 import WeeklyScheduleGrid from "../components/WeeklyScheduleGrid";
 
 export default function AdminDashboard() {
@@ -18,9 +19,11 @@ export default function AdminDashboard() {
 
   const [advertisers, setAdvertisers] = useState([]);
   const [hosts, setHosts] = useState([]);
+  const [events, setEvents] = useState([]);
   const [adminSettings, setAdminSettings] = useState(null);
   const [editing, setEditing] = useState(null); // { mode: 'new'|'edit', adv?: {} }
   const [editingHost, setEditingHost] = useState(null); // { mode, host? }
+  const [editingEvent, setEditingEvent] = useState(null); // { mode, event? }
   const [tab, setTab] = useState(() => localStorage.getItem("rl_admin_tab") || "radio");
 
   useEffect(() => {
@@ -32,13 +35,15 @@ export default function AdminDashboard() {
   }, [user, navigate]);
 
   const loadAll = async () => {
-    const [a, h, s] = await Promise.all([
+    const [a, h, ev, s] = await Promise.all([
       api.get("/advertisers"),
       api.get("/hosts"),
+      api.get("/admin/events"),
       api.get("/admin/settings"),
     ]);
     setAdvertisers(a.data);
     setHosts(h.data);
+    setEvents(ev.data);
     setAdminSettings(s.data);
   };
 
@@ -62,12 +67,37 @@ export default function AdminDashboard() {
     else toast.success(t.admin.deactivated);
   };
 
+  const activateHost = async (id) => {
+    await api.post("/admin/activate-host", { host_id: id });
+    await loadAll();
+    await loadSettings();
+    await loadLiveHost();
+    if (id && id !== "AUTO") toast.success(t.admin.activated);
+    else toast.success(t.admin.deactivated);
+  };
+
   const onDelete = async (adv) => {
     if (!window.confirm(t.admin.confirmDelete)) return;
     await api.delete(`/admin/advertisers/${adv.id}`);
     await loadAll();
     await loadActive();
     toast.success(t.admin.deleted);
+  };
+
+  const onDeleteHost = async (h) => {
+    if (!window.confirm(t.admin.confirmDelete)) return;
+    await api.delete(`/admin/hosts/${h.id}`);
+    await loadAll();
+    await loadLiveHost();
+    toast.success(t.admin.deleted);
+  };
+
+  const onDeleteEvent = async (ev) => {
+    if (!window.confirm("¿Eliminar este evento?")) return;
+    await api.delete(`/admin/events/${ev.id}`);
+    await loadAll();
+    await loadActive();
+    toast.success("Evento eliminado");
   };
 
   const saveSettings = async () => {
@@ -115,6 +145,20 @@ export default function AdminDashboard() {
     );
   }
 
+  if (editingEvent) {
+    return (
+      <AdminEventForm
+        initial={editingEvent.event}
+        onCancel={() => setEditingEvent(null)}
+        onSaved={async () => {
+          await loadAll();
+          await loadActive();
+          setEditingEvent(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div data-testid="admin-page" className="min-h-screen bg-slate-50">
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
@@ -132,6 +176,7 @@ export default function AdminDashboard() {
             { id: "radio", label: "Radio", icon: Settings, color: "text-orange-600" },
             { id: "hosts", label: "Locutores", icon: Mic2, color: "text-[#7F1D1D]" },
             { id: "ads", label: "Anunciantes", icon: Sparkles, color: "text-orange-600" },
+            { id: "events", label: "Eventos", icon: CalendarDays, color: "text-[#7F1D1D]" },
           ].map((tb) => {
             const Icon = tb.icon;
             const active = tab === tb.id;
@@ -539,7 +584,116 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ===================== TAB: EVENTS ===================== */}
+        {tab === "events" && (
+          <div className="mt-8 space-y-6" data-testid="tab-events">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-2xl font-extrabold text-slate-900 inline-flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-[#7F1D1D]" /> Eventos
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Conciertos, promociones y actividades comunitarias. Los eventos pasados se ocultan automáticamente.
+                </p>
+              </div>
+              <button
+                data-testid="admin-new-event-btn"
+                onClick={() => setEditingEvent({ mode: "new" })}
+                className="inline-flex items-center gap-2 bg-[#7F1D1D] hover:bg-[#991B1B] text-white font-bold rounded-full px-5 py-2.5 transition active:scale-95 shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                Nuevo evento
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="admin-events-grid">
+              {events.map((ev) => (
+                <EventAdminCard
+                  key={ev.id}
+                  ev={ev}
+                  onEdit={() => setEditingEvent({ mode: "edit", event: ev })}
+                  onDelete={() => onDeleteEvent(ev)}
+                />
+              ))}
+              {events.length === 0 && (
+                <p className="col-span-full text-slate-500 text-center py-10">
+                  Aún no hay eventos. Crea el primero con el botón "Nuevo evento".
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </section>
+    </div>
+  );
+}
+
+function EventAdminCard({ ev, onEdit, onDelete }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const isPast = (ev.event_date || "") < today;
+  const isToday = (ev.event_date || "") === today;
+  const categoryEmoji = { concierto: "🎶", promocion: "🎁", comunidad: "🤝" }[ev.category] || "📅";
+  return (
+    <div
+      data-testid={`admin-event-card-${ev.slug}`}
+      className={`bg-white rounded-2xl border ${isToday ? "border-amber-400 ring-2 ring-amber-200" : "border-slate-200"} p-5 flex gap-4`}
+    >
+      <div className="w-24 h-24 rounded-xl bg-slate-100 overflow-hidden shrink-0">
+        {ev.image_path ? (
+          <img src={bannerUrl(ev.image_path)} alt={ev.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-slate-400 text-3xl">
+            {categoryEmoji}
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="font-extrabold text-slate-900 truncate">{ev.title}</h3>
+            <p className="text-xs text-slate-500 truncate">
+              {categoryEmoji} {ev.location || "Sin ubicación"}
+            </p>
+          </div>
+          {isToday && (
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] bg-amber-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">
+              HOY
+            </span>
+          )}
+          {isPast && (
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] bg-slate-300 text-slate-600 px-2 py-0.5 rounded-full whitespace-nowrap">
+              PASADO
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate-700 mt-1.5 font-bold">
+          📅 {ev.event_date} · {ev.start_time}–{ev.end_time}
+        </p>
+        {ev.promoted_as_cta && (
+          <p className="text-[11px] text-amber-700 font-bold mt-1 inline-flex items-center gap-1">
+            <Sparkles className="w-3 h-3" /> SmartCTA · {ev.spots_per_hour}/h × {ev.spot_duration_sec}s · pri {ev.priority}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            data-testid={`admin-event-edit-${ev.slug}`}
+            onClick={onEdit}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-900 transition"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Editar
+          </button>
+          <button
+            data-testid={`admin-event-delete-${ev.slug}`}
+            onClick={onDelete}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-red-50 hover:bg-red-100 text-red-700 transition"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Eliminar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

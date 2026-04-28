@@ -239,6 +239,33 @@ class Host(HostIn):
     slug: str
     created_at: str
 
+
+# ---------------------- Events ---------------------- #
+class EventIn(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    location: Optional[str] = ""
+    event_date: str  # "YYYY-MM-DD"  (station local)
+    start_time: str = "19:00"  # "HH:MM"
+    end_time: str = "23:00"  # "HH:MM"
+    image_path: Optional[str] = ""  # banner / flyer
+    ticket_url: Optional[str] = ""
+    category: str = Field(default="concierto")  # concierto | promocion | comunidad
+    color: Optional[str] = "#7F1D1D"
+    # CTA promotion
+    promoted_as_cta: bool = False
+    promote_from_date: Optional[str] = ""  # "YYYY-MM-DD"; empty = 7 days before event_date
+    # Pauta (only used when promoted_as_cta=true)
+    priority: int = Field(default=7, ge=1, le=10)
+    spots_per_hour: int = Field(default=4, ge=1, le=60)
+    spot_duration_sec: int = Field(default=30, ge=5, le=600)
+
+
+class Event(EventIn):
+    id: str
+    slug: str
+    created_at: str
+
 # ---------------------- Settings helpers ---------------------- #
 DEFAULT_SETTINGS = {
     "station_name": "Radio Latina FM",
@@ -289,64 +316,101 @@ async def station_now() -> datetime:
 
 
 async def resolve_active_advertiser() -> Optional[dict]:
-    """Resolve current advertiser to display.
+    """Resolve current promo to display (advertiser OR event with promoted_as_cta=true).
     - If active_advertiser_id is a specific id, returns that ad (manual pin).
-    - If "AUTO", computes a weighted round-robin rotation among eligible advertisers
-      (those whose schedule covers NOW) using spots_per_hour, priority, and
-      spot_duration_sec to time-slice within an hourly cycle.
+    - If "AUTO", computes a weighted round-robin rotation among eligible items
+      (advertisers whose schedule covers NOW + events promoted as CTA in the
+      promotion window) using spots_per_hour, priority, and spot_duration_sec.
     """
     settings = await get_settings_doc()
     aid = (settings.get("active_advertiser_id") or "").strip()
     if aid and aid != "AUTO":
         adv = await db.advertisers.find_one({"id": aid}, {"_id": 0})
         if adv:
+            adv["type"] = "advertiser"
             return adv
         return None
     if aid != "AUTO":
         return None
 
     now = await station_now()
-    # Collect all advertisers whose schedule covers NOW
     eligible: list[dict] = []
+
+    # Advertisers whose schedule covers NOW
     cursor = db.advertisers.find({}, {"_id": 0})
     async for adv in cursor:
         for slot in adv.get("schedule") or []:
             if time_in_slot(now, slot):
+                adv["type"] = "advertiser"
                 eligible.append(adv)
                 break
+
+    # Events promoted as CTA in their promotion window
+    cursor = db.events.find({}, {"_id": 0})
+    async for ev in cursor:
+        if is_event_eligible_for_cta(ev, now):
+            ev["type"] = "event"
+            eligible.append(ev)
 
     if not eligible:
         return None
     if len(eligible) == 1:
         return eligible[0]
 
-    # Build a deterministic weighted round-robin rotation list.
-    # Each ad appears `spots_per_hour` times in the rotation.
-    # Higher-priority ads are placed first within each round (so they air sooner).
+    # Weighted round-robin — each item appears spots_per_hour times,
+    # priority sorts items earlier in each round.
     eligible.sort(key=lambda a: (-int(a.get("priority", 5) or 5), str(a.get("id", ""))))
-    remaining = {adv["id"]: max(1, int(adv.get("spots_per_hour", 4) or 4)) for adv in eligible}
+    remaining = {item["id"]: max(1, int(item.get("spots_per_hour", 4) or 4)) for item in eligible}
     rotation: list[dict] = []
     while sum(remaining.values()) > 0:
-        for adv in eligible:
-            if remaining[adv["id"]] > 0:
-                rotation.append(adv)
-                remaining[adv["id"]] -= 1
+        for item in eligible:
+            if remaining[item["id"]] > 0:
+                rotation.append(item)
+                remaining[item["id"]] -= 1
 
-    # Cycle duration = sum of spot_duration_sec for each occurrence in the rotation
-    cycle_duration = sum(max(5, int(adv.get("spot_duration_sec", 30) or 30)) for adv in rotation)
+    cycle_duration = sum(max(5, int(item.get("spot_duration_sec", 30) or 30)) for item in rotation)
     if cycle_duration <= 0:
         return rotation[0]
 
     epoch_seconds = int(now.timestamp())
     seconds_in_cycle = epoch_seconds % cycle_duration
-
-    # Walk rotation to find the ad covering the current second
     elapsed = 0
-    for adv in rotation:
-        elapsed += max(5, int(adv.get("spot_duration_sec", 30) or 30))
+    for item in rotation:
+        elapsed += max(5, int(item.get("spot_duration_sec", 30) or 30))
         if seconds_in_cycle < elapsed:
-            return adv
+            return item
     return rotation[-1]
+
+
+def is_event_eligible_for_cta(event: dict, now: datetime) -> bool:
+    """Event is shown in SmartCTA rotation when promoted_as_cta=true and now
+    falls between promote_from_date and end of event_date+end_time."""
+    if not event.get("promoted_as_cta"):
+        return False
+    try:
+        event_date = datetime.strptime(event["event_date"], "%Y-%m-%d").date()
+    except Exception:
+        return False
+    today = now.date()
+    promote_from = (event.get("promote_from_date") or "").strip()
+    try:
+        from_date = (
+            datetime.strptime(promote_from, "%Y-%m-%d").date()
+            if promote_from
+            else event_date - timedelta(days=7)
+        )
+    except Exception:
+        from_date = event_date - timedelta(days=7)
+    if today < from_date or today > event_date:
+        return False
+    if today == event_date:
+        try:
+            eh, em = map(int, (event.get("end_time") or "23:59").split(":"))
+            event_end = now.replace(hour=eh, minute=em, second=0, microsecond=0)
+            return now <= event_end
+        except Exception:
+            return True
+    return True
 
 
 async def resolve_live_host() -> Optional[dict]:
@@ -439,6 +503,30 @@ async def get_advertiser(slug: str):
     if not adv:
         raise HTTPException(status_code=404, detail="Advertiser not found")
     return adv
+
+
+# ---------------------- Events (public) ---------------------- #
+@api.get("/events")
+async def list_events(include_past: bool = False):
+    """Public events list. By default returns only today + future events,
+    sorted by event_date asc."""
+    cursor = db.events.find({}, {"_id": 0}).sort([("event_date", 1), ("start_time", 1)])
+    items = await cursor.to_list(500)
+    if include_past:
+        return items
+    now = await station_now()
+    today_str = now.date().isoformat()
+    return [e for e in items if (e.get("event_date") or "") >= today_str]
+
+
+@api.get("/events/{slug}")
+async def get_event(slug: str):
+    e = await db.events.find_one({"slug": slug}, {"_id": 0})
+    if not e:
+        e = await db.events.find_one({"id": slug}, {"_id": 0})
+    if not e:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return e
 
 # Public file proxy for banners (no auth — banners are intentionally public)
 @api.get("/files/{path:path}")
@@ -556,6 +644,45 @@ async def admin_delete_host(hid: str, _: dict = Depends(get_admin)):
     s = await get_settings_doc()
     if s.get("active_host_id") == hid:
         await db.settings.update_one({"id": "global"}, {"$set": {"active_host_id": "AUTO"}})
+    return {"ok": True}
+
+
+# ---------------------- Events (admin) ---------------------- #
+@api.get("/admin/events")
+async def admin_list_events(_: dict = Depends(get_admin)):
+    cursor = db.events.find({}, {"_id": 0}).sort([("event_date", 1), ("start_time", 1)])
+    items = await cursor.to_list(500)
+    return items
+
+
+@api.post("/admin/events")
+async def admin_create_event(payload: EventIn, _: dict = Depends(get_admin)):
+    eid = str(uuid.uuid4())
+    base_slug = slugify(payload.title)
+    slug = base_slug
+    n = 1
+    while await db.events.find_one({"slug": slug}):
+        n += 1
+        slug = f"{base_slug}-{n}"
+    doc = {**payload.model_dump(), "id": eid, "slug": slug, "created_at": now_iso()}
+    await db.events.insert_one(doc.copy())
+    return {**doc}
+
+
+@api.put("/admin/events/{eid}")
+async def admin_update_event(eid: str, payload: EventIn, _: dict = Depends(get_admin)):
+    update = payload.model_dump()
+    update["updated_at"] = now_iso()
+    res = await db.events.update_one({"id": eid}, {"$set": update})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+    e = await db.events.find_one({"id": eid}, {"_id": 0})
+    return e
+
+
+@api.delete("/admin/events/{eid}")
+async def admin_delete_event(eid: str, _: dict = Depends(get_admin)):
+    await db.events.delete_one({"id": eid})
     return {"ok": True}
 
 
@@ -713,6 +840,9 @@ async def on_startup():
     await db.advertisers.create_index("id", unique=True)
     await db.hosts.create_index("slug", unique=True)
     await db.hosts.create_index("id", unique=True)
+    await db.events.create_index("slug", unique=True)
+    await db.events.create_index("id", unique=True)
+    await db.events.create_index("event_date")
     await db.settings.create_index("id", unique=True)
     await seed_admin()
     await seed_demo_advertisers()

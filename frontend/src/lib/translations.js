@@ -27,6 +27,8 @@ export const translations = {
       noActive: "Sin promoción activa en este momento",
       activeBadge: "PROMOCIÓN",
       tapToOpen: "Toca para abrir",
+      eventBadge: "EVENTO",
+      viewEvent: "Ver evento",
       callNow: "Llamar ahora",
       whatsapp: "WhatsApp",
       directions: "Cómo llegar",

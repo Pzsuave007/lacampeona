@@ -57,7 +57,7 @@ export default function RadioPlayer() {
       data-testid="radio-player"
       className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-4 sm:left-4 sm:right-4 mx-auto max-w-5xl"
     >
-      <div className="bg-slate-900 text-white rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-orange-900/30 border border-white/5 overflow-hidden">
+      <div className="bg-slate-900 text-white sm:rounded-3xl shadow-2xl shadow-orange-900/30 border border-white/5 overflow-hidden">
         <div className="flex items-center gap-4 p-3 sm:p-4">
           {/* Logo / live indicator */}
           <div className="relative shrink-0">

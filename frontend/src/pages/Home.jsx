@@ -24,7 +24,7 @@ const POLA_2 = "https://images.pexels.com/photos/3851837/pexels-photo-3851837.jp
 const VIBE_BG = "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg";
 
 export default function Home() {
-  const { active, settings } = useStation();
+  const { settings } = useStation();
   const { t, lang } = useLanguage();
   const { advertisers } = useAdvertisers();
 
@@ -49,17 +49,13 @@ export default function Home() {
 
   return (
     <div data-testid="home-page" className="min-h-screen">
-      {active ? (
-        <ActiveHero active={active} t={t} />
-      ) : (
-        <DefaultHero
-          t={t}
-          stationName={settings?.station_name || "KWIP La Campeona"}
-          tagline={settings?.station_tagline}
-          stationWa={stationWa}
-          lang={lang}
-        />
-      )}
+      <DefaultHero
+        t={t}
+        stationName={settings?.station_name || "KWIP La Campeona"}
+        tagline={settings?.station_tagline}
+        stationWa={stationWa}
+        lang={lang}
+      />
 
       {/* Live ticker strip */}
       <MarqueeStrip

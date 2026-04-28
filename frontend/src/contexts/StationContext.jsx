@@ -6,6 +6,7 @@ const StationContext = createContext(null);
 export function StationProvider({ children }) {
   const [settings, setSettings] = useState(null);
   const [active, setActive] = useState(null);
+  const [liveHost, setLiveHost] = useState(null);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -25,15 +26,30 @@ export function StationProvider({ children }) {
     }
   }, []);
 
+  const loadLiveHost = useCallback(async () => {
+    try {
+      const { data } = await api.get("/live-host");
+      setLiveHost(data.host);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     loadSettings();
     loadActive();
-    const id = setInterval(loadActive, 10000);
+    loadLiveHost();
+    const id = setInterval(() => {
+      loadActive();
+      loadLiveHost();
+    }, 10000);
     return () => clearInterval(id);
-  }, [loadSettings, loadActive]);
+  }, [loadSettings, loadActive, loadLiveHost]);
 
   return (
-    <StationContext.Provider value={{ settings, active, loadSettings, loadActive }}>
+    <StationContext.Provider
+      value={{ settings, active, liveHost, loadSettings, loadActive, loadLiveHost }}
+    >
       {children}
     </StationContext.Provider>
   );

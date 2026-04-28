@@ -204,8 +204,35 @@ class SettingsIn(BaseModel):
     stream_url: Optional[str] = None
     now_playing: Optional[str] = None
     active_advertiser_id: Optional[str] = None  # "" or null = none, "AUTO" = use schedule
+    active_host_id: Optional[str] = None  # "" = none, "AUTO" = use schedule, id = pinned
     default_cta_text: Optional[str] = None
     default_cta_url: Optional[str] = None
+
+
+class HostScheduleSlot(BaseModel):
+    day_of_week: int = Field(..., ge=0, le=6)
+    start_time: str  # "HH:MM"
+    end_time: str
+
+
+class HostIn(BaseModel):
+    name: str
+    show_name: Optional[str] = ""
+    tagline: Optional[str] = ""
+    bio: Optional[str] = ""
+    photo_path: Optional[str] = ""  # storage path or external URL
+    phone: Optional[str] = ""
+    whatsapp: Optional[str] = ""
+    facebook: Optional[str] = ""
+    instagram: Optional[str] = ""
+    color: Optional[str] = "#7F1D1D"
+    schedule: List[HostScheduleSlot] = []
+
+
+class Host(HostIn):
+    id: str
+    slug: str
+    created_at: str
 
 # ---------------------- Settings helpers ---------------------- #
 DEFAULT_SETTINGS = {
@@ -215,6 +242,7 @@ DEFAULT_SETTINGS = {
     "stream_url": "https://ice1.somafm.com/groovesalad-128-mp3",
     "now_playing": "El Show de la Tarde",
     "active_advertiser_id": "AUTO",
+    "active_host_id": "AUTO",
     "default_cta_text": "WhatsApp the Studio",
     "default_cta_url": "",
 }
@@ -260,6 +288,23 @@ async def resolve_active_advertiser() -> Optional[dict]:
                     return adv
     return None
 
+
+async def resolve_live_host() -> Optional[dict]:
+    settings = await get_settings_doc()
+    hid = (settings.get("active_host_id") or "").strip()
+    if hid and hid != "AUTO":
+        h = await db.hosts.find_one({"id": hid}, {"_id": 0})
+        if h:
+            return h
+    if hid == "AUTO":
+        now = datetime.now(timezone.utc)
+        cursor = db.hosts.find({}, {"_id": 0})
+        async for h in cursor:
+            for slot in h.get("schedule") or []:
+                if time_in_slot(now, slot):
+                    return h
+    return None
+
 # ---------------------- Auth routes ---------------------- #
 @api.post("/auth/login")
 async def login(payload: LoginIn, response: Response):
@@ -292,12 +337,33 @@ async def root():
 async def public_settings():
     s = await get_settings_doc()
     s.pop("active_advertiser_id", None)  # internal
+    s.pop("active_host_id", None)  # internal
     return s
 
 @api.get("/active")
 async def active_advertiser():
     adv = await resolve_active_advertiser()
     return {"advertiser": adv}
+
+@api.get("/live-host")
+async def live_host():
+    h = await resolve_live_host()
+    return {"host": h}
+
+@api.get("/hosts")
+async def list_hosts():
+    cursor = db.hosts.find({}, {"_id": 0}).sort("created_at", -1)
+    items = await cursor.to_list(500)
+    return items
+
+@api.get("/hosts/{slug}")
+async def get_host(slug: str):
+    h = await db.hosts.find_one({"slug": slug}, {"_id": 0})
+    if not h:
+        h = await db.hosts.find_one({"id": slug}, {"_id": 0})
+    if not h:
+        raise HTTPException(status_code=404, detail="Host not found")
+    return h
 
 @api.get("/advertisers")
 async def list_advertisers():
@@ -378,6 +444,60 @@ async def admin_activate(payload: ActivateIn, _: dict = Depends(get_admin)):
     await db.settings.update_one({"id": "global"}, {"$set": {"active_advertiser_id": aid or "", "updated_at": now_iso()}}, upsert=True)
     s = await get_settings_doc()
     return s
+
+
+class ActivateHostIn(BaseModel):
+    host_id: Optional[str] = None  # "" or "AUTO" or id
+
+@api.post("/admin/activate-host")
+async def admin_activate_host(payload: ActivateHostIn, _: dict = Depends(get_admin)):
+    hid = (payload.host_id or "").strip()
+    if hid and hid not in ("AUTO", ""):
+        exists = await db.hosts.find_one({"id": hid}, {"_id": 0})
+        if not exists:
+            raise HTTPException(status_code=404, detail="Host not found")
+    await db.settings.update_one(
+        {"id": "global"},
+        {"$set": {"active_host_id": hid or "", "updated_at": now_iso()}},
+        upsert=True,
+    )
+    s = await get_settings_doc()
+    return s
+
+
+@api.post("/admin/hosts")
+async def admin_create_host(payload: HostIn, _: dict = Depends(get_admin)):
+    hid = str(uuid.uuid4())
+    base_slug = slugify(payload.name)
+    slug = base_slug
+    n = 1
+    while await db.hosts.find_one({"slug": slug}):
+        n += 1
+        slug = f"{base_slug}-{n}"
+    doc = {**payload.model_dump(), "id": hid, "slug": slug, "created_at": now_iso()}
+    await db.hosts.insert_one(doc.copy())
+    return {**doc}
+
+
+@api.put("/admin/hosts/{hid}")
+async def admin_update_host(hid: str, payload: HostIn, _: dict = Depends(get_admin)):
+    update = payload.model_dump()
+    update["updated_at"] = now_iso()
+    res = await db.hosts.update_one({"id": hid}, {"$set": update})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Host not found")
+    h = await db.hosts.find_one({"id": hid}, {"_id": 0})
+    return h
+
+
+@api.delete("/admin/hosts/{hid}")
+async def admin_delete_host(hid: str, _: dict = Depends(get_admin)):
+    await db.hosts.delete_one({"id": hid})
+    s = await get_settings_doc()
+    if s.get("active_host_id") == hid:
+        await db.settings.update_one({"id": "global"}, {"$set": {"active_host_id": "AUTO"}})
+    return {"ok": True}
+
 
 @api.post("/admin/upload")
 async def admin_upload(file: UploadFile = File(...), _: dict = Depends(get_admin)):
@@ -468,15 +588,75 @@ async def seed_demo_advertisers():
             await db.advertisers.insert_one(doc.copy())
         logger.info("Seeded demo advertisers")
 
+
+DEMO_HOSTS = [
+    {
+        "name": "DJ Carlos Ramírez",
+        "show_name": "La Mañanera",
+        "tagline": "Despierta con la mejor música",
+        "bio": "Todas las mañanas con los éxitos regionales, noticias locales y mucho sabor. Pide tu canción al WhatsApp.",
+        "photo_path": "https://images.pexels.com/photos/9519555/pexels-photo-9519555.jpeg",
+        "phone": "+15036230244",
+        "whatsapp": "15036230244",
+        "facebook": "https://www.facebook.com/lacampeona.laquemanda",
+        "instagram": "",
+        "color": "#7F1D1D",
+        "schedule": [{"day_of_week": d, "start_time": "06:00", "end_time": "11:00"} for d in range(0, 6)],
+    },
+    {
+        "name": "DJ Lupita Flores",
+        "show_name": "La Hora del Sabor",
+        "tagline": "Corridos, banda y la mejor bohemia",
+        "bio": "Lupita te acompaña en las tardes con lo mejor del regional mexicano, dedicatorias y saludos para toda la comunidad.",
+        "photo_path": "https://images.pexels.com/photos/6953875/pexels-photo-6953875.jpeg",
+        "phone": "+15036230244",
+        "whatsapp": "15036230244",
+        "facebook": "https://www.facebook.com/lacampeona.laquemanda",
+        "instagram": "",
+        "color": "#991B1B",
+        "schedule": [{"day_of_week": d, "start_time": "11:00", "end_time": "16:00"} for d in range(0, 7)],
+    },
+    {
+        "name": "DJ El Compa Beto",
+        "show_name": "Noches de Rumba",
+        "tagline": "La fiesta no para",
+        "bio": "Las mejores cumbias, rancheras y éxitos de la noche. Dedica una canción a esa persona especial.",
+        "photo_path": "https://images.pexels.com/photos/7502575/pexels-photo-7502575.jpeg",
+        "phone": "+15036230244",
+        "whatsapp": "15036230244",
+        "facebook": "https://www.facebook.com/lacampeona.laquemanda",
+        "instagram": "",
+        "color": "#450A0A",
+        "schedule": [{"day_of_week": d, "start_time": "16:00", "end_time": "22:00"} for d in range(0, 7)],
+    },
+]
+
+
+async def seed_demo_hosts():
+    count = await db.hosts.count_documents({})
+    if count == 0:
+        for h in DEMO_HOSTS:
+            doc = {
+                **h,
+                "id": str(uuid.uuid4()),
+                "slug": slugify(h["name"]),
+                "created_at": now_iso(),
+            }
+            await db.hosts.insert_one(doc.copy())
+        logger.info("Seeded demo hosts")
+
 # ---------------------- App lifecycle ---------------------- #
 @app.on_event("startup")
 async def on_startup():
     await db.users.create_index("email", unique=True)
     await db.advertisers.create_index("slug", unique=True)
     await db.advertisers.create_index("id", unique=True)
+    await db.hosts.create_index("slug", unique=True)
+    await db.hosts.create_index("id", unique=True)
     await db.settings.create_index("id", unique=True)
     await seed_admin()
     await seed_demo_advertisers()
+    await seed_demo_hosts()
     await get_settings_doc()
     init_storage()
 

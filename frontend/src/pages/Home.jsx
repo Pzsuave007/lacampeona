@@ -17,6 +17,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useAdvertisers } from "../hooks/useAdvertisers";
 import { bannerUrl, telLink, waLink, mapsLink } from "../lib/api";
 import MarqueeStrip from "../components/MarqueeStrip";
+import HostHero from "../components/HostHero";
 
 const HERO_BG = "https://images.pexels.com/photos/32213239/pexels-photo-32213239.jpeg";
 const POLA_1 = "https://images.pexels.com/photos/4651036/pexels-photo-4651036.jpeg";
@@ -24,11 +25,12 @@ const POLA_2 = "https://images.pexels.com/photos/3851837/pexels-photo-3851837.jp
 const VIBE_BG = "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg";
 
 export default function Home() {
-  const { settings } = useStation();
+  const { settings, liveHost } = useStation();
   const { t, lang } = useLanguage();
   const { advertisers } = useAdvertisers();
 
   const stationWa = waLink(settings?.station_whatsapp, t.home.heardOnRadio);
+  const stationName = settings?.station_name || "KWIP La Campeona";
 
   const tickerEs = [
     "EN VIVO 24/7",
@@ -49,13 +51,21 @@ export default function Home() {
 
   return (
     <div data-testid="home-page" className="min-h-screen">
-      <DefaultHero
-        t={t}
-        stationName={settings?.station_name || "KWIP La Campeona"}
-        tagline={settings?.station_tagline}
-        stationWa={stationWa}
-        lang={lang}
-      />
+      {liveHost ? (
+        <HostHero
+          host={liveHost}
+          stationName={stationName}
+          stationTagline={settings?.station_tagline}
+        />
+      ) : (
+        <DefaultHero
+          t={t}
+          stationName={stationName}
+          tagline={settings?.station_tagline}
+          stationWa={stationWa}
+          lang={lang}
+        />
+      )}
 
       {/* Live ticker strip */}
       <MarqueeStrip

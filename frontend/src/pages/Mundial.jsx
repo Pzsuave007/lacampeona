@@ -1,0 +1,270 @@
+import React from "react";
+import { Link } from "react-router-dom";
+import {
+  Trophy,
+  Calendar,
+  MapPin,
+  Radio as RadioIcon,
+  Sparkles,
+  ChevronRight,
+} from "lucide-react";
+import { useLanguage } from "../contexts/LanguageContext";
+import { useStation } from "../contexts/StationContext";
+import { WORLD_CUP_INFO, WORLD_CUP_MATCHES } from "../data/staticContent";
+import { waLink } from "../lib/api";
+
+function fmtDate(iso, lang) {
+  const d = new Date(iso);
+  const opts = { weekday: "short", day: "numeric", month: "short" };
+  return d.toLocaleDateString(lang === "es" ? "es-MX" : "en-US", opts);
+}
+function fmtTime(iso, lang) {
+  const d = new Date(iso);
+  const opts = { hour: "2-digit", minute: "2-digit", hour12: lang === "en" };
+  return d.toLocaleTimeString(lang === "es" ? "es-MX" : "en-US", opts);
+}
+
+// Group matches by date string
+function groupByDay(matches, lang) {
+  const map = new Map();
+  for (const m of matches) {
+    const key = fmtDate(m.kickoff, lang);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(m);
+  }
+  return Array.from(map.entries());
+}
+
+export default function Mundial() {
+  const { lang } = useLanguage();
+  const { settings } = useStation();
+  const grouped = groupByDay(WORLD_CUP_MATCHES, lang);
+  const stationWa = waLink(
+    settings?.station_whatsapp,
+    lang === "es"
+      ? "Hola, quiero info de la cobertura del Mundial en La Campeona"
+      : "Hi, I want info about World Cup coverage on La Campeona",
+  );
+
+  return (
+    <div data-testid="mundial-page" className="min-h-screen">
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0F2A1A] via-[#0E3B26] to-[#155D32]">
+        <div className="absolute -top-24 -left-20 w-[28rem] h-[28rem] rounded-full bg-emerald-400/15 blur-3xl blob-a pointer-events-none" />
+        <div className="absolute top-32 -right-20 w-[28rem] h-[28rem] rounded-full bg-amber-400/20 blur-3xl blob-b pointer-events-none" />
+        <div className="absolute inset-0 stripes-y opacity-[0.06]" />
+        {/* Soccer ball pattern subtle */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 30% 20%, white 2px, transparent 3px), radial-gradient(circle at 70% 60%, white 2px, transparent 3px)",
+            backgroundSize: "180px 180px",
+          }}
+        />
+
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 md:pt-20 md:pb-20 text-white">
+          <span className="inline-flex items-center gap-2 bg-amber-300 text-[#0F2A1A] px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.25em] shadow-md mb-6">
+            <Trophy className="w-3.5 h-3.5" />
+            {WORLD_CUP_INFO.exclusiveLine}
+          </span>
+          <p className="font-script text-3xl sm:text-4xl text-amber-200 -rotate-2 mb-2">
+            {lang === "es" ? "vívelo con" : "live it with"}
+          </p>
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
+            <span className="block text-white">Mundial</span>
+            <span className="font-script font-normal italic text-amber-300 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
+              ¡{lang === "es" ? "en vivo" : "live"}!
+            </span>
+          </h1>
+          <p className="mt-5 text-lg sm:text-xl text-amber-100/95 leading-snug max-w-2xl font-semibold">
+            {WORLD_CUP_INFO.edition} · {WORLD_CUP_INFO.hostCountries}
+          </p>
+          <p className="mt-3 text-white/85 max-w-2xl">
+            {lang === "es"
+              ? "La Campeona 880 AM · 103.9 FM Fuego transmite los partidos del Mundial 2026 EN ESPAÑOL, en vivo y exclusivos para todo Oregon."
+              : "La Campeona 880 AM · 103.9 FM Fuego brings every World Cup 2026 match LIVE in Spanish, exclusive across Oregon."}
+          </p>
+
+          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
+            <Stat label="Equipos" number={WORLD_CUP_INFO.teams} />
+            <Stat label="Partidos" number={WORLD_CUP_INFO.matches} />
+            <Stat label="Sedes" number="3" sub="USA · CAN · MEX" />
+            <Stat label="Inicia" number="11 Jun" sub="2026" />
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <button
+              onClick={() => {
+                const btn = document.querySelector('[data-testid="player-play-btn"]');
+                btn && btn.click();
+              }}
+              data-testid="mundial-listen-btn"
+              className="group inline-flex items-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#0F2A1A] font-black rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(252,211,77,0.25)] transition hover:-translate-y-1 active:scale-95"
+            >
+              <RadioIcon className="w-5 h-5" />
+              {lang === "es" ? "Escucha en vivo" : "Listen live"}
+            </button>
+            {stationWa && (
+              <a
+                href={stationWa}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="mundial-wa-btn"
+                className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/25 hover:bg-white/20 text-white font-bold rounded-full px-7 py-4 transition hover:-translate-y-1 active:scale-95"
+              >
+                {lang === "es" ? "Pregunta por patrocinios" : "Ask about sponsorship"}
+                <ChevronRight className="w-5 h-5" />
+              </a>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Match calendar */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20">
+        <div className="flex items-end justify-between gap-4 mb-8 flex-wrap">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-700 mb-2 inline-flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              {lang === "es" ? "Calendario de partidos" : "Match schedule"}
+            </p>
+            <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter">
+              {lang === "es" ? "Cada gol, " : "Every goal, "}
+              <span className="font-script font-normal italic text-emerald-700">
+                {lang === "es" ? "en tu radio" : "on your radio"}
+              </span>
+            </h2>
+          </div>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+            {lang === "es" ? "Hora de Oregon (PDT)" : "Oregon time (PDT)"}
+          </span>
+        </div>
+
+        <div className="space-y-8">
+          {grouped.map(([day, items]) => (
+            <div key={day}>
+              <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-slate-500 mb-3 inline-flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-600" /> {day}
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((m) => (
+                  <MatchCard key={m.id} match={m} lang={lang} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA bottom */}
+      <section className="bg-[#0F2A1A] text-white py-14">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          <div className="md:col-span-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-amber-300 font-bold mb-2">
+              {lang === "es" ? "Patrocinios disponibles" : "Sponsorships available"}
+            </p>
+            <h3 className="text-3xl sm:text-4xl font-black tracking-tight">
+              {lang === "es"
+                ? "Tu marca al lado de cada gol del Mundial."
+                : "Your brand next to every goal."}
+            </h3>
+            <p className="mt-3 text-white/80 max-w-xl">
+              {lang === "es"
+                ? "Spots premium, menciones del comentarista y patrocinio exclusivo de partidos clave."
+                : "Premium spots, in-commentary mentions, and exclusive game sponsorships."}
+            </p>
+          </div>
+          <Link
+            to="/anuncia"
+            data-testid="mundial-to-sales"
+            className="inline-flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#0F2A1A] font-black rounded-full px-7 py-4 transition active:scale-95 shadow-lg"
+          >
+            {lang === "es" ? "Ver paquetes" : "See packages"}
+            <Sparkles className="w-5 h-5" />
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Stat({ label, number, sub }) {
+  return (
+    <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-3">
+      <p className="text-3xl font-black tracking-tighter text-amber-300">{number}</p>
+      <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80">{label}</p>
+      {sub && <p className="text-[10px] text-white/60 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function MatchCard({ match, lang }) {
+  const { home, away, stage, venue, featured, isFinal } = match;
+  return (
+    <div
+      data-testid={`match-card-${match.id}`}
+      className={`relative rounded-2xl overflow-hidden border-2 transition hover:-translate-y-1 hover:shadow-xl ${
+        isFinal
+          ? "border-amber-400 bg-gradient-to-br from-amber-50 to-amber-100"
+          : featured
+            ? "border-emerald-700 bg-white"
+            : "border-slate-200 bg-white"
+      }`}
+    >
+      {featured && !isFinal && (
+        <span className="absolute top-3 right-3 wiggle px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] text-white bg-emerald-700 shadow-md">
+          ★ Destacado
+        </span>
+      )}
+      {isFinal && (
+        <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] text-amber-900 bg-amber-300 shadow-md">
+          🏆 Final
+        </span>
+      )}
+      <div className="p-5">
+        <p className="text-[10px] uppercase tracking-[0.25em] font-extrabold text-slate-500 mb-3">
+          {stage}
+        </p>
+        <div className="flex items-center gap-3 mb-4">
+          <Team team={home} />
+          <span className="text-xs font-black text-slate-400 uppercase">vs</span>
+          <Team team={away} reverse />
+        </div>
+        <div className="flex items-center gap-2 text-[12px] font-bold text-slate-700 mb-1">
+          <span className="font-mono text-base text-emerald-700 font-black">
+            {fmtTime(match.kickoff, lang)}
+          </span>
+          <span className="text-slate-400">·</span>
+          <span className="text-slate-500">PDT</span>
+        </div>
+        <p className="text-[12px] text-slate-500 inline-flex items-start gap-1">
+          <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          {venue}
+        </p>
+      </div>
+      <div
+        className={`px-5 py-2 text-[11px] font-extrabold uppercase tracking-wider flex items-center justify-between ${
+          isFinal
+            ? "bg-amber-300 text-amber-900"
+            : "bg-slate-900 text-amber-300"
+        }`}
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <RadioIcon className="w-3.5 h-3.5" />
+          La Campeona 880 AM
+        </span>
+        <span className="opacity-80">{lang === "es" ? "EN VIVO" : "LIVE"}</span>
+      </div>
+    </div>
+  );
+}
+
+function Team({ team, reverse }) {
+  return (
+    <div className={`flex-1 flex items-center gap-2 ${reverse ? "flex-row-reverse text-right" : ""}`}>
+      <span className="text-3xl leading-none">{team.flag}</span>
+      <p className="font-extrabold text-slate-900 truncate">{team.name}</p>
+    </div>
+  );
+}

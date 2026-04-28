@@ -46,6 +46,12 @@ export default function Navbar() {
           <NavLink to="/" end className={linkClass} data-testid="nav-home-link">
             {t.nav.home}
           </NavLink>
+          <NavLink to="/mundial" className={linkClass} data-testid="nav-mundial-link">
+            <span className="inline-flex items-center gap-1">🏆 Mundial</span>
+          </NavLink>
+          <NavLink to="/anuncia" className={linkClass} data-testid="nav-anuncia-link">
+            {lang === "es" ? "Anúnciate" : "Advertise"}
+          </NavLink>
           <NavLink to="/advertisers" className={linkClass} data-testid="nav-advertisers-link">
             {t.nav.advertisers}
           </NavLink>
@@ -107,6 +113,12 @@ export default function Navbar() {
           <div className="px-4 py-3 flex flex-col gap-1">
             <NavLink to="/" end onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-home">
               {t.nav.home}
+            </NavLink>
+            <NavLink to="/mundial" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-mundial">
+              🏆 Mundial
+            </NavLink>
+            <NavLink to="/anuncia" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-anuncia">
+              {lang === "es" ? "Anúnciate" : "Advertise"}
             </NavLink>
             <NavLink to="/advertisers" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-advertisers">
               {t.nav.advertisers}

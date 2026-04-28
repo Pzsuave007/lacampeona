@@ -74,6 +74,9 @@ export default function Home() {
         textColor="#FACC15"
       />
 
+      {/* Mundial 2026 teaser */}
+      <MundialTeaser lang={lang} />
+
       {/* Vibe / "what's the show" section with photos */}
       <VibeSection settings={settings} lang={lang} />
 
@@ -355,6 +358,48 @@ function Stat({ number, label }) {
         {label}
       </span>
     </div>
+  );
+}
+
+function MundialTeaser({ lang }) {
+  return (
+    <section
+      data-testid="mundial-teaser"
+      className="relative overflow-hidden bg-gradient-to-br from-[#0F2A1A] via-[#0E3B26] to-[#155D32] text-white"
+    >
+      <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full bg-amber-400/15 blur-3xl blob-b pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-96 h-96 rounded-full bg-emerald-400/15 blur-3xl blob-a pointer-events-none" />
+      <div className="absolute inset-0 stripes-y opacity-[0.05] pointer-events-none" />
+
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-14 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <div className="md:col-span-8">
+          <span className="inline-flex items-center gap-2 bg-amber-300 text-[#0F2A1A] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.25em] shadow-md mb-3">
+            🏆 {lang === "es" ? "Transmisión exclusiva en español" : "Exclusive Spanish broadcast"}
+          </span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tighter leading-tight">
+            {lang === "es" ? "Mundial 2026 " : "World Cup 2026 "}
+            <span className="font-script font-normal italic text-amber-300 text-4xl sm:text-5xl lg:text-6xl">
+              {lang === "es" ? "en La Campeona" : "on La Campeona"}
+            </span>
+          </h2>
+          <p className="mt-2 text-white/85 max-w-xl">
+            {lang === "es"
+              ? "Cada partido del mundial, narrado en vivo. 🇲🇽🇺🇸🇨🇦 Junio – Julio 2026."
+              : "Every World Cup match, called live. 🇲🇽🇺🇸🇨🇦 June – July 2026."}
+          </p>
+        </div>
+        <div className="md:col-span-4 flex md:justify-end">
+          <Link
+            to="/mundial"
+            data-testid="home-to-mundial"
+            className="inline-flex items-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#0F2A1A] font-black rounded-full px-6 py-3 transition active:scale-95 shadow-[0_15px_40px_rgba(252,211,77,0.25)] hover:-translate-y-0.5"
+          >
+            {lang === "es" ? "Ver calendario" : "See schedule"}
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 

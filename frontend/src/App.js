@@ -14,6 +14,8 @@ import AdvertisersList from "@/pages/AdvertisersList";
 import AdvertiserDetail from "@/pages/AdvertiserDetail";
 import Login from "@/pages/Login";
 import AdminDashboard from "@/pages/AdminDashboard";
+import Mundial from "@/pages/Mundial";
+import Anuncia from "@/pages/Anuncia";
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
               <main className="flex-1 app-bottom-pad">
                 <Routes>
                   <Route path="/" element={<Home />} />
+                  <Route path="/mundial" element={<Mundial />} />
+                  <Route path="/anuncia" element={<Anuncia />} />
                   <Route path="/advertisers" element={<AdvertisersList />} />
                   <Route path="/a/:slug" element={<AdvertiserDetail />} />
                   <Route path="/login" element={<Login />} />

@@ -118,17 +118,15 @@ export default function Home() {
           </div>
 
           <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7 items-stretch"
             data-testid="advertisers-grid"
           >
-            {advertisers.map((adv, idx) => (
+            {advertisers.map((adv) => (
               <Link
                 key={adv.id}
                 to={`/a/${adv.slug}`}
                 data-testid={`advertiser-card-${adv.slug}`}
-                className={`group relative bg-white rounded-3xl shadow-xl shadow-slate-900/10 overflow-hidden border border-slate-100 transition duration-300 hover:-translate-y-2 hover:shadow-2xl ${
-                  idx % 3 === 1 ? "sm:translate-y-3" : ""
-                }`}
+                className="group relative bg-white rounded-3xl shadow-xl shadow-slate-900/10 overflow-hidden border border-slate-100 transition duration-300 hover:-translate-y-2 hover:shadow-2xl flex flex-col"
               >
                 {/* Sticker */}
                 <span
@@ -138,7 +136,7 @@ export default function Home() {
                   ★ {adv.tagline ? "Hot" : "Promo"}
                 </span>
 
-                <div className="aspect-[16/10] bg-slate-100 overflow-hidden">
+                <div className="aspect-[16/10] bg-slate-100 overflow-hidden shrink-0">
                   {adv.banner_path ? (
                     <img
                       src={bannerUrl(adv.banner_path)}
@@ -151,7 +149,7 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-                <div className="p-6">
+                <div className="p-6 flex flex-col flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className="inline-block w-2.5 h-2.5 rounded-full"
@@ -169,7 +167,7 @@ export default function Home() {
                       {adv.special_offer}
                     </p>
                   )}
-                  <div className="mt-5 inline-flex items-center gap-1 text-orange-600 font-bold text-sm group-hover:gap-2 transition-all">
+                  <div className="mt-auto pt-5 inline-flex items-center gap-1 text-orange-600 font-bold text-sm group-hover:gap-2 transition-all">
                     {t.home.visitPage}{" "}
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
                   </div>

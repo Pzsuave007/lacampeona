@@ -34,9 +34,9 @@ export default function SmartCTA() {
   return (
     <div
       data-testid="smart-cta"
-      className="fixed right-2 left-auto sm:left-4 sm:right-auto bottom-[136px] sm:bottom-28 z-40 w-[min(320px,calc(100vw-1rem))] sm:w-auto sm:max-w-sm"
+      className="fixed bottom-[80px] left-0 right-0 sm:left-4 sm:right-auto sm:bottom-28 z-40 sm:max-w-sm"
     >
-      <div className="rounded-2xl sm:rounded-3xl shadow-2xl shadow-slate-900/30 border border-white/20 overflow-hidden bg-white rise-in">
+      <div className="rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-slate-900/30 border border-b-0 sm:border-b border-white/20 overflow-hidden bg-white rise-in">
         {/* Banner image (horizontal) - compact on mobile */}
         {expanded && banner && (
           <div className="relative aspect-[21/9] sm:aspect-[16/9] w-full overflow-hidden">

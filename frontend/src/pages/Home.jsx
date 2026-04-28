@@ -205,18 +205,18 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-md">
               {lang === "es" ? (
                 <>
-                  La que <span className="text-yellow-300">manda</span> en
+                  ¡La que
                   <br />
-                  <span className="font-script font-normal italic text-yellow-200 text-6xl sm:text-7xl lg:text-8xl">
-                    Oregon
+                  <span className="font-script font-normal italic text-yellow-200 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
+                    manda!
                   </span>
                 </>
               ) : (
                 <>
-                  The beat of <span className="text-yellow-300">Latino</span>
+                  The one that
                   <br />
-                  <span className="font-script font-normal italic text-yellow-200 text-6xl sm:text-7xl lg:text-8xl">
-                    Oregon
+                  <span className="font-script font-normal italic text-yellow-200 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
+                    rules!
                   </span>
                 </>
               )}

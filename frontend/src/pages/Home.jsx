@@ -36,7 +36,7 @@ export default function Home() {
     "EN VIVO 24/7",
     "TU MÚSICA SIN PARAR",
     "PROMOS EXCLUSIVAS",
-    "DESDE LOS ÁNGELES",
+    "DESDE DALLAS, OREGON",
     "RITMO LATINO",
     "LLAMA AL ESTUDIO",
   ];
@@ -44,7 +44,7 @@ export default function Home() {
     "LIVE 24/7",
     "NON-STOP MUSIC",
     "EXCLUSIVE DEALS",
-    "FROM LOS ANGELES",
+    "FROM DALLAS, OREGON",
     "LATIN BEATS",
     "CALL THE STUDIO",
   ];

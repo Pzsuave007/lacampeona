@@ -21,6 +21,11 @@ export default function AdminDashboard() {
   const [adminSettings, setAdminSettings] = useState(null);
   const [editing, setEditing] = useState(null); // { mode: 'new'|'edit', adv?: {} }
   const [editingHost, setEditingHost] = useState(null); // { mode, host? }
+  const [tab, setTab] = useState(() => localStorage.getItem("rl_admin_tab") || "radio");
+
+  useEffect(() => {
+    localStorage.setItem("rl_admin_tab", tab);
+  }, [tab]);
 
   useEffect(() => {
     if (user === null) navigate("/login");
@@ -121,46 +126,142 @@ export default function AdminDashboard() {
         </h1>
         <p className="text-slate-600 mt-2">{t.admin.subtitle}</p>
 
-        {/* Active state card */}
-        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-          <div className="flex-1">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">
-              {t.admin.activeNow}
-            </p>
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-orange-600" />
-              <span className="text-xl font-extrabold text-slate-900" data-testid="admin-active-name">
-                {active ? active.name : activeId === "AUTO" ? t.admin.auto : t.admin.none}
-              </span>
-            </div>
-            {activeId === "AUTO" && (
-              <p className="text-xs text-slate-500 mt-2 max-w-xl">{t.admin.autoExplain}</p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              data-testid="admin-set-auto-btn"
-              onClick={() => activate("AUTO")}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition ${
-                activeId === "AUTO" ? "bg-slate-900 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-900"
-              }`}
-            >
-              {t.admin.auto}
-            </button>
-            <button
-              data-testid="admin-set-none-btn"
-              onClick={() => activate("")}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition ${
-                activeId === "" ? "bg-slate-900 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-900"
-              }`}
-            >
-              {t.admin.none}
-            </button>
-          </div>
+        {/* Tabs */}
+        <div className="mt-8 flex flex-wrap gap-2 border-b border-slate-200">
+          {[
+            { id: "radio", label: "Radio", icon: Settings, color: "text-orange-600" },
+            { id: "hosts", label: "Locutores", icon: Mic2, color: "text-[#7F1D1D]" },
+            { id: "ads", label: "Anunciantes", icon: Sparkles, color: "text-orange-600" },
+          ].map((tb) => {
+            const Icon = tb.icon;
+            const active = tab === tb.id;
+            return (
+              <button
+                key={tb.id}
+                data-testid={`admin-tab-${tb.id}`}
+                onClick={() => setTab(tb.id)}
+                className={`relative inline-flex items-center gap-2 px-5 py-3 text-sm font-bold transition -mb-px border-b-2 ${
+                  active
+                    ? "border-slate-900 text-slate-900"
+                    : "border-transparent text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${active ? tb.color : ""}`} />
+                {tb.label}
+                {tb.id === "hosts" && liveHost && (
+                  <span className="ml-1 inline-flex items-center gap-1 bg-[#7F1D1D] text-white text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300 live-dot" />
+                    Live
+                  </span>
+                )}
+                {tb.id === "ads" && active && (
+                  <span className="ml-1 text-[10px] font-extrabold uppercase text-orange-600">
+                    {activeId === "AUTO" ? "AUTO" : activeId ? "ON" : "—"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Hosts / Locutores — live-on-air section */}
-        <div className="mt-10 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+        {/* ===================== TAB: RADIO ===================== */}
+        {tab === "radio" && adminSettings && (
+          <div className="mt-8 space-y-8" data-testid="tab-radio">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8">
+              <div className="flex items-center gap-2 mb-1">
+                <Settings className="w-5 h-5 text-orange-600" />
+                <h2 className="text-2xl font-extrabold text-slate-900">{t.admin.stationSettings}</h2>
+              </div>
+              <p className="text-sm text-slate-500 mb-5">
+                Configura el nombre, frecuencia, stream y zona horaria de la emisora.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SettingField
+                  testid="set-station-name"
+                  label={t.admin.stationName}
+                  value={adminSettings.station_name || ""}
+                  onChange={(v) => setAdminSettings({ ...adminSettings, station_name: v })}
+                />
+                <SettingField
+                  testid="set-station-tagline"
+                  label={t.admin.stationTagline}
+                  value={adminSettings.station_tagline || ""}
+                  onChange={(v) => setAdminSettings({ ...adminSettings, station_tagline: v })}
+                />
+                <SettingField
+                  testid="set-station-wa"
+                  label={t.admin.stationWhatsapp}
+                  placeholder="13105550100"
+                  value={adminSettings.station_whatsapp || ""}
+                  onChange={(v) => setAdminSettings({ ...adminSettings, station_whatsapp: v })}
+                />
+                <SettingField
+                  testid="set-now-playing"
+                  label={t.admin.nowPlaying}
+                  value={adminSettings.now_playing || ""}
+                  onChange={(v) => setAdminSettings({ ...adminSettings, now_playing: v })}
+                />
+                <SettingField
+                  testid="set-stream-url"
+                  wide
+                  label={t.admin.streamUrl}
+                  value={adminSettings.stream_url || ""}
+                  onChange={(v) => setAdminSettings({ ...adminSettings, stream_url: v })}
+                />
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
+                    Zona horaria de la emisora
+                  </span>
+                  <select
+                    data-testid="set-timezone"
+                    value={adminSettings.timezone || "America/Los_Angeles"}
+                    onChange={(e) => setAdminSettings({ ...adminSettings, timezone: e.target.value })}
+                    className="mt-1 w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition bg-white"
+                  >
+                    <option value="America/Los_Angeles">Oregon / California (PST/PDT)</option>
+                    <option value="America/Denver">Colorado / Arizona (MST/MDT)</option>
+                    <option value="America/Chicago">Chicago / Texas (CST/CDT)</option>
+                    <option value="America/New_York">New York / Florida (EST/EDT)</option>
+                    <option value="America/Mexico_City">Ciudad de México (CST)</option>
+                    <option value="America/Bogota">Bogotá / Lima (COT)</option>
+                    <option value="America/Buenos_Aires">Buenos Aires (ART)</option>
+                    <option value="UTC">UTC (Universal)</option>
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Los horarios de los locutores y anunciantes se evalúan en esta zona.
+                  </p>
+                </label>
+              </div>
+              <button
+                data-testid="settings-save-btn"
+                onClick={saveSettings}
+                className="mt-5 inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-full px-5 py-2.5 transition active:scale-95"
+              >
+                <Save className="w-4 h-4" />
+                {t.admin.save}
+              </button>
+            </div>
+
+            {/* Quick stats card */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard label="Locutores" value={hosts.length} icon={Mic2} accent="#7F1D1D" />
+              <StatCard label="Anunciantes" value={advertisers.length} icon={Sparkles} accent="#EA580C" />
+              <StatCard
+                label="Al aire ahora"
+                value={liveHost ? liveHost.show_name || liveHost.name : "—"}
+                icon={Mic2}
+                accent="#7F1D1D"
+                small
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ===================== TAB: HOSTS ===================== */}
+        {tab === "hosts" && (
+          <div className="mt-8 space-y-8" data-testid="tab-hosts">
+            {/* Live host status */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
           <div className="flex-1">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#7F1D1D] mb-1 inline-flex items-center gap-2">
               <Mic2 className="w-4 h-4" /> Al aire ahora
@@ -308,10 +409,53 @@ export default function AdminDashboard() {
             </p>
           </div>
         )}
+          </div>
+        )}
 
-        {/* Advertisers list */}
-        <div className="mt-12 flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-slate-900">{t.nav.advertisers}</h2>
+        {/* ===================== TAB: ADS ===================== */}
+        {tab === "ads" && (
+          <div className="mt-8 space-y-8" data-testid="tab-ads">
+            {/* Active advertiser status */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+              <div className="flex-1">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-1">
+                  {t.admin.activeNow}
+                </p>
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-orange-600" />
+                  <span className="text-xl font-extrabold text-slate-900" data-testid="admin-active-name">
+                    {active ? active.name : activeId === "AUTO" ? t.admin.auto : t.admin.none}
+                  </span>
+                </div>
+                {activeId === "AUTO" && (
+                  <p className="text-xs text-slate-500 mt-2 max-w-xl">{t.admin.autoExplain}</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  data-testid="admin-set-auto-btn"
+                  onClick={() => activate("AUTO")}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition ${
+                    activeId === "AUTO" ? "bg-slate-900 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-900"
+                  }`}
+                >
+                  {t.admin.auto}
+                </button>
+                <button
+                  data-testid="admin-set-none-btn"
+                  onClick={() => activate("")}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition ${
+                    activeId === "" ? "bg-slate-900 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-900"
+                  }`}
+                >
+                  {t.admin.none}
+                </button>
+              </div>
+            </div>
+
+            {/* Advertisers list */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-extrabold text-slate-900">{t.nav.advertisers}</h2>
           <button
             data-testid="admin-new-advertiser-btn"
             onClick={() => setEditing({ mode: "new" })}
@@ -389,80 +533,7 @@ export default function AdminDashboard() {
               </div>
             );
           })}
-        </div>
-
-        {/* Station settings */}
-        {adminSettings && (
-          <div className="mt-12 bg-white rounded-2xl border border-slate-200 p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Settings className="w-5 h-5 text-orange-600" />
-              <h2 className="text-2xl font-extrabold text-slate-900">{t.admin.stationSettings}</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SettingField
-                testid="set-station-name"
-                label={t.admin.stationName}
-                value={adminSettings.station_name || ""}
-                onChange={(v) => setAdminSettings({ ...adminSettings, station_name: v })}
-              />
-              <SettingField
-                testid="set-station-tagline"
-                label={t.admin.stationTagline}
-                value={adminSettings.station_tagline || ""}
-                onChange={(v) => setAdminSettings({ ...adminSettings, station_tagline: v })}
-              />
-              <SettingField
-                testid="set-station-wa"
-                label={t.admin.stationWhatsapp}
-                placeholder="13105550100"
-                value={adminSettings.station_whatsapp || ""}
-                onChange={(v) => setAdminSettings({ ...adminSettings, station_whatsapp: v })}
-              />
-              <SettingField
-                testid="set-now-playing"
-                label={t.admin.nowPlaying}
-                value={adminSettings.now_playing || ""}
-                onChange={(v) => setAdminSettings({ ...adminSettings, now_playing: v })}
-              />
-              <SettingField
-                testid="set-stream-url"
-                wide
-                label={t.admin.streamUrl}
-                value={adminSettings.stream_url || ""}
-                onChange={(v) => setAdminSettings({ ...adminSettings, stream_url: v })}
-              />
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
-                  Zona horaria de la emisora
-                </span>
-                <select
-                  data-testid="set-timezone"
-                  value={adminSettings.timezone || "America/Los_Angeles"}
-                  onChange={(e) => setAdminSettings({ ...adminSettings, timezone: e.target.value })}
-                  className="mt-1 w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition bg-white"
-                >
-                  <option value="America/Los_Angeles">Oregon / California (PST/PDT)</option>
-                  <option value="America/Denver">Colorado / Arizona (MST/MDT)</option>
-                  <option value="America/Chicago">Chicago / Texas (CST/CDT)</option>
-                  <option value="America/New_York">New York / Florida (EST/EDT)</option>
-                  <option value="America/Mexico_City">Ciudad de México (CST)</option>
-                  <option value="America/Bogota">Bogotá / Lima (COT)</option>
-                  <option value="America/Buenos_Aires">Buenos Aires (ART)</option>
-                  <option value="UTC">UTC (Universal)</option>
-                </select>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Los horarios de los locutores y anunciantes se evalúan en esta zona.
-                </p>
-              </label>
-            </div>
-            <button
-              data-testid="settings-save-btn"
-              onClick={saveSettings}
-              className="mt-5 inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-full px-5 py-2.5 transition active:scale-95"
-            >
-              <Save className="w-4 h-4" />
-              {t.admin.save}
-            </button>
           </div>
         )}
       </section>
@@ -482,5 +553,26 @@ function SettingField({ label, value, onChange, placeholder, testid, wide }) {
         className="mt-1 w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition"
       />
     </label>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, accent = "#7F1D1D", small }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 flex items-center gap-4">
+      <span
+        className="w-12 h-12 rounded-xl flex items-center justify-center"
+        style={{ backgroundColor: `${accent}1A`, color: accent }}
+      >
+        <Icon className="w-5 h-5" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">
+          {label}
+        </p>
+        <p className={`font-black text-slate-900 truncate ${small ? "text-lg" : "text-3xl"}`}>
+          {value}
+        </p>
+      </div>
+    </div>
   );
 }

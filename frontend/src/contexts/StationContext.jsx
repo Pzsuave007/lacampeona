@@ -39,11 +39,14 @@ export function StationProvider({ children }) {
     loadSettings();
     loadActive();
     loadLiveHost();
-    const id = setInterval(() => {
-      loadActive();
-      loadLiveHost();
-    }, 10000);
-    return () => clearInterval(id);
+    // Poll active advertiser every 5 seconds for snappy spot rotation
+    // Poll live host every 30 seconds (changes are slower)
+    const adId = setInterval(loadActive, 5000);
+    const hostId = setInterval(loadLiveHost, 30000);
+    return () => {
+      clearInterval(adId);
+      clearInterval(hostId);
+    };
   }, [loadSettings, loadActive, loadLiveHost]);
 
   return (

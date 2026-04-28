@@ -63,6 +63,9 @@ export default function AdvertiserForm({ initial, onCancel, onSaved }) {
     try {
       const payload = {
         ...form,
+        priority: Number(form.priority) || 5,
+        spots_per_hour: Number(form.spots_per_hour) || 4,
+        spot_duration_sec: Number(form.spot_duration_sec) || 30,
         schedule: form.schedule.map((s) => ({
           day_of_week: Number(s.day_of_week),
           start_time: s.start_time,
@@ -148,6 +151,75 @@ export default function AdvertiserForm({ initial, onCancel, onSaved }) {
                 className="flex-1 px-3 py-2 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none text-sm"
               />
             </div>
+          </div>
+
+          {/* Pauta — traffic settings */}
+          <div className="bg-orange-50 rounded-xl border border-orange-200 p-4">
+            <div className="mb-3">
+              <h4 className="text-sm font-extrabold text-orange-900 uppercase tracking-wider">
+                Pauta publicitaria
+              </h4>
+              <p className="text-xs text-slate-600 mt-1">
+                Define cuántas veces y por cuánto tiempo aparece este anuncio durante sus franjas activas.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-[0.15em] text-slate-700">
+                  Repeticiones / hora
+                </span>
+                <input
+                  data-testid="form-spots-per-hour"
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={form.spots_per_hour ?? 4}
+                  onChange={(e) => set("spots_per_hour", e.target.value)}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border-2 border-orange-200 bg-white focus:border-orange-500 focus:outline-none transition"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Cada {form.spots_per_hour ? Math.round(60 / form.spots_per_hour) : "—"} min
+                </p>
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-[0.15em] text-slate-700">
+                  Duración del spot (seg)
+                </span>
+                <input
+                  data-testid="form-spot-duration"
+                  type="number"
+                  min="5"
+                  max="600"
+                  value={form.spot_duration_sec ?? 30}
+                  onChange={(e) => set("spot_duration_sec", e.target.value)}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border-2 border-orange-200 bg-white focus:border-orange-500 focus:outline-none transition"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">Tiempo visible cada vez</p>
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-[0.15em] text-slate-700">
+                  Prioridad (1–10)
+                </span>
+                <input
+                  data-testid="form-priority"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={form.priority ?? 5}
+                  onChange={(e) => set("priority", e.target.value)}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border-2 border-orange-200 bg-white focus:border-orange-500 focus:outline-none transition"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">Más alto gana solapes</p>
+              </label>
+            </div>
+            <p className="text-xs text-orange-900 bg-orange-100 rounded-lg px-3 py-2 mt-3">
+              📊 <b>Resumen:</b>{" "}
+              {form.spots_per_hour || 4} spots/h × {form.spot_duration_sec || 30}s ={" "}
+              <b>
+                {Math.round(((form.spots_per_hour || 4) * (form.spot_duration_sec || 30) / 3600) * 100)}%
+              </b>{" "}
+              del tiempo visible · prioridad {form.priority || 5}
+            </p>
           </div>
 
           {/* Schedule */}

@@ -191,6 +191,10 @@ class AdvertiserIn(BaseModel):
     banner_path: Optional[str] = ""  # storage path or external URL
     color: Optional[str] = "#EA580C"
     schedule: List[ScheduleSlot] = []
+    # Pauta / traffic settings
+    priority: int = Field(default=5, ge=1, le=10)  # higher = wins overlaps
+    spots_per_hour: int = Field(default=4, ge=1, le=60)  # how many appearances per hour
+    spot_duration_sec: int = Field(default=30, ge=5, le=600)  # how long popup stays visible
 
 class Advertiser(AdvertiserIn):
     id: str

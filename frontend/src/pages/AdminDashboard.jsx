@@ -499,6 +499,9 @@ export default function AdminDashboard() {
                   <p className="text-xs text-slate-500 mt-1 truncate">
                     {adv.phone} {adv.whatsapp ? `• WA +${adv.whatsapp}` : ""}
                   </p>
+                  <p className="text-[11px] text-orange-700 font-bold mt-1">
+                    📊 {adv.spots_per_hour || 4} spots/h × {adv.spot_duration_sec || 30}s · prioridad {adv.priority || 5}
+                  </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       data-testid={`admin-activate-${adv.slug}`}

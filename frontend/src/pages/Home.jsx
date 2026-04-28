@@ -173,16 +173,18 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
   return (
     <section
       data-testid="home-hero"
-      className="relative overflow-hidden bg-gradient-to-br from-orange-600 via-orange-500 to-amber-400"
+      className="relative overflow-hidden bg-gradient-to-br from-[#3F0A0A] via-[#7F1D1D] to-[#991B1B]"
     >
-      {/* Decorative blobs */}
-      <div className="absolute -top-20 -left-24 w-96 h-96 rounded-full bg-pink-500/40 blur-3xl blob-a pointer-events-none" />
-      <div className="absolute top-40 -right-20 w-96 h-96 rounded-full bg-yellow-300/50 blur-3xl blob-b pointer-events-none" />
-      <div className="absolute inset-0 stripes-y opacity-[0.08] pointer-events-none" />
+      {/* Decorative blobs — warm ember + gold */}
+      <div className="absolute -top-24 -left-28 w-[28rem] h-[28rem] rounded-full bg-rose-600/30 blur-3xl blob-a pointer-events-none" />
+      <div className="absolute top-40 -right-24 w-[28rem] h-[28rem] rounded-full bg-amber-400/20 blur-3xl blob-b pointer-events-none" />
+      <div className="absolute inset-0 stripes-y opacity-[0.06] pointer-events-none" />
+      {/* Subtle top vignette */}
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/40 to-transparent pointer-events-none" />
 
-      {/* Background image */}
+      {/* Background image — darkened */}
       <div
-        className="absolute inset-0 opacity-30 mix-blend-overlay"
+        className="absolute inset-0 opacity-[0.18] mix-blend-luminosity"
         style={{
           backgroundImage: `url(${HERO_BG})`,
           backgroundSize: "cover",
@@ -194,16 +196,16 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           {/* Left: Headline */}
           <div className="lg:col-span-7 text-white rise-in">
-            <span className="inline-flex items-center gap-2 bg-white text-slate-900 px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.25em] shadow-md mb-6">
-              <span className="w-2 h-2 rounded-full bg-red-500 live-dot" />
+            <span className="inline-flex items-center gap-2 bg-amber-300 text-[#3F0A0A] px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.25em] shadow-md mb-6 ring-1 ring-black/10">
+              <span className="w-2 h-2 rounded-full bg-red-700 live-dot" />
               {t.live.label} · {stationName}
             </span>
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-md">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
               {lang === "es" ? (
                 <>
                   ¡La que
                   <br />
-                  <span className="font-script font-normal italic text-yellow-200 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
+                  <span className="font-script font-normal italic text-amber-300 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
                     manda!
                   </span>
                 </>
@@ -211,16 +213,16 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
                 <>
                   The one that
                   <br />
-                  <span className="font-script font-normal italic text-yellow-200 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
+                  <span className="font-script font-normal italic text-amber-300 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
                     rules!
                   </span>
                 </>
               )}
             </h1>
-            <p className="mt-5 text-lg sm:text-xl text-white/95 leading-snug max-w-xl font-semibold">
+            <p className="mt-5 text-lg sm:text-xl text-amber-100/95 leading-snug max-w-xl font-semibold tracking-wide">
               {tagline || "880 AM · 103.9 FM"}
             </p>
-            <p className="mt-3 text-white/85 leading-relaxed max-w-xl">
+            <p className="mt-3 text-white/80 leading-relaxed max-w-xl">
               {lang === "es"
                 ? "Música regional mexicana, noticias y promociones de tus negocios favoritos — en vivo, desde Dallas, Oregon."
                 : "Regional Mexican music, news, and offers from your favorite local businesses — live from Dallas, Oregon."}
@@ -232,7 +234,7 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
                   btn && btn.click();
                 }}
                 data-testid="hero-listen-btn"
-                className="group inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(15,23,42,0.4)] transition hover:-translate-y-1 active:scale-95"
+                className="group inline-flex items-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(252,211,77,0.25)] transition hover:-translate-y-1 active:scale-95 ring-1 ring-black/5"
               >
                 <Headphones className="w-5 h-5 group-hover:scale-110 transition" />
                 {t.home.ctaListen}
@@ -243,7 +245,7 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="hero-wa-btn"
-                  className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#16A34A] text-white font-bold rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(37,211,102,0.4)] transition hover:-translate-y-1 active:scale-95"
+                  className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#16A34A] text-white font-bold rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(37,211,102,0.3)] transition hover:-translate-y-1 active:scale-95"
                 >
                   <MessageCircle className="w-5 h-5" />
                   {t.home.ctaWhatsApp}
@@ -252,7 +254,7 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
               <a
                 href="tel:+15036230244"
                 data-testid="hero-call-btn"
-                className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 hover:bg-white/25 text-white font-bold rounded-full px-7 py-4 transition hover:-translate-y-1 active:scale-95"
+                className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/25 hover:bg-white/20 text-white font-bold rounded-full px-7 py-4 transition hover:-translate-y-1 active:scale-95"
               >
                 <Phone className="w-5 h-5" />
                 {lang === "es" ? "Llama al estudio" : "Call the studio"}
@@ -260,7 +262,7 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
             </div>
 
             {/* Mini stats */}
-            <div className="mt-10 flex flex-wrap gap-6 text-white/95">
+            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-4 text-white/95 pt-6 border-t border-white/10 max-w-xl">
               <Stat number="880" label={lang === "es" ? "AM" : "AM"} />
               <Stat number="103.9" label={lang === "es" ? "FM" : "FM"} />
               <Stat number="24/7" label={lang === "es" ? "En vivo" : "Live"} />
@@ -279,19 +281,19 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
               caption="La Campeona sigue sonando"
               className="absolute top-32 right-0 tilt-r w-64"
             />
-            <div className="absolute bottom-0 left-16 bg-slate-900 text-white rounded-3xl p-5 w-72 shadow-2xl rise-in rise-delay-3 border-4 border-yellow-300">
+            <div className="absolute bottom-0 left-16 bg-[#3F0A0A] text-white rounded-3xl p-5 w-72 shadow-2xl rise-in rise-delay-3 border-4 border-amber-300">
               <div className="flex items-center gap-3 mb-2">
-                <span className="w-10 h-10 rounded-full bg-yellow-300 flex items-center justify-center">
-                  <Disc3 className="w-5 h-5 text-slate-900 vinyl-spin" />
+                <span className="w-10 h-10 rounded-full bg-amber-300 flex items-center justify-center">
+                  <Disc3 className="w-5 h-5 text-[#3F0A0A] vinyl-spin" />
                 </span>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] font-extrabold text-yellow-300">
+                  <p className="text-[10px] uppercase tracking-[0.25em] font-extrabold text-amber-300">
                     {t.live.nowPlaying}
                   </p>
                   <p className="font-bold text-sm leading-tight">La Campeona · 880 AM</p>
                 </div>
               </div>
-              <div className="flex items-end gap-1 h-6 text-yellow-300">
+              <div className="flex items-end gap-1 h-6 text-amber-300">
                 {[0, 1, 2, 3, 4].map((i) => (
                   <span key={i} className="eq-bar" />
                 ))}
@@ -320,8 +322,12 @@ function Polaroid({ src, caption, className = "" }) {
 function Stat({ number, label }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="text-3xl sm:text-4xl font-black tracking-tighter text-yellow-300">{number}</span>
-      <span className="text-sm font-semibold text-white/85">{label}</span>
+      <span className="text-3xl sm:text-4xl font-black tracking-tighter text-amber-300 drop-shadow-[0_4px_20px_rgba(252,211,77,0.25)]">
+        {number}
+      </span>
+      <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">
+        {label}
+      </span>
     </div>
   );
 }

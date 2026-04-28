@@ -207,6 +207,7 @@ class SettingsIn(BaseModel):
     active_host_id: Optional[str] = None  # "" = none, "AUTO" = use schedule, id = pinned
     default_cta_text: Optional[str] = None
     default_cta_url: Optional[str] = None
+    timezone: Optional[str] = None  # IANA, e.g. America/Los_Angeles
 
 
 class HostScheduleSlot(BaseModel):
@@ -245,6 +246,7 @@ DEFAULT_SETTINGS = {
     "active_host_id": "AUTO",
     "default_cta_text": "WhatsApp the Studio",
     "default_cta_url": "",
+    "timezone": "America/Los_Angeles",
 }
 
 async def get_settings_doc() -> dict:
@@ -270,17 +272,27 @@ def time_in_slot(now: datetime, slot: dict) -> bool:
         end = end + timedelta(days=1)
     return start <= now <= end
 
+
+async def station_now() -> datetime:
+    """Current time in the station's configured timezone."""
+    settings = await get_settings_doc()
+    tz_name = settings.get("timezone") or "UTC"
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo(tz_name))
+    except Exception:
+        return datetime.now(timezone.utc)
+
+
 async def resolve_active_advertiser() -> Optional[dict]:
     settings = await get_settings_doc()
     aid = (settings.get("active_advertiser_id") or "").strip()
-    # explicit pin (non-AUTO, non-empty)
     if aid and aid != "AUTO":
         adv = await db.advertisers.find_one({"id": aid}, {"_id": 0})
         if adv:
             return adv
-    # AUTO -> resolve via schedule
     if aid == "AUTO":
-        now = datetime.now(timezone.utc)
+        now = await station_now()
         cursor = db.advertisers.find({}, {"_id": 0})
         async for adv in cursor:
             for slot in adv.get("schedule") or []:
@@ -297,7 +309,7 @@ async def resolve_live_host() -> Optional[dict]:
         if h:
             return h
     if hid == "AUTO":
-        now = datetime.now(timezone.utc)
+        now = await station_now()
         cursor = db.hosts.find({}, {"_id": 0})
         async for h in cursor:
             for slot in h.get("schedule") or []:

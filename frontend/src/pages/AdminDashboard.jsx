@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -8,6 +8,7 @@ import { useStation } from "../contexts/StationContext";
 import { api, bannerUrl } from "../lib/api";
 import AdvertiserForm from "./AdminAdvertiserForm";
 import AdminHostForm from "./AdminHostForm";
+import WeeklyScheduleGrid from "../components/WeeklyScheduleGrid";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -71,6 +72,7 @@ export default function AdminDashboard() {
       station_whatsapp: adminSettings.station_whatsapp,
       stream_url: adminSettings.stream_url,
       now_playing: adminSettings.now_playing,
+      timezone: adminSettings.timezone,
       default_cta_text: adminSettings.default_cta_text,
       default_cta_url: adminSettings.default_cta_url,
     };
@@ -284,8 +286,31 @@ export default function AdminDashboard() {
           )}
         </div>
 
+        {/* Weekly calendar grid */}
+        {hosts.length > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-extrabold text-slate-900 inline-flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-[#7F1D1D]" /> Programación de la semana
+              </h3>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+                {adminSettings?.timezone || "America/Los_Angeles"}
+              </span>
+            </div>
+            <WeeklyScheduleGrid
+              hosts={hosts}
+              timezone={adminSettings?.timezone}
+              onEditHost={(h) => setEditingHost({ mode: "edit", host: h })}
+            />
+            <p className="text-xs text-slate-500 mt-3">
+              💡 El sistema cambia al locutor automáticamente cuando entra una franja activa.
+              Asegúrate de tener el modo <b>“Automático (horario)”</b> seleccionado arriba.
+            </p>
+          </div>
+        )}
+
         {/* Advertisers list */}
-        <div className="mt-10 flex items-center justify-between">
+        <div className="mt-12 flex items-center justify-between">
           <h2 className="text-2xl font-extrabold text-slate-900">{t.nav.advertisers}</h2>
           <button
             data-testid="admin-new-advertiser-btn"
@@ -406,6 +431,29 @@ export default function AdminDashboard() {
                 value={adminSettings.stream_url || ""}
                 onChange={(v) => setAdminSettings({ ...adminSettings, stream_url: v })}
               />
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
+                  Zona horaria de la emisora
+                </span>
+                <select
+                  data-testid="set-timezone"
+                  value={adminSettings.timezone || "America/Los_Angeles"}
+                  onChange={(e) => setAdminSettings({ ...adminSettings, timezone: e.target.value })}
+                  className="mt-1 w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition bg-white"
+                >
+                  <option value="America/Los_Angeles">Oregon / California (PST/PDT)</option>
+                  <option value="America/Denver">Colorado / Arizona (MST/MDT)</option>
+                  <option value="America/Chicago">Chicago / Texas (CST/CDT)</option>
+                  <option value="America/New_York">New York / Florida (EST/EDT)</option>
+                  <option value="America/Mexico_City">Ciudad de México (CST)</option>
+                  <option value="America/Bogota">Bogotá / Lima (COT)</option>
+                  <option value="America/Buenos_Aires">Buenos Aires (ART)</option>
+                  <option value="UTC">UTC (Universal)</option>
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Los horarios de los locutores y anunciantes se evalúan en esta zona.
+                </p>
+              </label>
             </div>
             <button
               data-testid="settings-save-btn"

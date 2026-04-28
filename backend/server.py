@@ -195,11 +195,14 @@ class AdvertiserIn(BaseModel):
     priority: int = Field(default=5, ge=1, le=10)  # higher = wins overlaps
     spots_per_hour: int = Field(default=4, ge=1, le=60)  # how many appearances per hour
     spot_duration_sec: int = Field(default=30, ge=5, le=600)  # how long popup stays visible
+    # Owner reporting
+    owner_email: Optional[str] = ""  # business owner contact
 
 class Advertiser(AdvertiserIn):
     id: str
     slug: str
     created_at: str
+    report_token: Optional[str] = ""  # opaque token for /reporte/:token public dashboard
 
 class SettingsIn(BaseModel):
     station_name: Optional[str] = None
@@ -263,12 +266,15 @@ class EventIn(BaseModel):
     priority: int = Field(default=7, ge=1, le=10)
     spots_per_hour: int = Field(default=4, ge=1, le=60)
     spot_duration_sec: int = Field(default=30, ge=5, le=600)
+    # Owner reporting
+    owner_email: Optional[str] = ""
 
 
 class Event(EventIn):
     id: str
     slug: str
     created_at: str
+    report_token: Optional[str] = ""
 
 # ---------------------- Settings helpers ---------------------- #
 DEFAULT_SETTINGS = {
@@ -500,6 +506,9 @@ async def public_settings():
 @api.get("/active")
 async def active_advertiser():
     adv = await resolve_active_advertiser()
+    if adv:
+        adv.pop("report_token", None)
+        adv.pop("owner_email", None)
     return {"advertiser": adv}
 
 @api.get("/live-host")
@@ -522,11 +531,18 @@ async def get_host(slug: str):
         raise HTTPException(status_code=404, detail="Host not found")
     return h
 
+def strip_private(doc: Optional[dict]) -> Optional[dict]:
+    if not doc:
+        return doc
+    doc.pop("report_token", None)
+    doc.pop("owner_email", None)
+    return doc
+
 @api.get("/advertisers")
 async def list_advertisers():
     cursor = db.advertisers.find({}, {"_id": 0}).sort("created_at", -1)
     items = await cursor.to_list(500)
-    return items
+    return [strip_private(i) for i in items]
 
 @api.get("/advertisers/{slug}")
 async def get_advertiser(slug: str):
@@ -535,7 +551,186 @@ async def get_advertiser(slug: str):
         adv = await db.advertisers.find_one({"id": slug}, {"_id": 0})
     if not adv:
         raise HTTPException(status_code=404, detail="Advertiser not found")
-    return adv
+    return strip_private(adv)
+
+
+# ---------------------- Tracking & Analytics ---------------------- #
+class TrackIn(BaseModel):
+    kind: str  # impression | call | whatsapp | directions | visit | tickets
+    entity_type: str  # advertiser | event
+    entity_id: str
+    session_id: Optional[str] = ""
+
+
+VALID_TRACK_KINDS = {"impression", "call", "whatsapp", "directions", "visit", "tickets"}
+VALID_TRACK_TYPES = {"advertiser", "event"}
+
+
+@api.post("/track")
+async def track_event(payload: TrackIn):
+    if payload.kind not in VALID_TRACK_KINDS:
+        raise HTTPException(status_code=400, detail="Invalid kind")
+    if payload.entity_type not in VALID_TRACK_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid entity_type")
+    if not payload.entity_id:
+        return {"ok": True, "skipped": True}
+    # For impressions, dedupe per session_id within a 30s window so multiple polls
+    # don't inflate counts when the same ad is shown to the same user.
+    now = datetime.now(timezone.utc)
+    if payload.kind == "impression" and payload.session_id:
+        recent = await db.cta_events.find_one(
+            {
+                "kind": "impression",
+                "entity_id": payload.entity_id,
+                "session_id": payload.session_id,
+                "created_at": {"$gte": now - timedelta(seconds=30)},
+            },
+            {"_id": 0, "id": 1},
+        )
+        if recent:
+            return {"ok": True, "deduped": True}
+    doc = {
+        "id": str(uuid.uuid4()),
+        "kind": payload.kind,
+        "entity_type": payload.entity_type,
+        "entity_id": payload.entity_id,
+        "session_id": payload.session_id or "",
+        "created_at": now,
+    }
+    await db.cta_events.insert_one(doc.copy())
+    return {"ok": True}
+
+
+def _date_str(d: datetime) -> str:
+    return d.strftime("%Y-%m-%d")
+
+
+async def _entity_stats(entity_id: str, days: int = 30) -> dict:
+    """Returns aggregated stats for a single entity over last `days` days."""
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+    cursor = db.cta_events.find(
+        {"entity_id": entity_id, "created_at": {"$gte": since}},
+        {"_id": 0, "kind": 1, "created_at": 1},
+    )
+    rows = await cursor.to_list(20000)
+    totals = {k: 0 for k in VALID_TRACK_KINDS}
+    daily: dict[str, dict] = {}
+    for r in rows:
+        k = r["kind"]
+        totals[k] = totals.get(k, 0) + 1
+        ds = _date_str(r["created_at"])
+        if ds not in daily:
+            daily[ds] = {kk: 0 for kk in VALID_TRACK_KINDS}
+        daily[ds][k] = daily[ds].get(k, 0) + 1
+    # Build complete daily series (fill zeros)
+    series = []
+    for i in range(days - 1, -1, -1):
+        d = (now - timedelta(days=i))
+        ds = _date_str(d)
+        series.append({"date": ds, **daily.get(ds, {k: 0 for k in VALID_TRACK_KINDS})})
+    impressions = totals.get("impression", 0)
+    clicks = sum(v for k, v in totals.items() if k != "impression")
+    return {
+        "totals": totals,
+        "impressions": impressions,
+        "clicks": clicks,
+        "ctr": (clicks / impressions) if impressions > 0 else 0.0,
+        "series": series,
+        "days": days,
+    }
+
+
+@api.get("/admin/analytics/overview")
+async def admin_analytics_overview(days: int = 30, _: dict = Depends(get_admin)):
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+    cursor = db.cta_events.find(
+        {"created_at": {"$gte": since}},
+        {"_id": 0, "kind": 1, "entity_id": 1, "entity_type": 1},
+    )
+    rows = await cursor.to_list(50000)
+    totals = {k: 0 for k in VALID_TRACK_KINDS}
+    by_entity: dict[str, dict] = {}
+    for r in rows:
+        k = r["kind"]
+        totals[k] = totals.get(k, 0) + 1
+        eid = r["entity_id"]
+        if eid not in by_entity:
+            by_entity[eid] = {
+                "entity_id": eid,
+                "entity_type": r["entity_type"],
+                **{kk: 0 for kk in VALID_TRACK_KINDS},
+            }
+        by_entity[eid][k] += 1
+    # Enrich with names
+    ad_ids = [eid for eid, v in by_entity.items() if v["entity_type"] == "advertiser"]
+    ev_ids = [eid for eid, v in by_entity.items() if v["entity_type"] == "event"]
+    if ad_ids:
+        async for adv in db.advertisers.find({"id": {"$in": ad_ids}}, {"_id": 0, "id": 1, "name": 1, "slug": 1}):
+            by_entity[adv["id"]]["name"] = adv["name"]
+            by_entity[adv["id"]]["slug"] = adv.get("slug", "")
+    if ev_ids:
+        async for ev in db.events.find({"id": {"$in": ev_ids}}, {"_id": 0, "id": 1, "title": 1, "slug": 1}):
+            by_entity[ev["id"]]["name"] = ev["title"]
+            by_entity[ev["id"]]["slug"] = ev.get("slug", "")
+    items = list(by_entity.values())
+    for it in items:
+        impressions = it.get("impression", 0)
+        clicks = sum(v for k, v in it.items() if k in VALID_TRACK_KINDS and k != "impression")
+        it["impressions"] = impressions
+        it["clicks"] = clicks
+        it["ctr"] = (clicks / impressions) if impressions > 0 else 0.0
+    items.sort(key=lambda x: -x.get("impressions", 0))
+    impressions = totals.get("impression", 0)
+    clicks = sum(v for k, v in totals.items() if k != "impression")
+    return {
+        "days": days,
+        "totals": totals,
+        "impressions": impressions,
+        "clicks": clicks,
+        "ctr": (clicks / impressions) if impressions > 0 else 0.0,
+        "items": items,
+    }
+
+
+@api.get("/admin/analytics/{entity_type}/{entity_id}")
+async def admin_entity_analytics(entity_type: str, entity_id: str, days: int = 30, _: dict = Depends(get_admin)):
+    if entity_type not in VALID_TRACK_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid entity_type")
+    coll = db.advertisers if entity_type == "advertiser" else db.events
+    entity = await coll.find_one({"id": entity_id}, {"_id": 0})
+    if not entity:
+        raise HTTPException(status_code=404, detail="Not found")
+    stats = await _entity_stats(entity_id, days=days)
+    return {"entity": entity, "entity_type": entity_type, **stats}
+
+
+@api.get("/admin/advertisers")
+async def admin_list_advertisers(_: dict = Depends(get_admin)):
+    """Admin-only listing that returns full advertiser data including report_token."""
+    cursor = db.advertisers.find({}, {"_id": 0}).sort("created_at", -1)
+    items = await cursor.to_list(500)
+    return items
+
+
+@api.get("/report/{token}")
+async def public_report(token: str, days: int = 30):
+    """Public dashboard accessed via opaque report_token."""
+    adv = await db.advertisers.find_one({"report_token": token}, {"_id": 0})
+    entity_type = "advertiser"
+    if not adv:
+        adv = await db.events.find_one({"report_token": token}, {"_id": 0})
+        entity_type = "event"
+    if not adv:
+        raise HTTPException(status_code=404, detail="Reporte no encontrado")
+    stats = await _entity_stats(adv["id"], days=days)
+    # Strip private from entity payload (we keep token-bearing access only,
+    # don't echo it back)
+    public_entity = {**adv}
+    public_entity.pop("report_token", None)
+    public_entity.pop("owner_email", None)
+    return {"entity": public_entity, "entity_type": entity_type, **stats}
 
 
 # ---------------------- Events (public) ---------------------- #
@@ -546,11 +741,11 @@ async def list_events(include_past: bool = False):
     cursor = db.events.find({}, {"_id": 0}).sort([("event_date", 1), ("start_time", 1)])
     items = await cursor.to_list(500)
     if include_past:
-        return items
+        return [strip_private(i) for i in items]
     now = await station_now()
     today_str = now.date().isoformat()
     return [
-        e for e in items
+        strip_private(e) for e in items
         if (e.get("end_date") or e.get("event_date") or "") >= today_str
     ]
 
@@ -562,7 +757,7 @@ async def get_event(slug: str):
         e = await db.events.find_one({"id": slug}, {"_id": 0})
     if not e:
         raise HTTPException(status_code=404, detail="Event not found")
-    return e
+    return strip_private(e)
 
 # Public file proxy for banners (no auth — banners are intentionally public)
 @api.get("/files/{path:path}")
@@ -593,7 +788,13 @@ async def admin_create_advertiser(payload: AdvertiserIn, _: dict = Depends(get_a
     while await db.advertisers.find_one({"slug": slug}):
         n += 1
         slug = f"{base_slug}-{n}"
-    doc = {**payload.model_dump(), "id": aid, "slug": slug, "created_at": now_iso()}
+    doc = {
+        **payload.model_dump(),
+        "id": aid,
+        "slug": slug,
+        "report_token": uuid.uuid4().hex,
+        "created_at": now_iso(),
+    }
     await db.advertisers.insert_one(doc.copy())
     return {**doc}
 
@@ -700,7 +901,13 @@ async def admin_create_event(payload: EventIn, _: dict = Depends(get_admin)):
     while await db.events.find_one({"slug": slug}):
         n += 1
         slug = f"{base_slug}-{n}"
-    doc = {**payload.model_dump(), "id": eid, "slug": slug, "created_at": now_iso()}
+    doc = {
+        **payload.model_dump(),
+        "id": eid,
+        "slug": slug,
+        "report_token": uuid.uuid4().hex,
+        "created_at": now_iso(),
+    }
     await db.events.insert_one(doc.copy())
     return {**doc}
 
@@ -869,20 +1076,38 @@ async def seed_demo_hosts():
         logger.info("Seeded demo hosts")
 
 # ---------------------- App lifecycle ---------------------- #
+async def backfill_report_tokens():
+    """Assign report_token to existing advertisers/events that don't have one."""
+    async for adv in db.advertisers.find({"$or": [{"report_token": {"$exists": False}}, {"report_token": ""}]}, {"_id": 0, "id": 1}):
+        await db.advertisers.update_one(
+            {"id": adv["id"]}, {"$set": {"report_token": uuid.uuid4().hex}}
+        )
+    async for ev in db.events.find({"$or": [{"report_token": {"$exists": False}}, {"report_token": ""}]}, {"_id": 0, "id": 1}):
+        await db.events.update_one(
+            {"id": ev["id"]}, {"$set": {"report_token": uuid.uuid4().hex}}
+        )
+
+
 @app.on_event("startup")
 async def on_startup():
     await db.users.create_index("email", unique=True)
     await db.advertisers.create_index("slug", unique=True)
     await db.advertisers.create_index("id", unique=True)
+    await db.advertisers.create_index("report_token")
     await db.hosts.create_index("slug", unique=True)
     await db.hosts.create_index("id", unique=True)
     await db.events.create_index("slug", unique=True)
     await db.events.create_index("id", unique=True)
     await db.events.create_index("event_date")
+    await db.events.create_index("report_token")
+    await db.cta_events.create_index([("created_at", 1)])
+    await db.cta_events.create_index([("entity_id", 1), ("created_at", 1)])
+    await db.cta_events.create_index([("kind", 1)])
     await db.settings.create_index("id", unique=True)
     await seed_admin()
     await seed_demo_advertisers()
     await seed_demo_hosts()
+    await backfill_report_tokens()
     await get_settings_doc()
     init_storage()
 

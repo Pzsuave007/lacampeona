@@ -1,0 +1,41 @@
+{
+  "summary": "Tested SmartCTA click analytics + per-entity report tokens end-to-end. Backend: 22/22 pytest tests pass (track endpoint validation, 30s impression dedup, admin overview with name/slug enrichment + sort-desc, per-entity drilldown 30-day series, public /report/{token} for both advertisers and events, private-field stripping on /advertisers, /advertisers/{slug}, /events, /active, plus admin/advertisers including report_token, auto-token on creation, 404 on invalid token). Frontend: Admin Reportes tab loads with 4 stat cards (Impresiones 33 / Clicks 11 / CTR 33.3% / Items 7), entities table renders 5 rows (3 advertisers + 2 events) with Ver + Link buttons, period selector 7d/14d/30d/90d works, drilldown opens full ReportDashboard with hero (image+name), Recharts daily chart, clicks-by-type breakdown. Public /reporte/{token} renders the same dashboard without authentication.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminDashboard ReportsTab", "issue": "Reportes tab trigger missing data-testid='tab-reports' (spec called for this; selector returned 0 elements, had to fall back to text match). Other tabs likely have testids — please add to maintain consistency.", "selector": "[data-testid=\"tab-reports\"]", "priority": "LOW"},
+      {"component": "ReportsTab table rows", "issue": "'Ver' and 'Link' action buttons have no data-testid attributes (e.g. report-row-view-{id}, report-row-copy-{id}). Tests must rely on visible text which is brittle for i18n.", "selector": "button:has-text(\"Ver\"), button:has-text(\"Link\")", "priority": "LOW"},
+      {"component": "Various pages (carry-over from iter 2)", "issue": "Console warning '<img src=\"\">' still emitted twice on homepage — empty image src for entities/hosts without photo/banner.", "selector": "img[src='']", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "SmartCTA homepage tracking", "issue": "During the test visit no POST /api/track calls were observed in 4s. This is likely because SmartCTA was in the pause-window of its rotation cycle (active rotator can return None during pauses). Existing aggregate (33 impressions / 11 clicks across entities) confirms the pipeline works in real usage; flagging only for awareness — not a defect.", "affected_selectors": ["[data-testid^=\"smartcta-\"]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_tracking_analytics.py",
+    "/app/test_reports/pytest/tracking_results.xml"
+  ],
+  "action_items": [
+    "(LOW) Add data-testid=\"tab-reports\" to the Reportes TabsTrigger in AdminDashboard.jsx (and similar testids to other tabs for consistency).",
+    "(LOW) Add per-row data-testid attributes to Ver and Link/Copy buttons in ReportsTab (e.g. report-row-view-{id}, report-row-copy-{id}).",
+    "(LOW carry-over) Avoid rendering <img src=''> when image_path/photo_path/banner_path is empty — render null or a placeholder.",
+    "(OPTIONAL) Consider also stripping report_token from GET /api/admin/analytics/{type}/{id} entity payload — currently it returns the full record including report_token to the admin (which is by design but may want to align stripping behaviour with /report/{token}). Acceptable as admin-only."
+  ],
+  "critical_code_review_comments": [
+    "/api/track has no auth/rate-limiting — any client could spam impression/click events. Dedup helps for impressions (30s window per session) but click kinds are not deduped at all, allowing inflation. Consider per-IP rate limiting or signed session_ids.",
+    "_entity_stats reads up to 20000 rows into memory. Fine for the current scale but a Mongo aggregation pipeline ($group by date/kind) would scale better and is trivial to write.",
+    "report_token is opaque uuid hex (32 chars). It is permanently valid and not rotatable — if leaked there is no revocation mechanism. Consider adding POST /api/admin/{type}/{id}/rotate-token.",
+    "admin_list_advertisers returns full advertiser data including owner_email and report_token — fine, but make sure the admin-only endpoint is the only one used by AdminDashboard.jsx (verify frontend is not still calling /api/advertisers and missing the token).",
+    "server.py is now ~1130 lines — splitting into routers (auth, advertisers, events, hosts, analytics, settings, files) would aid maintainability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_tracking_analytics.py (new)"
+  ],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "~95% (all critical flows working; 2 missing testids + 1 pre-existing img warning)"},
+  "test_credentials": "admin@radiolatina.fm / admin123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Tests create TEST_-prefixed advertisers/events and clean them up via DELETE in module-scoped fixtures.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New backend pytest file: /app/backend/tests/test_tracking_analytics.py (22 tests, runs in ~6s). Run with: REACT_APP_BACKEND_URL=https://dj-control-center.preview.emergentagent.com pytest backend/tests/test_tracking_analytics.py -v. Existing tests in /app/backend/tests/test_radio_api.py (auth+CRUD+upload) and /app/backend/tests/test_events_rotation.py (rotation+events) still apply. The cta_events MongoDB collection has indexes on (created_at), (entity_id, created_at), (kind). Frontend route /reporte/:token is intentionally public and returns 404 for invalid tokens. Admin endpoint /api/admin/advertisers (NOT /api/advertisers) is required to obtain report_token for the Reportes tab."
+}

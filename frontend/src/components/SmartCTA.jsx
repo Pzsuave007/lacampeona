@@ -4,6 +4,7 @@ import { Phone, MessageCircle, MapPin, Sparkles, ChevronUp, Minus, Calendar } fr
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { telLink, waLink, mapsLink, bannerUrl } from "../lib/api";
+import { track } from "../lib/tracking";
 
 function formatEventDate(ev) {
   if (!ev?.event_date) return "";
@@ -41,6 +42,14 @@ export default function SmartCTA() {
   useEffect(() => {
     if (active) setExpanded(!isMobile());
   }, [active?.id]);
+
+  // Track impression every time the active item changes (backend dedupes
+  // multiple polls within a 30s window per session)
+  useEffect(() => {
+    if (!active?.id) return;
+    if (location.pathname.startsWith("/login") || location.pathname.startsWith("/admin")) return;
+    track("impression", active.type === "event" ? "event" : "advertiser", active.id);
+  }, [active?.id, location.pathname]);
 
   if (!active) return null;
   // Hide on login and admin to reduce visual clutter
@@ -189,6 +198,7 @@ export default function SmartCTA() {
                 <a
                   href={tel}
                   data-testid="smart-cta-call"
+                  onClick={() => trackClick("call")}
                   className="flex flex-col items-center gap-0.5 sm:gap-1 text-white rounded-lg sm:rounded-xl px-2 py-2 sm:py-3 text-[11px] sm:text-xs font-bold hover:brightness-110 transition active:scale-95 shadow-md"
                   style={{ backgroundColor: color }}
                 >
@@ -202,6 +212,7 @@ export default function SmartCTA() {
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="smart-cta-whatsapp"
+                  onClick={() => trackClick("whatsapp")}
                   className="flex flex-col items-center gap-0.5 sm:gap-1 bg-[#25D366] text-white rounded-lg sm:rounded-xl px-2 py-2 sm:py-3 text-[11px] sm:text-xs font-bold hover:bg-[#16A34A] transition active:scale-95 shadow-md"
                 >
                   <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -214,6 +225,7 @@ export default function SmartCTA() {
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="smart-cta-directions"
+                  onClick={() => trackClick("directions")}
                   className="flex flex-col items-center gap-0.5 sm:gap-1 bg-slate-900 text-white rounded-lg sm:rounded-xl px-2 py-2 sm:py-3 text-[11px] sm:text-xs font-bold hover:bg-slate-800 transition active:scale-95 shadow-md"
                 >
                   <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -224,6 +236,7 @@ export default function SmartCTA() {
             <Link
               to={detailLink}
               data-testid="smart-cta-visit"
+              onClick={() => trackClick("visit")}
               className="text-center text-[13px] sm:text-sm font-bold text-slate-700 hover:text-slate-900 underline underline-offset-4 decoration-2 py-1"
               style={{ textDecorationColor: color }}
             >

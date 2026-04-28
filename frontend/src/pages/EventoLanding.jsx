@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { api, bannerUrl, mapsLink } from "../lib/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import { track } from "../lib/tracking";
 
 const CATEGORY_META = {
   concierto: { emoji: "🎶", label: "Concierto", labelEn: "Concert" },
@@ -72,6 +73,11 @@ export default function EventoLanding() {
       cancelled = true;
     };
   }, [slug]);
+
+  // Track impression on landing (must be before any early returns)
+  useEffect(() => {
+    if (ev?.id) track("impression", "event", ev.id);
+  }, [ev?.id]);
 
   if (error) {
     return (
@@ -304,6 +310,7 @@ export default function EventoLanding() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="evento-tickets-btn"
+                onClick={() => track("tickets", "event", ev.id)}
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-white font-extrabold transition active:scale-95 shadow-lg hover:-translate-y-0.5"
                 style={{ backgroundColor: color }}
               >
@@ -318,6 +325,7 @@ export default function EventoLanding() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="evento-directions-btn"
+                onClick={() => track("directions", "event", ev.id)}
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold transition active:scale-95 shadow-md hover:-translate-y-0.5"
               >
                 <MapPin className="w-5 h-5" />

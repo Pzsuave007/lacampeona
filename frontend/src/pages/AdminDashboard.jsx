@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2, Calendar, CalendarDays } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2, Calendar, CalendarDays, BarChart3, Copy, Eye, MousePointerClick, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -10,6 +10,7 @@ import AdvertiserForm from "./AdminAdvertiserForm";
 import AdminHostForm from "./AdminHostForm";
 import AdminEventForm from "./AdminEventForm";
 import WeeklyScheduleGrid from "../components/WeeklyScheduleGrid";
+import ReportDashboard from "../components/ReportDashboard";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -36,7 +37,7 @@ export default function AdminDashboard() {
 
   const loadAll = async () => {
     const [a, h, ev, s] = await Promise.all([
-      api.get("/advertisers"),
+      api.get("/admin/advertisers"),
       api.get("/hosts"),
       api.get("/admin/events"),
       api.get("/admin/settings"),
@@ -178,6 +179,7 @@ export default function AdminDashboard() {
             { id: "hosts", label: "Locutores", icon: Mic2, color: "text-[#7F1D1D]" },
             { id: "ads", label: "Anunciantes", icon: Sparkles, color: "text-orange-600" },
             { id: "events", label: "Eventos", icon: CalendarDays, color: "text-[#7F1D1D]" },
+            { id: "reports", label: "Reportes", icon: BarChart3, color: "text-orange-600" },
           ].map((tb) => {
             const Icon = tb.icon;
             const active = tab === tb.id;
@@ -644,10 +646,207 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ===================== TAB: REPORTS ===================== */}
+        {tab === "reports" && (
+          <ReportsTab advertisers={advertisers} events={events} />
+        )}
       </section>
     </div>
   );
 }
+
+function ReportsTab({ advertisers, events }) {
+  const [overview, setOverview] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [details, setDetails] = useState(null);
+  const [days, setDays] = useState(30);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get(`/admin/analytics/overview?days=${days}`);
+        setOverview(data);
+      } catch (e) {
+        toast.error("Error cargando reportes");
+      }
+    })();
+  }, [days]);
+
+  useEffect(() => {
+    if (!selected) {
+      setDetails(null);
+      return;
+    }
+    (async () => {
+      try {
+        const { data } = await api.get(
+          `/admin/analytics/${selected.entity_type}/${selected.id}?days=${days}`
+        );
+        setDetails(data);
+      } catch (e) {
+        toast.error("Error cargando detalle");
+      }
+    })();
+  }, [selected, days]);
+
+  const allEntities = [
+    ...advertisers.map((a) => ({ ...a, entity_type: "advertiser", display: a.name })),
+    ...events.map((e) => ({ ...e, entity_type: "event", display: e.title })),
+  ];
+
+  const copyReportLink = (entity) => {
+    const link = `${window.location.origin}/reporte/${entity.report_token}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link);
+      toast.success("Link copiado al portapapeles");
+    } else {
+      window.prompt("Copia este link:", link);
+    }
+  };
+
+  return (
+    <div className="mt-8 space-y-6" data-testid="tab-reports">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-2xl font-extrabold text-slate-900 inline-flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-orange-600" /> Reportes
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Impresiones, clicks y CTR por anunciante y evento. Comparte el link con cada cliente para que vea su propio dashboard.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Periodo</span>
+          {[7, 14, 30, 90].map((d) => (
+            <button
+              key={d}
+              data-testid={`reports-period-${d}`}
+              onClick={() => setDays(d)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${
+                days === d ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              {d}d
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {overview && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" data-testid="reports-overview">
+          <OverviewStat icon={Eye} label="Impresiones" value={overview.impressions} color="#7F1D1D" />
+          <OverviewStat icon={MousePointerClick} label="Clicks" value={overview.clicks} color="#EA580C" />
+          <OverviewStat icon={TrendingUp} label="CTR" value={`${(overview.ctr * 100).toFixed(1)}%`} color="#0E3B26" />
+          <OverviewStat icon={Sparkles} label="Items activos" value={overview.items?.length || 0} color="#25D366" />
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-slate-100">
+          <h3 className="text-sm font-extrabold text-slate-900">Por anunciante / evento</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" data-testid="reports-entities-table">
+            <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="text-left px-4 py-3 font-bold">Nombre</th>
+                <th className="text-left px-4 py-3 font-bold">Tipo</th>
+                <th className="text-right px-4 py-3 font-bold">Impr.</th>
+                <th className="text-right px-4 py-3 font-bold">Clicks</th>
+                <th className="text-right px-4 py-3 font-bold">CTR</th>
+                <th className="text-right px-4 py-3 font-bold">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allEntities.map((entity) => {
+                const stats = (overview?.items || []).find((it) => it.entity_id === entity.id) || { impressions: 0, clicks: 0, ctr: 0 };
+                return (
+                  <tr key={entity.id} className="border-t border-slate-100 hover:bg-slate-50/60">
+                    <td className="px-4 py-3 font-bold text-slate-900">{entity.display}</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                          entity.entity_type === "event" ? "bg-amber-100 text-amber-800" : "bg-orange-100 text-orange-800"
+                        }`}
+                      >
+                        {entity.entity_type === "event" ? "Evento" : "Anuncio"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold tabular-nums">{stats.impressions || 0}</td>
+                    <td className="px-4 py-3 text-right font-bold tabular-nums">{stats.clicks || 0}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-slate-600">{((stats.ctr || 0) * 100).toFixed(1)}%</td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2 flex-wrap">
+                        <button
+                          data-testid={`report-view-${entity.id}`}
+                          onClick={() => setSelected({ entity_type: entity.entity_type, id: entity.id })}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-900 transition"
+                        >
+                          <BarChart3 className="w-3 h-3" /> Ver
+                        </button>
+                        {entity.report_token && (
+                          <button
+                            data-testid={`report-copy-${entity.id}`}
+                            onClick={() => copyReportLink(entity)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold bg-orange-100 hover:bg-orange-200 text-orange-800 transition"
+                            title="Copiar link para enviar al dueño"
+                          >
+                            <Copy className="w-3 h-3" /> Link
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {allEntities.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="text-center text-slate-500 py-10">
+                    Aún no hay anunciantes ni eventos para reportar.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {selected && details && (
+        <div className="bg-orange-50 rounded-2xl border-2 border-orange-200 p-5" data-testid="reports-drilldown">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <h3 className="text-lg font-extrabold text-slate-900">
+              📊 {details.entity?.name || details.entity?.title || "—"}
+            </h3>
+            <button
+              data-testid="reports-close-drilldown"
+              onClick={() => setSelected(null)}
+              className="text-xs text-slate-600 hover:text-slate-900 font-bold underline"
+            >
+              Cerrar
+            </button>
+          </div>
+          <ReportDashboard stats={details} entityName={details.entity?.name || details.entity?.title} entityType={selected.entity_type} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OverviewStat({ icon: Icon, label, value, color }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ backgroundColor: color }}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{label}</p>
+      </div>
+      <p className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{value}</p>
+    </div>
+  );
+}
+
 
 function EventAdminCard({ ev, onEdit, onDelete }) {
   const today = new Date().toISOString().slice(0, 10);

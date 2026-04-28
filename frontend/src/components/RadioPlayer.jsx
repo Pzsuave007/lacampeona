@@ -76,8 +76,15 @@ export default function RadioPlayer() {
 
           {/* Now playing */}
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-orange-300 font-bold">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-orange-300 font-bold flex items-center gap-2">
               {t.live.nowPlaying}
+              {playing && (
+                <span className="flex items-end gap-0.5 h-3 text-orange-300">
+                  <span className="eq-bar" style={{ width: 2, height: 10 }} />
+                  <span className="eq-bar" style={{ width: 2, height: 10 }} />
+                  <span className="eq-bar" style={{ width: 2, height: 10 }} />
+                </span>
+              )}
             </div>
             <div className="font-extrabold text-base sm:text-lg truncate" data-testid="now-playing-text">
               {nowPlaying}

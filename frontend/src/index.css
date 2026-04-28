@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=Caveat:wght@600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -7,6 +7,7 @@
 :root {
     --font-heading: "Outfit", system-ui, sans-serif;
     --font-body: "Manrope", system-ui, sans-serif;
+    --font-script: "Caveat", cursive;
 }
 
 html,
@@ -28,6 +29,10 @@ h5,
 h6 {
     font-family: var(--font-heading);
     letter-spacing: -0.02em;
+}
+
+.font-script {
+    font-family: var(--font-script);
 }
 
 @layer base {
@@ -61,12 +66,11 @@ h6 {
     }
 }
 
-/* App container reserved space for sticky audio player */
 .app-bottom-pad {
-    padding-bottom: 120px;
+    padding-bottom: 130px;
 }
 
-/* Marquee for now-playing */
+/* --- Marquee --- */
 @keyframes marquee {
     0% {
         transform: translateX(0%);
@@ -78,10 +82,13 @@ h6 {
 .marquee-track {
     display: inline-flex;
     white-space: nowrap;
-    animation: marquee 18s linear infinite;
+    animation: marquee 28s linear infinite;
+}
+.marquee-track-fast {
+    animation-duration: 18s;
 }
 
-/* Pulsing live dot */
+/* --- LIVE pulse --- */
 @keyframes live-pulse {
     0%,
     100% {
@@ -90,14 +97,14 @@ h6 {
     }
     50% {
         opacity: 0.5;
-        transform: scale(1.4);
+        transform: scale(1.5);
     }
 }
 .live-dot {
     animation: live-pulse 1.6s ease-in-out infinite;
 }
 
-/* Vinyl spin while playing */
+/* --- Vinyl spin --- */
 @keyframes vinyl-spin {
     from {
         transform: rotate(0deg);
@@ -110,11 +117,37 @@ h6 {
     animation: vinyl-spin 6s linear infinite;
 }
 
-/* Subtle entrance */
+/* --- Floating blobs --- */
+@keyframes float-a {
+    0%,
+    100% {
+        transform: translate(0px, 0px) scale(1);
+    }
+    50% {
+        transform: translate(20px, -30px) scale(1.05);
+    }
+}
+@keyframes float-b {
+    0%,
+    100% {
+        transform: translate(0px, 0px) scale(1);
+    }
+    50% {
+        transform: translate(-25px, 20px) scale(1.08);
+    }
+}
+.blob-a {
+    animation: float-a 14s ease-in-out infinite;
+}
+.blob-b {
+    animation: float-b 18s ease-in-out infinite;
+}
+
+/* --- Gentle rise on mount --- */
 @keyframes rise-in {
     from {
         opacity: 0;
-        transform: translateY(12px);
+        transform: translateY(14px);
     }
     to {
         opacity: 1;
@@ -122,10 +155,92 @@ h6 {
     }
 }
 .rise-in {
-    animation: rise-in 500ms ease-out both;
+    animation: rise-in 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.rise-delay-1 {
+    animation-delay: 90ms;
+}
+.rise-delay-2 {
+    animation-delay: 180ms;
+}
+.rise-delay-3 {
+    animation-delay: 270ms;
 }
 
-/* Selection */
+/* --- Tilt cards (polaroid) --- */
+.tilt-l {
+    transform: rotate(-6deg);
+}
+.tilt-r {
+    transform: rotate(5deg);
+}
+.tilt-l:hover,
+.tilt-r:hover {
+    transform: rotate(0deg) translateY(-4px);
+}
+
+/* --- Equalizer bars --- */
+@keyframes eq-bar {
+    0%,
+    100% {
+        transform: scaleY(0.3);
+    }
+    50% {
+        transform: scaleY(1);
+    }
+}
+.eq-bar {
+    width: 3px;
+    height: 18px;
+    background: currentColor;
+    border-radius: 2px;
+    transform-origin: bottom;
+    animation: eq-bar 1s ease-in-out infinite;
+}
+.eq-bar:nth-child(2) {
+    animation-delay: 120ms;
+}
+.eq-bar:nth-child(3) {
+    animation-delay: 240ms;
+}
+.eq-bar:nth-child(4) {
+    animation-delay: 360ms;
+}
+.eq-bar:nth-child(5) {
+    animation-delay: 480ms;
+}
+
+/* --- Sticker / badge --- */
+@keyframes wiggle {
+    0%,
+    100% {
+        transform: rotate(-8deg);
+    }
+    50% {
+        transform: rotate(8deg);
+    }
+}
+.wiggle {
+    animation: wiggle 4s ease-in-out infinite;
+}
+
+/* --- Decorative dot grid background --- */
+.dot-grid {
+    background-image: radial-gradient(rgba(15, 23, 42, 0.12) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+/* --- Hatched accent --- */
+.stripes-y {
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.18) 0px,
+        rgba(255, 255, 255, 0.18) 8px,
+        transparent 8px,
+        transparent 16px
+    );
+}
+
 ::selection {
     background-color: #fdba74;
     color: #0f172a;

@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, MapPin, Clock, Ticket, ArrowRight, ChevronLeft } from "lucide-react";
+import { Calendar, MapPin, Clock, ArrowRight, ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEvents } from "../hooks/useEvents";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -113,8 +113,9 @@ export default function Eventos() {
           {upcoming.map((ev) => {
             const meta = CATEGORY_META[ev.category] || CATEGORY_META.concierto;
             return (
-              <article
+              <Link
                 key={ev.id}
+                to={`/eventos/${ev.slug}`}
                 data-testid={`event-card-${ev.slug}`}
                 className="group relative bg-white rounded-3xl shadow-xl shadow-slate-900/10 overflow-hidden border border-slate-100 transition duration-300 hover:-translate-y-2 hover:shadow-2xl flex flex-col"
               >
@@ -164,22 +165,16 @@ export default function Eventos() {
                       {ev.description}
                     </p>
                   )}
-                  {ev.ticket_url && (
-                    <a
-                      href={ev.ticket_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-testid={`event-tickets-${ev.slug}`}
-                      className="mt-auto pt-5 inline-flex items-center gap-2 font-bold text-sm group-hover:gap-3 transition-all"
-                      style={{ color: ev.color || meta.color }}
-                    >
-                      <Ticket className="w-4 h-4" />
-                      {lang === "es" ? "Comprar boletos" : "Get tickets"}
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
-                    </a>
-                  )}
+                  <div
+                    data-testid={`event-view-${ev.slug}`}
+                    className="mt-auto pt-5 inline-flex items-center gap-2 font-bold text-sm group-hover:gap-3 transition-all"
+                    style={{ color: ev.color || meta.color }}
+                  >
+                    {lang === "es" ? "Ver evento" : "View event"}
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+                  </div>
                 </div>
-              </article>
+              </Link>
             );
           })}
         </div>

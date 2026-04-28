@@ -17,6 +17,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import Mundial from "@/pages/Mundial";
 import Anuncia from "@/pages/Anuncia";
 import Eventos from "@/pages/Eventos";
+import EventoLanding from "@/pages/EventoLanding";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
                   <Route path="/mundial" element={<Mundial />} />
                   <Route path="/anuncia" element={<Anuncia />} />
                   <Route path="/eventos" element={<Eventos />} />
+                  <Route path="/eventos/:slug" element={<EventoLanding />} />
                   <Route path="/advertisers" element={<AdvertisersList />} />
                   <Route path="/a/:slug" element={<AdvertiserDetail />} />
                   <Route path="/login" element={<Login />} />

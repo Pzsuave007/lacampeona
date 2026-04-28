@@ -594,7 +594,7 @@ function EventsTeaser({ events, lang }) {
             return (
               <Link
                 key={ev.id}
-                to="/eventos"
+                to={`/eventos/${ev.slug}`}
                 data-testid={`event-teaser-${ev.slug}`}
                 className="group bg-white/8 hover:bg-white/15 backdrop-blur-sm border border-white/15 rounded-2xl overflow-hidden transition hover:-translate-y-1"
               >

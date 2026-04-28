@@ -37,21 +37,49 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const upload = async (file) => {
+    if (!file) return null;
+    const fd = new FormData();
+    fd.append("file", file);
+    const { data } = await api.post("/admin/upload", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data.path;
+  };
+
+  const uploadMain = async (file) => {
     if (!file) return;
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const { data } = await api.post("/admin/upload", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      set("image_path", data.path);
+      const path = await upload(file);
+      if (path) set("image_path", path);
       toast.success("Imagen subida");
     } catch (e) {
       toast.error("Error al subir imagen");
     } finally {
       setUploading(false);
     }
+  };
+
+  const uploadGallery = async (files) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const paths = [];
+      for (const f of Array.from(files)) {
+        const p = await upload(f);
+        if (p) paths.push(p);
+      }
+      setForm((f) => ({ ...f, gallery: [...(f.gallery || []), ...paths] }));
+      toast.success(`${paths.length} foto(s) agregada(s)`);
+    } catch (e) {
+      toast.error("Error al subir galería");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeGalleryImage = (idx) => {
+    setForm((f) => ({ ...f, gallery: (f.gallery || []).filter((_, i) => i !== idx) }));
   };
 
   const submit = async (e) => {
@@ -68,6 +96,7 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
         spots_per_hour: Number(form.spots_per_hour) || 4,
         spot_duration_sec: Number(form.spot_duration_sec) || 30,
         promoted_as_cta: Boolean(form.promoted_as_cta),
+        gallery: Array.isArray(form.gallery) ? form.gallery : [],
       };
       if (isEdit) {
         await api.put(`/admin/events/${initial.id}`, payload);
@@ -104,7 +133,8 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
         <form onSubmit={submit} className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field testid="event-form-title" label="Título" wide value={form.title} onChange={(v) => set("title", v)} required />
-            <Field testid="event-form-location" label="Ubicación" wide value={form.location} onChange={(v) => set("location", v)} placeholder="Salón XYZ, Dallas, OR" />
+            <Field testid="event-form-location" label="Lugar / Venue" value={form.location} onChange={(v) => set("location", v)} placeholder="Salón Aztlan" />
+            <Field testid="event-form-address" label="Dirección completa (Google Maps)" value={form.address} onChange={(v) => set("address", v)} placeholder="123 Main St, Dallas, OR 97338" />
             <Field testid="event-form-date" label="Fecha de inicio" type="date" value={form.event_date} onChange={(v) => set("event_date", v)} required />
             <Field testid="event-form-end-date" label="Fecha de fin (opcional)" type="date" value={form.end_date} onChange={(v) => set("end_date", v)} placeholder="Igual que inicio si es 1 día" />
             <label className="block">
@@ -129,10 +159,10 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
             <TextArea testid="event-description" label="Descripción" value={form.description} onChange={(v) => set("description", v)} />
           </div>
 
-          {/* Image upload */}
+          {/* Main image upload */}
           <div>
-            <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Flyer / Imagen</span>
-            <div className="mt-2 flex items-center gap-4">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Flyer / Imagen principal</span>
+            <div className="mt-2 flex items-center gap-4 flex-wrap">
               <div className="w-32 h-20 bg-slate-100 rounded-xl overflow-hidden shrink-0">
                 {form.image_path && bannerUrl(form.image_path) && (
                   <img src={bannerUrl(form.image_path)} alt="flyer" className="w-full h-full object-cover" />
@@ -151,7 +181,7 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => upload(e.target.files?.[0])}
+                  onChange={(e) => uploadMain(e.target.files?.[0])}
                 />
               </label>
               <input
@@ -159,9 +189,62 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
                 value={form.image_path}
                 placeholder="o pega URL/path"
                 onChange={(e) => set("image_path", e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl border-2 border-slate-200 focus:border-[#7F1D1D] focus:outline-none text-sm"
+                className="flex-1 min-w-[200px] px-3 py-2 rounded-xl border-2 border-slate-200 focus:border-[#7F1D1D] focus:outline-none text-sm"
               />
             </div>
+          </div>
+
+          {/* Gallery (multi-photo) */}
+          <div>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
+                Galería ({(form.gallery || []).length})
+              </span>
+              <label
+                data-testid="event-gallery-upload-label"
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition ${
+                  uploading ? "bg-slate-200 text-slate-500" : "bg-[#7F1D1D] hover:bg-[#991B1B] text-white"
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                {uploading ? "Subiendo..." : "Agregar fotos"}
+                <input
+                  data-testid="event-gallery-upload-input"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => uploadGallery(e.target.files)}
+                />
+              </label>
+            </div>
+            {(form.gallery || []).length > 0 && (
+              <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {form.gallery.map((g, i) => (
+                  <div
+                    key={`${g}-${i}`}
+                    className="relative group aspect-square rounded-lg overflow-hidden bg-slate-100 border border-slate-200"
+                    data-testid={`event-gallery-item-${i}`}
+                  >
+                    <img src={bannerUrl(g)} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryImage(i)}
+                      data-testid={`event-gallery-remove-${i}`}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                      aria-label="Quitar"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {(form.gallery || []).length === 0 && (
+              <p className="text-xs text-slate-500 mt-2 italic">
+                💡 Agrega fotos extra para enriquecer la página del evento.
+              </p>
+            )}
           </div>
 
           {/* SmartCTA promotion */}

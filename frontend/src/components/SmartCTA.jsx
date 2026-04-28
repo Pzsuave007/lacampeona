@@ -52,7 +52,7 @@ export default function SmartCTA() {
   const displayTagline = isEvent ? formatEventDate(active) : active.tagline;
   const displayOffer = isEvent ? active.description : active.special_offer;
   const bannerPath = isEvent ? active.image_path : active.banner_path;
-  const detailLink = isEvent ? "/eventos" : `/a/${active.slug}`;
+  const detailLink = isEvent ? `/eventos/${active.slug}` : `/a/${active.slug}`;
   const ctaLabel = isEvent ? t.home.viewEvent || "Ver evento" : t.home.visitPage;
 
   const wa = waLink(

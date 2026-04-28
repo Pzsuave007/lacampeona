@@ -249,7 +249,9 @@ class EventIn(BaseModel):
     end_date: Optional[str] = ""  # "YYYY-MM-DD"  (last day; empty = same as event_date)
     start_time: str = "19:00"  # "HH:MM"
     end_time: str = "23:00"  # "HH:MM"  (end time on the last day)
-    image_path: Optional[str] = ""  # banner / flyer
+    image_path: Optional[str] = ""  # main banner / flyer
+    gallery: List[str] = []  # additional photos (paths or URLs)
+    address: Optional[str] = ""  # full address for maps directions (e.g. "123 Main St, Dallas, OR 97338")
     ticket_url: Optional[str] = ""
     category: str = Field(default="concierto")  # concierto | promocion | comunidad
     color: Optional[str] = "#7F1D1D"

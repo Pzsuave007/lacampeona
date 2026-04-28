@@ -59,14 +59,18 @@ export default function RadioPlayer() {
     >
       <div className="bg-slate-900 text-white rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-orange-900/30 border border-white/5 overflow-hidden">
         <div className="flex items-center gap-4 p-3 sm:p-4">
-          {/* Vinyl / live indicator */}
+          {/* Logo / live indicator */}
           <div className="relative shrink-0">
             <div
-              className={`w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center ${
+              className={`w-14 h-14 rounded-full bg-black flex items-center justify-center overflow-hidden ring-2 ring-amber-300/50 ${
                 playing ? "vinyl-spin" : ""
               }`}
             >
-              <Radio className="w-6 h-6 text-slate-900" strokeWidth={2.5} />
+              <img
+                src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png"
+                alt="La Campeona"
+                className="w-full h-full object-contain p-1.5"
+              />
             </div>
             <span className="absolute -top-1 -right-1 inline-flex items-center gap-1 bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-white live-dot" />

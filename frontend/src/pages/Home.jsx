@@ -279,16 +279,18 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
             </div>
           </div>
 
-          {/* Right: Polaroid stack */}
+          {/* Right: Brand logo stack */}
           <div className="lg:col-span-5 relative h-[420px] hidden lg:block">
-            <Polaroid
-              src={POLA_1}
-              caption="¡Que viva la música!"
+            <BrandPolaroid
+              src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png"
+              caption="880 AM"
+              tone="amber"
               className="absolute top-0 left-6 tilt-l w-64"
             />
-            <Polaroid
-              src={POLA_2}
-              caption="La Campeona sigue sonando"
+            <BrandPolaroid
+              src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/2nch7aix_LaCampeona-fuego-logot-big%20%281%29.png"
+              caption="103.9 FM"
+              tone="rose"
               className="absolute top-32 right-0 tilt-r w-64"
             />
             <div className="absolute bottom-0 left-16 bg-[#3F0A0A] text-white rounded-3xl p-5 w-72 shadow-2xl rise-in rise-delay-3 border-4 border-amber-300">
@@ -325,6 +327,20 @@ function Polaroid({ src, caption, className = "" }) {
         <img src={src} alt={caption} className="w-full h-full object-cover" />
       </div>
       <p className="mt-2 text-center font-script text-2xl text-slate-900">{caption}</p>
+    </div>
+  );
+}
+
+function BrandPolaroid({ src, caption, tone = "amber", className = "" }) {
+  const toneCls = tone === "rose" ? "text-rose-600" : "text-amber-600";
+  return (
+    <div
+      className={`bg-white p-3 pb-5 rounded-md shadow-2xl shadow-black/40 transition duration-300 cursor-default ${className}`}
+    >
+      <div className="aspect-square overflow-hidden rounded-sm bg-black flex items-center justify-center p-3">
+        <img src={src} alt={caption} className="w-full h-full object-contain" />
+      </div>
+      <p className={`mt-2 text-center font-script text-3xl ${toneCls}`}>{caption}</p>
     </div>
   );
 }

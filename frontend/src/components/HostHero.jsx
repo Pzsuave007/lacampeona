@@ -86,58 +86,83 @@ export default function HostHero({ host, stationName, stationTagline }) {
       {/* Decorative blob */}
       <div className="absolute -top-24 -right-24 w-[30rem] h-[30rem] rounded-full bg-amber-400/20 blur-3xl blob-b pointer-events-none" />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 md:pt-20 md:pb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-end">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 sm:pt-12 sm:pb-16 md:pt-20 md:pb-28">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-end">
+          {/* Mobile-only DJ portrait card (above the text) */}
+          <div className="lg:hidden -mx-2">
+            <div className="relative">
+              <div
+                className="absolute -inset-2 rounded-3xl tilt-r"
+                style={{ backgroundColor: "#FCD34D" }}
+              />
+              <div className="relative bg-white p-2 rounded-3xl shadow-2xl">
+                {photo ? (
+                  <img
+                    src={photo}
+                    alt={host.name}
+                    className="w-full aspect-[16/10] object-cover rounded-2xl"
+                  />
+                ) : (
+                  <div className="w-full aspect-[16/10] bg-slate-200 rounded-2xl flex items-center justify-center text-slate-400">
+                    <Mic2 className="w-12 h-12" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Left: Host info */}
           <div className="lg:col-span-7 text-white rise-in">
-            <span className="inline-flex items-center gap-2 bg-amber-300 text-[#3F0A0A] px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.25em] shadow-md mb-5 ring-1 ring-black/10">
+            <span className="inline-flex items-center gap-2 bg-amber-300 text-[#3F0A0A] px-3 py-1.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] shadow-md mb-4 sm:mb-5 ring-1 ring-black/10">
               <Mic2 className="w-3.5 h-3.5" />
-              {lang === "es" ? "AL AIRE AHORA" : "ON AIR NOW"} · {stationName}
+              {lang === "es" ? "AL AIRE AHORA" : "ON AIR NOW"}
+              <span className="hidden sm:inline">· {stationName}</span>
             </span>
 
-            <p className="font-script text-3xl sm:text-4xl text-amber-200 -rotate-2 mb-2">
+            <p className="font-script text-2xl sm:text-3xl lg:text-4xl text-amber-200 -rotate-2 mb-1">
               {lang === "es" ? "con" : "with"}
             </p>
             <h1
-              className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.95] drop-shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
               data-testid="host-hero-name"
             >
               {host.name}
             </h1>
 
             {host.show_name && (
-              <p className="mt-4 text-2xl sm:text-3xl font-extrabold text-amber-300 tracking-tight">
+              <p className="mt-3 sm:mt-4 text-xl sm:text-2xl lg:text-3xl font-extrabold text-amber-300 tracking-tight">
                 “{host.show_name}”
               </p>
             )}
 
             {host.tagline && (
-              <p className="mt-3 text-lg sm:text-xl text-white/90 font-semibold max-w-xl">
+              <p className="mt-2 sm:mt-3 text-base sm:text-lg lg:text-xl text-white/90 font-semibold max-w-xl">
                 {host.tagline}
               </p>
             )}
 
             {host.bio && (
-              <p className="mt-4 text-white/80 leading-relaxed max-w-xl">
+              <p className="mt-3 sm:mt-4 text-sm sm:text-base text-white/80 leading-relaxed max-w-xl">
                 {host.bio}
               </p>
             )}
 
             {scheduleStr && (
-              <p className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-amber-200 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2">
-                <Clock className="w-4 h-4" />
+              <p className="mt-4 sm:mt-5 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-200 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 sm:px-4 py-1.5 sm:py-2">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {scheduleStr}
               </p>
             )}
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            {/* Buttons: stacked on mobile, inline on sm+ */}
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3">
               <button
                 onClick={() => {
                   const btn = document.querySelector('[data-testid="player-play-btn"]');
                   btn && btn.click();
                 }}
                 data-testid="host-hero-listen"
-                className="group inline-flex items-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(252,211,77,0.25)] transition hover:-translate-y-1 active:scale-95 ring-1 ring-black/5"
+                className="group inline-flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-6 sm:px-7 py-3.5 sm:py-4 shadow-[0_15px_40px_rgba(252,211,77,0.25)] transition hover:-translate-y-1 active:scale-95 ring-1 ring-black/5 w-full sm:w-auto"
               >
                 <Headphones className="w-5 h-5 group-hover:scale-110 transition" />
                 {t.home.ctaListen}
@@ -148,74 +173,87 @@ export default function HostHero({ host, stationName, stationTagline }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="host-hero-wa"
-                  className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#16A34A] text-white font-bold rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(37,211,102,0.3)] transition hover:-translate-y-1 active:scale-95"
+                  className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#16A34A] text-white font-bold rounded-full px-6 sm:px-7 py-3.5 sm:py-4 shadow-[0_15px_40px_rgba(37,211,102,0.3)] transition hover:-translate-y-1 active:scale-95 w-full sm:w-auto"
                 >
                   <MessageCircle className="w-5 h-5" />
                   {lang === "es" ? "Mándale WhatsApp" : "WhatsApp the DJ"}
                 </a>
               )}
-              {tel && (
-                <a
-                  href={tel}
-                  data-testid="host-hero-call"
-                  className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/25 hover:bg-white/20 text-white font-bold rounded-full px-7 py-4 transition hover:-translate-y-1 active:scale-95"
-                >
-                  <Phone className="w-5 h-5" />
-                  {lang === "es" ? "Llama al estudio" : "Call the studio"}
-                </a>
-              )}
-              {(host.facebook || host.instagram) && (
-                <div className="inline-flex items-center gap-2">
-                  {host.facebook && (
-                    <a
-                      href={host.facebook}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-testid="host-hero-fb"
-                      aria-label="Facebook"
-                      className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/25 text-white flex items-center justify-center hover:bg-white/20 transition active:scale-95"
-                    >
-                      <Facebook className="w-5 h-5" />
-                    </a>
-                  )}
-                  {host.instagram && (
-                    <a
-                      href={host.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-testid="host-hero-ig"
-                      aria-label="Instagram"
-                      className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/25 text-white flex items-center justify-center hover:bg-white/20 transition active:scale-95"
-                    >
-                      <Instagram className="w-5 h-5" />
-                    </a>
-                  )}
-                </div>
-              )}
+              <div className="flex gap-2 sm:contents">
+                {tel && (
+                  <a
+                    href={tel}
+                    data-testid="host-hero-call"
+                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-md border border-white/25 hover:bg-white/20 text-white font-bold rounded-full px-5 sm:px-7 py-3.5 sm:py-4 transition hover:-translate-y-1 active:scale-95"
+                  >
+                    <Phone className="w-5 h-5" />
+                    <span className="hidden sm:inline">
+                      {lang === "es" ? "Llama al estudio" : "Call the studio"}
+                    </span>
+                    <span className="sm:hidden">{lang === "es" ? "Llamar" : "Call"}</span>
+                  </a>
+                )}
+                {(host.facebook || host.instagram) && (
+                  <div className="inline-flex items-center gap-2">
+                    {host.facebook && (
+                      <a
+                        href={host.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="host-hero-fb"
+                        aria-label="Facebook"
+                        className="w-12 h-12 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/25 text-white flex items-center justify-center hover:bg-white/20 transition active:scale-95 shrink-0"
+                      >
+                        <Facebook className="w-5 h-5" />
+                      </a>
+                    )}
+                    {host.instagram && (
+                      <a
+                        href={host.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="host-hero-ig"
+                        aria-label="Instagram"
+                        className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/25 text-white flex items-center justify-center hover:bg-white/20 transition active:scale-95 shrink-0"
+                      >
+                        <Instagram className="w-5 h-5" />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Mini stats band */}
-            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-4 text-white/95 pt-6 border-t border-white/10 max-w-xl">
-              <span className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl font-black tracking-tighter text-amber-300">880</span>
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">AM</span>
+            <div className="mt-7 sm:mt-10 flex flex-wrap gap-x-6 gap-y-3 sm:gap-x-8 sm:gap-y-4 text-white/95 pt-5 sm:pt-6 border-t border-white/10 max-w-xl">
+              <span className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter text-amber-300">
+                  880
+                </span>
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-white/70">
+                  AM
+                </span>
               </span>
-              <span className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl font-black tracking-tighter text-amber-300">103.9</span>
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">FM</span>
+              <span className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter text-amber-300">
+                  103.9
+                </span>
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-white/70">
+                  FM
+                </span>
               </span>
-              <span className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl font-black tracking-tighter text-amber-300">
+              <span className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter text-amber-300">
                   {stationTagline ? "¡LIVE!" : "24/7"}
                 </span>
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-white/70">
                   {lang === "es" ? "En vivo" : "Live"}
                 </span>
               </span>
             </div>
           </div>
 
-          {/* Right: Framed portrait */}
+          {/* Right: Framed portrait — desktop only */}
           <div className="lg:col-span-5 relative hidden lg:block">
             <div className="relative">
               <div

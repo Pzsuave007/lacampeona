@@ -205,20 +205,20 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
         }}
       />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 md:pt-20 md:pb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 sm:pt-12 sm:pb-16 md:pt-20 md:pb-28">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
           {/* Left: Headline */}
           <div className="lg:col-span-7 text-white rise-in">
-            <span className="inline-flex items-center gap-2 bg-amber-300 text-[#3F0A0A] px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.25em] shadow-md mb-6 ring-1 ring-black/10">
+            <span className="inline-flex items-center gap-2 bg-amber-300 text-[#3F0A0A] px-3 py-1.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] shadow-md mb-4 sm:mb-6 ring-1 ring-black/10">
               <span className="w-2 h-2 rounded-full bg-red-700 live-dot" />
               {t.live.label} · {stationName}
             </span>
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
               {lang === "es" ? (
                 <>
                   ¡La que
                   <br />
-                  <span className="font-script font-normal italic text-amber-300 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
+                  <span className="font-script font-normal italic text-amber-300 text-6xl sm:text-7xl md:text-8xl lg:text-9xl block -mt-1 sm:-mt-2">
                     manda!
                   </span>
                 </>
@@ -226,28 +226,28 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
                 <>
                   The one that
                   <br />
-                  <span className="font-script font-normal italic text-amber-300 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
+                  <span className="font-script font-normal italic text-amber-300 text-6xl sm:text-7xl md:text-8xl lg:text-9xl block -mt-1 sm:-mt-2">
                     rules!
                   </span>
                 </>
               )}
             </h1>
-            <p className="mt-5 text-lg sm:text-xl text-amber-100/95 leading-snug max-w-xl font-semibold tracking-wide">
+            <p className="mt-4 sm:mt-5 text-base sm:text-lg lg:text-xl text-amber-100/95 leading-snug max-w-xl font-semibold tracking-wide">
               {tagline || "880 AM · 103.9 FM"}
             </p>
-            <p className="mt-3 text-white/80 leading-relaxed max-w-xl">
+            <p className="mt-2 sm:mt-3 text-sm sm:text-base text-white/80 leading-relaxed max-w-xl">
               {lang === "es"
                 ? "Música regional mexicana, noticias y promociones de tus negocios favoritos — en vivo, desde Dallas, Oregon."
                 : "Regional Mexican music, news, and offers from your favorite local businesses — live from Dallas, Oregon."}
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3">
               <button
                 onClick={() => {
                   const btn = document.querySelector('[data-testid="player-play-btn"]');
                   btn && btn.click();
                 }}
                 data-testid="hero-listen-btn"
-                className="group inline-flex items-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(252,211,77,0.25)] transition hover:-translate-y-1 active:scale-95 ring-1 ring-black/5"
+                className="group inline-flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-6 sm:px-7 py-3.5 sm:py-4 shadow-[0_15px_40px_rgba(252,211,77,0.25)] transition hover:-translate-y-1 active:scale-95 ring-1 ring-black/5 w-full sm:w-auto"
               >
                 <Headphones className="w-5 h-5 group-hover:scale-110 transition" />
                 {t.home.ctaListen}
@@ -258,7 +258,7 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="hero-wa-btn"
-                  className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#16A34A] text-white font-bold rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(37,211,102,0.3)] transition hover:-translate-y-1 active:scale-95"
+                  className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#16A34A] text-white font-bold rounded-full px-6 sm:px-7 py-3.5 sm:py-4 shadow-[0_15px_40px_rgba(37,211,102,0.3)] transition hover:-translate-y-1 active:scale-95 w-full sm:w-auto"
                 >
                   <MessageCircle className="w-5 h-5" />
                   {t.home.ctaWhatsApp}
@@ -267,7 +267,7 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
               <a
                 href="tel:+15036230244"
                 data-testid="hero-call-btn"
-                className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/25 hover:bg-white/20 text-white font-bold rounded-full px-7 py-4 transition hover:-translate-y-1 active:scale-95"
+                className="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-md border border-white/25 hover:bg-white/20 text-white font-bold rounded-full px-6 sm:px-7 py-3.5 sm:py-4 transition hover:-translate-y-1 active:scale-95 w-full sm:w-auto"
               >
                 <Phone className="w-5 h-5" />
                 {lang === "es" ? "Llama al estudio" : "Call the studio"}
@@ -275,7 +275,7 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
             </div>
 
             {/* Mini stats */}
-            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-4 text-white/95 pt-6 border-t border-white/10 max-w-xl">
+            <div className="mt-7 sm:mt-10 flex flex-wrap gap-x-6 gap-y-3 sm:gap-x-8 sm:gap-y-4 text-white/95 pt-5 sm:pt-6 border-t border-white/10 max-w-xl">
               <Stat number="880" label={lang === "es" ? "AM" : "AM"} />
               <Stat number="103.9" label={lang === "es" ? "FM" : "FM"} />
               <Stat number="24/7" label={lang === "es" ? "En vivo" : "Live"} />

@@ -212,6 +212,7 @@ class SettingsIn(BaseModel):
     default_cta_text: Optional[str] = None
     default_cta_url: Optional[str] = None
     timezone: Optional[str] = None  # IANA, e.g. America/Los_Angeles
+    cta_pause_seconds: Optional[int] = None  # gap between ads in rotation; default 60s
 
 
 class HostScheduleSlot(BaseModel):
@@ -358,7 +359,16 @@ async def resolve_active_advertiser() -> Optional[dict]:
     if not eligible:
         return None
     if len(eligible) == 1:
-        return eligible[0]
+        # Single eligible item: respect the pause cycle so the user gets breaks
+        pause_seconds = max(0, int(settings.get("cta_pause_seconds") or 60))
+        item = eligible[0]
+        spot_duration = max(5, int(item.get("spot_duration_sec", 30) or 30))
+        if pause_seconds == 0:
+            return item
+        cycle = spot_duration + pause_seconds
+        epoch_seconds = int(now.timestamp())
+        seconds_in_cycle = epoch_seconds % cycle
+        return item if seconds_in_cycle < spot_duration else None
 
     # Weighted round-robin — each item appears spots_per_hour times,
     # priority sorts items earlier in each round.
@@ -371,18 +381,27 @@ async def resolve_active_advertiser() -> Optional[dict]:
                 rotation.append(item)
                 remaining[item["id"]] -= 1
 
-    cycle_duration = sum(max(5, int(item.get("spot_duration_sec", 30) or 30)) for item in rotation)
+    pause_seconds = max(0, int(settings.get("cta_pause_seconds") or 60))
+    # Build a timeline of (item_or_None, duration). After each ad we insert a pause slot.
+    timeline: list[tuple[Optional[dict], int]] = []
+    for item in rotation:
+        spot_duration = max(5, int(item.get("spot_duration_sec", 30) or 30))
+        timeline.append((item, spot_duration))
+        if pause_seconds > 0:
+            timeline.append((None, pause_seconds))
+
+    cycle_duration = sum(d for _, d in timeline)
     if cycle_duration <= 0:
         return rotation[0]
 
     epoch_seconds = int(now.timestamp())
     seconds_in_cycle = epoch_seconds % cycle_duration
     elapsed = 0
-    for item in rotation:
-        elapsed += max(5, int(item.get("spot_duration_sec", 30) or 30))
+    for item, duration in timeline:
+        elapsed += duration
         if seconds_in_cycle < elapsed:
-            return item
-    return rotation[-1]
+            return item  # may be None for pause slots
+    return None
 
 
 def is_event_eligible_for_cta(event: dict, now: datetime) -> bool:

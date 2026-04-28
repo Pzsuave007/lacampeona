@@ -110,6 +110,7 @@ export default function AdminDashboard() {
       timezone: adminSettings.timezone,
       default_cta_text: adminSettings.default_cta_text,
       default_cta_url: adminSettings.default_cta_url,
+      cta_pause_seconds: Number(adminSettings.cta_pause_seconds ?? 60),
     };
     const { data } = await api.put("/admin/settings", payload);
     setAdminSettings(data);
@@ -274,6 +275,25 @@ export default function AdminDashboard() {
                   </select>
                   <p className="text-[11px] text-slate-500 mt-1">
                     Los horarios de los locutores y anunciantes se evalúan en esta zona.
+                  </p>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
+                    Pausa entre anuncios (segundos)
+                  </span>
+                  <input
+                    data-testid="set-cta-pause"
+                    type="number"
+                    min="0"
+                    max="600"
+                    value={adminSettings.cta_pause_seconds ?? 60}
+                    onChange={(e) =>
+                      setAdminSettings({ ...adminSettings, cta_pause_seconds: e.target.value })
+                    }
+                    className="mt-1 w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition bg-white"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Segundos sin anuncio entre cada spot (default 60s). Pon 0 para rotación continua.
                   </p>
                 </label>
               </div>

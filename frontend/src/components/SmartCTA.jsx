@@ -60,6 +60,19 @@ export default function SmartCTA() {
               <Sparkles className="w-3 h-3" />
               {t.home.activeBadge}
             </span>
+            {/* Minimize button (top-right, where X used to be) */}
+            <button
+              data-testid="smart-cta-minimize"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(false);
+              }}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-900 flex items-center justify-center transition active:scale-95 shadow-md"
+              aria-label="Minimizar"
+              title="Minimizar"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
           </div>
         )}
 

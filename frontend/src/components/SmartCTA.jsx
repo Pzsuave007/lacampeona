@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Phone, MessageCircle, MapPin, Sparkles, ChevronUp, ChevronDown, X } from "lucide-react";
+import { Phone, MessageCircle, MapPin, Sparkles, ChevronUp, Minus } from "lucide-react";
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { telLink, waLink, mapsLink, bannerUrl } from "../lib/api";
@@ -13,7 +13,6 @@ export default function SmartCTA() {
   const isMobile = () =>
     typeof window !== "undefined" && window.innerWidth < 640;
   const [expanded, setExpanded] = useState(() => !isMobile());
-  const [dismissedId, setDismissedId] = useState(null);
 
   useEffect(() => {
     if (active) setExpanded(!isMobile());
@@ -22,7 +21,6 @@ export default function SmartCTA() {
   if (!active) return null;
   // Hide on login and admin to reduce visual clutter
   if (location.pathname.startsWith("/login") || location.pathname.startsWith("/admin")) return null;
-  if (dismissedId === active.id) return null;
 
   const wa = waLink(
     active.whatsapp || settings?.station_whatsapp,
@@ -62,64 +60,40 @@ export default function SmartCTA() {
               <Sparkles className="w-3 h-3" />
               {t.home.activeBadge}
             </span>
-            {/* Close */}
-            <button
-              data-testid="smart-cta-close"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDismissedId(active.id);
-              }}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-slate-900 flex items-center justify-center transition active:scale-95 shadow-md"
-              aria-label="Cerrar"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         )}
 
-        {/* Header / toggle bar (always visible) */}
-        <div className="relative flex items-stretch" style={{ backgroundColor: color }}>
-          <button
-            data-testid="smart-cta-toggle"
-            onClick={() => setExpanded((e) => !e)}
-            className={`flex-1 flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 text-white transition ${
-              expanded ? "hover:brightness-110" : "hover:brightness-95"
-            }`}
-          >
-            {!expanded && (
-              <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/25 flex items-center justify-center shrink-0">
-                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </span>
-            )}
-            <span className="flex-1 text-left min-w-0">
-              <span className="block text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.2em] sm:tracking-[0.25em] opacity-90">
-                {t.home.activeBadge}
-              </span>
-              <span className="block font-extrabold truncate text-sm sm:text-base">
-                {active.name}
-              </span>
-            </span>
-            {expanded ? (
-              <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-            ) : (
-              <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-            )}
-          </button>
-          {/* Always-visible close button (so user can dismiss without expanding) */}
+        {/* Header / toggle bar (always visible) - tap to minimize/expand */}
+        <button
+          data-testid="smart-cta-toggle"
+          onClick={() => setExpanded((e) => !e)}
+          aria-label={expanded ? "Minimizar" : "Expandir"}
+          className={`w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 text-white transition ${
+            expanded ? "hover:brightness-110" : "hover:brightness-95"
+          }`}
+          style={{ backgroundColor: color }}
+        >
           {!expanded && (
-            <button
-              data-testid="smart-cta-close-collapsed"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDismissedId(active.id);
-              }}
-              className="px-3 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/10 transition border-l border-white/15"
-              aria-label="Cerrar"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/25 flex items-center justify-center shrink-0">
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </span>
           )}
-        </div>
+          <span className="flex-1 text-left min-w-0">
+            <span className="block text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.2em] sm:tracking-[0.25em] opacity-90">
+              {t.home.activeBadge}
+            </span>
+            <span className="block font-extrabold truncate text-sm sm:text-base">
+              {active.name}
+            </span>
+          </span>
+          <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            {expanded ? (
+              <Minus className="w-4 h-4 sm:w-5 sm:h-5" />
+            ) : (
+              <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />
+            )}
+          </span>
+        </button>
 
         {/* Info + actions */}
         {expanded && (

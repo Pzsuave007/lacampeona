@@ -52,7 +52,13 @@ export default function Home() {
       {active ? (
         <ActiveHero active={active} t={t} />
       ) : (
-        <DefaultHero t={t} stationName={settings?.station_name || "Radio Latina FM"} stationWa={stationWa} lang={lang} />
+        <DefaultHero
+          t={t}
+          stationName={settings?.station_name || "KWIP La Campeona"}
+          tagline={settings?.station_tagline}
+          stationWa={stationWa}
+          lang={lang}
+        />
       )}
 
       {/* Live ticker strip */}
@@ -167,7 +173,7 @@ export default function Home() {
 }
 
 /* --------------------- Default Hero --------------------- */
-function DefaultHero({ t, stationName, stationWa, lang }) {
+function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
   return (
     <section
       data-testid="home-hero"
@@ -199,24 +205,29 @@ function DefaultHero({ t, stationName, stationWa, lang }) {
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-md">
               {lang === "es" ? (
                 <>
-                  El ritmo que <span className="text-yellow-300">une</span> a la
+                  La que <span className="text-yellow-300">manda</span> en
                   <br />
                   <span className="font-script font-normal italic text-yellow-200 text-6xl sm:text-7xl lg:text-8xl">
-                    comunidad
+                    Oregon
                   </span>
                 </>
               ) : (
                 <>
-                  The beat that <span className="text-yellow-300">unites</span> our
+                  The beat of <span className="text-yellow-300">Latino</span>
                   <br />
                   <span className="font-script font-normal italic text-yellow-200 text-6xl sm:text-7xl lg:text-8xl">
-                    community
+                    Oregon
                   </span>
                 </>
               )}
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-white/95 leading-relaxed max-w-xl">
-              {t.home.heroSubtitle}
+            <p className="mt-5 text-lg sm:text-xl text-white/95 leading-snug max-w-xl font-semibold">
+              {tagline || "880 AM · 103.9 FM"}
+            </p>
+            <p className="mt-3 text-white/85 leading-relaxed max-w-xl">
+              {lang === "es"
+                ? "Música regional mexicana, noticias y promociones de tus negocios favoritos — en vivo, desde Dallas, Oregon."
+                : "Regional Mexican music, news, and offers from your favorite local businesses — live from Dallas, Oregon."}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <button
@@ -242,13 +253,21 @@ function DefaultHero({ t, stationName, stationWa, lang }) {
                   {t.home.ctaWhatsApp}
                 </a>
               )}
+              <a
+                href="tel:+15036230244"
+                data-testid="hero-call-btn"
+                className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md border border-white/30 hover:bg-white/25 text-white font-bold rounded-full px-7 py-4 transition hover:-translate-y-1 active:scale-95"
+              >
+                <Phone className="w-5 h-5" />
+                {lang === "es" ? "Llama al estudio" : "Call the studio"}
+              </a>
             </div>
 
             {/* Mini stats */}
             <div className="mt-10 flex flex-wrap gap-6 text-white/95">
-              <Stat number="24/7" label={lang === "es" ? "Música en vivo" : "Live music"} />
-              <Stat number="50K+" label={lang === "es" ? "Oyentes felices" : "Happy listeners"} />
-              <Stat number="100+" label={lang === "es" ? "Negocios aliados" : "Local partners"} />
+              <Stat number="880" label={lang === "es" ? "AM" : "AM"} />
+              <Stat number="103.9" label={lang === "es" ? "FM" : "FM"} />
+              <Stat number="24/7" label={lang === "es" ? "En vivo" : "Live"} />
             </div>
           </div>
 
@@ -261,7 +280,7 @@ function DefaultHero({ t, stationName, stationWa, lang }) {
             />
             <Polaroid
               src={POLA_2}
-              caption="Tu DJ favorito"
+              caption="La Campeona sigue sonando"
               className="absolute top-32 right-0 tilt-r w-64"
             />
             <div className="absolute bottom-0 left-16 bg-slate-900 text-white rounded-3xl p-5 w-72 shadow-2xl rise-in rise-delay-3 border-4 border-yellow-300">
@@ -273,7 +292,7 @@ function DefaultHero({ t, stationName, stationWa, lang }) {
                   <p className="text-[10px] uppercase tracking-[0.25em] font-extrabold text-yellow-300">
                     {t.live.nowPlaying}
                   </p>
-                  <p className="font-bold text-sm leading-tight">El Show de la Tarde</p>
+                  <p className="font-bold text-sm leading-tight">La Campeona · 880 AM</p>
                 </div>
               </div>
               <div className="flex items-end gap-1 h-6 text-yellow-300">
@@ -448,8 +467,8 @@ function VibeSection({ settings, lang }) {
           </h2>
           <p className="mt-5 text-lg text-white/85 leading-relaxed max-w-md">
             {lang === "es"
-              ? "Cada hora un ritmo, cada show una historia. Bachata, salsa, regional, urbano — y lo mejor del talento local en una sola estación."
-              : "Every hour a new rhythm, every show a new story. Bachata, salsa, regional, urban — and the best local talent on one station."}
+              ? "Música regional mexicana, corridos, banda, norteño y cumbia — 24 horas al día desde Dallas, Oregon, para toda la Willamette Valley y Portland."
+              : "Regional Mexican, corridos, banda, norteño and cumbia — 24 hours a day from Dallas, Oregon, reaching all of Willamette Valley and Portland."}
           </p>
           <div className="mt-7 flex items-center gap-4">
             <div className="flex items-end gap-1 h-10 text-yellow-300">
@@ -549,7 +568,7 @@ function CommunitySection({ t, lang, stationWa, tagline }) {
             </p>
             <div className="mt-4 flex items-center gap-2 text-slate-900/80">
               <Phone className="w-4 h-4" />
-              <span className="text-sm font-bold">+1 (310) 555-0100</span>
+              <span className="text-sm font-bold">+1 (503) 623-0244</span>
             </div>
           </div>
         </div>

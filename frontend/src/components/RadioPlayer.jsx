@@ -48,7 +48,7 @@ export default function RadioPlayer() {
     }
   };
 
-  const stationName = settings?.station_name || "Radio Latina FM";
+  const stationName = settings?.station_name || "KWIP La Campeona";
   const nowPlaying = settings?.now_playing || "—";
   const streamUrl = settings?.stream_url || "";
 

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Radio, Menu, X, Languages, LogOut, ShieldCheck } from "lucide-react";
+import { Menu, X, Languages, LogOut, ShieldCheck } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useStation } from "../contexts/StationContext";
@@ -30,12 +30,27 @@ export default function Navbar() {
           data-testid="nav-home-logo"
           className="flex items-center gap-2 group"
         >
-          <span className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md group-hover:scale-105 transition">
-            <Radio className="w-5 h-5 text-slate-900" strokeWidth={2.5} />
+          <span className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md group-hover:scale-105 transition ring-2 ring-white">
+            <img
+              src="https://us7.maindigitalstream.com/4550/tmp/images/logo.1670715085.jpg"
+              alt="KWIP"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.replaceWith(Object.assign(document.createElement("span"), {
+                  className: "w-full h-full flex items-center justify-center",
+                  innerHTML: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/></svg>',
+                }));
+              }}
+            />
           </span>
-          <span className="font-black text-lg tracking-tight text-slate-900">
-            {settings?.station_name || "Radio Latina"}
-          </span>
+          <div className="leading-tight">
+            <span className="block font-black text-base sm:text-lg tracking-tight text-slate-900">
+              {settings?.station_name || "KWIP La Campeona"}
+            </span>
+            <span className="hidden sm:block text-[10px] font-bold uppercase tracking-[0.2em] text-orange-600">
+              880 AM · 103.9 FM
+            </span>
+          </div>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">

@@ -97,9 +97,19 @@ export default function Home() {
               </h2>
               <p className="text-slate-600 mt-2 max-w-md">{t.home.sponsorsSubtitle}</p>
             </div>
-            <p className="font-script text-3xl text-orange-600 leading-none rotate-[-4deg] hidden sm:block">
-              {lang === "es" ? "¡Apóyalos!" : "Support them!"}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="font-script text-3xl text-orange-600 leading-none rotate-[-4deg] hidden md:block">
+                {lang === "es" ? "¡Apóyalos!" : "Support them!"}
+              </p>
+              <Link
+                to="/anuncia"
+                data-testid="sponsors-header-cta"
+                className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-5 py-3 transition active:scale-95 shadow-[0_10px_30px_rgba(234,88,12,0.35)] hover:-translate-y-0.5 whitespace-nowrap"
+              >
+                <Sparkles className="w-4 h-4" />
+                {lang === "es" ? "Anúnciate aquí" : "Advertise here"}
+              </Link>
+            </div>
           </div>
 
           <div

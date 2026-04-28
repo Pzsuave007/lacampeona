@@ -1,54 +1,49 @@
-# Radio Latina FM — PRD
+# KWIP La Campeona — PRD
 
 ## Original Problem Statement
-Modern, mobile-first web app for a Spanish radio station focused on engagement and monetization. Sticky live-radio player + dynamic advertiser system that lets staff activate one advertiser at a time so the website (banner, CTA, phone, WhatsApp, directions, landing page) updates instantly across all listeners.
+Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanish radio station from Dallas, Oregon. Focus on engagement and monetization with sticky live radio player, dynamic advertiser system (with scheduling and Smart CTA popups), host/DJ scheduling with dynamic hero, WhatsApp integration, World Cup 2026 schedule page, and an advertiser sales landing page.
 
-## User Personas
-- **Listener (mobile-first)**: tunes in, sees who is currently sponsoring, taps to call / WhatsApp / get directions.
-- **Advertiser**: gets a dedicated landing page, contact actions, and time-windowed exposure.
-- **Station staff (admin)**: one-click activates an advertiser, schedules slots, edits station settings.
+## User Language
+**Spanish (es)** — all UI copy and agent communication must be in Spanish.
 
-## Core Requirements (static)
-1. Sticky live audio player + Now Playing.
-2. Dynamic advertiser system — only one active at a time.
-3. Per-advertiser landing pages (call, WhatsApp, directions, offer).
-4. Smart floating CTA with phone/WhatsApp/maps/landing.
-5. WhatsApp deep links with pre-filled "I heard your ad on the radio".
-6. Optional schedule (day_of_week + start/end time per advertiser).
-7. Default state when no advertiser active.
-8. Bilingual ES/EN, mobile-first, vibrant Latino-focused design.
+## Core Architecture
+- **Frontend**: React + Tailwind + Shadcn UI (mobile-first)
+- **Backend**: FastAPI on `/api/*`
+- **DB**: MongoDB (users, hosts, advertisers, settings)
+- **Storage**: Emergent Object Storage (banners/images)
+- **Auth**: JWT (admin only)
 
-## Architecture
-- **Backend**: FastAPI on `:8001` behind ingress at `/api`. MongoDB via MONGO_URL.
-- **Frontend**: React 19 + CRA + Tailwind + shadcn-style components, axios with `withCredentials`.
-- **Auth**: JWT (HS256) issued as httpOnly cookie + Bearer fallback. Admin seed via env.
-- **Storage**: Emergent Object Storage (`integrations.emergentagent.com/objstore`) for banner uploads.
+## Implemented (as of 2026-02)
+- Live radio player streaming KWIP La Campeona (sticky, mobile-friendly)
+- Dynamic HostHero — auto-updates by DJ schedule + station timezone (`America/Los_Angeles`)
+- Default Hero (when no live host)
+- Advanced advertiser scheduling (radio-style: spots/hour, duration_sec, priority 1–10)
+- `/api/active` endpoint with timezone-aware evaluation
+- SmartCTA floating popup — **mobile-friendly, starts collapsed on mobile** (less invasive)
+- Admin Dashboard (3 tabs: Settings, Hosts, Advertisers)
+- WeeklyScheduleGrid for Hosts
+- File upload to object storage
+- Static pages: `/mundial` (World Cup 2026 schedule), `/anuncia` (advertising sales pitch)
+- Bilingual (ES/EN, default ES)
+- "Anúnciate aquí" CTA in Anunciantes destacados section
+- Emergent branding fully removed
 
-## What's been implemented (2026-04-28)
-- JWT auth (login / me / logout) with admin seed (admin@radiolatina.fm / admin123).
-- Settings doc (station name, tagline, station whatsapp, stream URL, now playing, default CTA).
-- Advertisers CRUD (admin) with embedded schedule slots and unique slug.
-- `/api/active` resolver: explicit pin > AUTO+schedule > none.
-- Banner upload endpoint + public proxy `/api/files/{path}`.
-- Demo seed: 2 advertisers (Café Aroma, El Sabor Latino).
-- Frontend: Home (hero, advertiser grid), Advertisers list, Advertiser detail, Login, Admin Dashboard (one-click activate, settings, advertiser CRUD with schedule + upload), bilingual ES/EN toggle, sticky RadioPlayer with vinyl spin + LIVE pulse, floating SmartCTA hidden on /login & /admin.
-- Tests: 24/24 backend + 100% frontend critical flows (Playwright via testing agent).
-
-## Backlog
-### P0 (next)
-- (none — MVP complete)
-
+## Backlog / Roadmap
 ### P1
-- Audience analytics (clicks per CTA per advertiser, day/hour heatmap).
-- Multi-admin / role management; brute-force lockout on login.
-- iCal-style overlapping schedule conflicts UI in admin.
-- Push notifications when an advertiser becomes active (web push).
+- Visual Weekly Schedule Grid for Advertisers in Admin Dashboard
+- Click analytics on SmartCTA actions (calls, WhatsApp, maps) — for ROI reporting
 
 ### P2
-- Advertiser self-serve portal (pay-to-play, Stripe).
-- Show schedule grid + DJ profiles.
-- Listener accounts / favourite advertisers.
-- Offline PWA mode with background audio.
+- Stripe-powered advertiser self-serve portal
+- Refactor polling → WebSocket/SSE for real-time updates at scale
+
+## Key Files
+- `/app/backend/server.py` — all API
+- `/app/frontend/src/components/SmartCTA.jsx` — floating advertiser popup
+- `/app/frontend/src/components/HostHero.jsx`, `WeeklyScheduleGrid.jsx`
+- `/app/frontend/src/pages/Home.jsx`, `AdminDashboard.jsx`, `Mundial.jsx`, `Anuncia.jsx`
+- `/app/frontend/src/contexts/StationContext.js` — polling + active state
+- `/app/frontend/src/data/staticContent.js` — Mundial matches + Anuncia pricing (static)
 
 ## Test Credentials
 See `/app/memory/test_credentials.md`.

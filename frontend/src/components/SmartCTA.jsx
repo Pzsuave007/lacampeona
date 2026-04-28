@@ -9,11 +9,14 @@ export default function SmartCTA() {
   const { active, settings } = useStation();
   const { t } = useLanguage();
   const location = useLocation();
-  const [expanded, setExpanded] = useState(true);
+  // Start collapsed on mobile (less invasive), expanded on desktop
+  const isMobile = () =>
+    typeof window !== "undefined" && window.innerWidth < 640;
+  const [expanded, setExpanded] = useState(() => !isMobile());
   const [dismissedId, setDismissedId] = useState(null);
 
   useEffect(() => {
-    if (active) setExpanded(true);
+    if (active) setExpanded(!isMobile());
   }, [active?.id]);
 
   if (!active) return null;
@@ -33,12 +36,12 @@ export default function SmartCTA() {
   return (
     <div
       data-testid="smart-cta"
-      className="fixed left-2 right-2 sm:left-4 sm:right-auto bottom-[136px] sm:bottom-28 z-40 mx-auto sm:mx-0 max-w-sm"
+      className="fixed right-2 left-auto sm:left-4 sm:right-auto bottom-[136px] sm:bottom-28 z-40 w-[min(320px,calc(100vw-1rem))] sm:w-auto sm:max-w-sm"
     >
-      <div className="rounded-3xl shadow-2xl shadow-slate-900/30 border border-white/20 overflow-hidden bg-white rise-in">
-        {/* Banner image (horizontal) */}
+      <div className="rounded-2xl sm:rounded-3xl shadow-2xl shadow-slate-900/30 border border-white/20 overflow-hidden bg-white rise-in">
+        {/* Banner image (horizontal) - compact on mobile */}
         {expanded && banner && (
-          <div className="relative aspect-[16/9] w-full overflow-hidden">
+          <div className="relative aspect-[21/9] sm:aspect-[16/9] w-full overflow-hidden">
             <img
               src={banner}
               alt={active.name}
@@ -75,53 +78,74 @@ export default function SmartCTA() {
         )}
 
         {/* Header / toggle bar (always visible) */}
-        <button
-          data-testid="smart-cta-toggle"
-          onClick={() => setExpanded((e) => !e)}
-          className={`w-full flex items-center gap-3 px-4 py-3 text-white transition ${
-            expanded ? "hover:brightness-110" : "hover:brightness-95"
-          }`}
-          style={{ backgroundColor: color }}
-        >
+        <div className="relative flex items-stretch" style={{ backgroundColor: color }}>
+          <button
+            data-testid="smart-cta-toggle"
+            onClick={() => setExpanded((e) => !e)}
+            className={`flex-1 flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 text-white transition ${
+              expanded ? "hover:brightness-110" : "hover:brightness-95"
+            }`}
+          >
+            {!expanded && (
+              <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/25 flex items-center justify-center shrink-0">
+                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </span>
+            )}
+            <span className="flex-1 text-left min-w-0">
+              <span className="block text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.2em] sm:tracking-[0.25em] opacity-90">
+                {t.home.activeBadge}
+              </span>
+              <span className="block font-extrabold truncate text-sm sm:text-base">
+                {active.name}
+              </span>
+            </span>
+            {expanded ? (
+              <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            ) : (
+              <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            )}
+          </button>
+          {/* Always-visible close button (so user can dismiss without expanding) */}
           {!expanded && (
-            <span className="w-8 h-8 rounded-full bg-white/25 flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </span>
+            <button
+              data-testid="smart-cta-close-collapsed"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDismissedId(active.id);
+              }}
+              className="px-3 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/10 transition border-l border-white/15"
+              aria-label="Cerrar"
+            >
+              <X className="w-4 h-4" />
+            </button>
           )}
-          <span className="flex-1 text-left">
-            <span className="block text-[10px] font-extrabold uppercase tracking-[0.25em] opacity-90">
-              {t.home.activeBadge}
-            </span>
-            <span className="block font-extrabold truncate text-base">{active.name}</span>
-          </span>
-          {expanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-        </button>
+        </div>
 
         {/* Info + actions */}
         {expanded && (
-          <div className="px-4 pt-3 pb-4 bg-white flex flex-col gap-3">
+          <div className="px-3 sm:px-4 pt-2.5 sm:pt-3 pb-3 sm:pb-4 bg-white flex flex-col gap-2.5 sm:gap-3">
             {active.tagline && (
-              <p className="font-script text-2xl leading-none text-slate-900 -rotate-1">
+              <p className="font-script text-xl sm:text-2xl leading-none text-slate-900 -rotate-1">
                 {active.tagline}
               </p>
             )}
             {active.special_offer && (
               <p
-                className="text-sm font-semibold text-slate-700 leading-snug"
+                className="text-xs sm:text-sm font-semibold text-slate-700 leading-snug line-clamp-2"
                 data-testid="smart-cta-offer"
               >
                 {active.special_offer}
               </p>
             )}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
               {tel && (
                 <a
                   href={tel}
                   data-testid="smart-cta-call"
-                  className="flex flex-col items-center gap-1 text-white rounded-xl px-2 py-3 text-xs font-bold hover:brightness-110 transition active:scale-95 shadow-md"
+                  className="flex flex-col items-center gap-0.5 sm:gap-1 text-white rounded-lg sm:rounded-xl px-2 py-2 sm:py-3 text-[11px] sm:text-xs font-bold hover:brightness-110 transition active:scale-95 shadow-md"
                   style={{ backgroundColor: color }}
                 >
-                  <Phone className="w-4 h-4" />
+                  <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {t.home.callNow}
                 </a>
               )}
@@ -131,9 +155,9 @@ export default function SmartCTA() {
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="smart-cta-whatsapp"
-                  className="flex flex-col items-center gap-1 bg-[#25D366] text-white rounded-xl px-2 py-3 text-xs font-bold hover:bg-[#16A34A] transition active:scale-95 shadow-md"
+                  className="flex flex-col items-center gap-0.5 sm:gap-1 bg-[#25D366] text-white rounded-lg sm:rounded-xl px-2 py-2 sm:py-3 text-[11px] sm:text-xs font-bold hover:bg-[#16A34A] transition active:scale-95 shadow-md"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {t.home.whatsapp}
                 </a>
               )}
@@ -143,9 +167,9 @@ export default function SmartCTA() {
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="smart-cta-directions"
-                  className="flex flex-col items-center gap-1 bg-slate-900 text-white rounded-xl px-2 py-3 text-xs font-bold hover:bg-slate-800 transition active:scale-95 shadow-md"
+                  className="flex flex-col items-center gap-0.5 sm:gap-1 bg-slate-900 text-white rounded-lg sm:rounded-xl px-2 py-2 sm:py-3 text-[11px] sm:text-xs font-bold hover:bg-slate-800 transition active:scale-95 shadow-md"
                 >
-                  <MapPin className="w-4 h-4" />
+                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {t.home.directions}
                 </a>
               )}
@@ -153,7 +177,7 @@ export default function SmartCTA() {
             <Link
               to={`/a/${active.slug}`}
               data-testid="smart-cta-visit"
-              className="text-center text-xs font-bold text-slate-600 hover:text-slate-900 underline underline-offset-2"
+              className="text-center text-[11px] sm:text-xs font-bold text-slate-600 hover:text-slate-900 underline underline-offset-2"
             >
               {t.home.visitPage} →
             </Link>

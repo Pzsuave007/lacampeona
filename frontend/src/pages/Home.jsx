@@ -530,21 +530,31 @@ function ActiveHero({ active, t }) {
 /* --------------------- Events teaser --------------------- */
 function EventsTeaser({ events, lang }) {
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = (events || []).filter((e) => (e.event_date || "") >= today).slice(0, 3);
+  const upcoming = (events || []).filter((e) => (e.end_date || e.event_date || "") >= today).slice(0, 3);
   if (upcoming.length === 0) return null;
 
-  const fmt = (dateStr) => {
-    if (!dateStr) return "";
+  const fmt = (ev) => {
+    if (!ev?.event_date) return "";
     try {
-      const [y, m, d] = dateStr.split("-").map(Number);
+      const [y, m, d] = ev.event_date.split("-").map(Number);
       const date = new Date(y, m - 1, d);
-      return date.toLocaleDateString(lang === "es" ? "es-MX" : "en-US", {
+      const start = date.toLocaleDateString(lang === "es" ? "es-MX" : "en-US", {
         weekday: "short",
         day: "numeric",
         month: "short",
       });
+      if (ev.end_date && ev.end_date !== ev.event_date) {
+        const [ey, em, ed] = ev.end_date.split("-").map(Number);
+        const endDate = new Date(ey, em - 1, ed);
+        const endStr = endDate.toLocaleDateString(lang === "es" ? "es-MX" : "en-US", {
+          day: "numeric",
+          month: "short",
+        });
+        return `${start} – ${endStr}`;
+      }
+      return start;
     } catch {
-      return dateStr;
+      return ev.event_date;
     }
   };
 
@@ -608,7 +618,7 @@ function EventsTeaser({ events, lang }) {
                 </div>
                 <div className="p-4">
                   <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-amber-300">
-                    {fmt(ev.event_date)} · {ev.start_time}
+                    {fmt(ev)} · {ev.start_time}
                   </p>
                   <h3 className="mt-1 text-lg font-extrabold leading-tight line-clamp-2">
                     {ev.title}

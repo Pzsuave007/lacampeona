@@ -9,8 +9,20 @@ function formatEventDate(ev) {
   if (!ev?.event_date) return "";
   try {
     const [y, m, d] = ev.event_date.split("-").map(Number);
-    const date = new Date(y, m - 1, d);
-    const fmt = date.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+    const start = new Date(y, m - 1, d);
+    if (ev.end_date && ev.end_date !== ev.event_date) {
+      const [ey, em, ed] = ev.end_date.split("-").map(Number);
+      const end = new Date(ey, em - 1, ed);
+      // Same month: "5 – 7 de mayo"
+      if (y === ey && m === em) {
+        const monthName = end.toLocaleDateString("es-MX", { month: "long" });
+        return `${d} – ${ed} de ${monthName}`;
+      }
+      const startStr = start.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+      const endStr = end.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+      return `${startStr} – ${endStr}`;
+    }
+    const fmt = start.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
     return ev.start_time ? `${fmt} · ${ev.start_time}` : fmt;
   } catch {
     return ev.event_date;

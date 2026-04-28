@@ -23,12 +23,36 @@ function formatDate(dateStr, lang) {
   }
 }
 
+function formatDateRange(startStr, endStr, lang) {
+  if (!startStr) return "";
+  if (!endStr || endStr === startStr) return formatDate(startStr, lang);
+  try {
+    const [sy, sm, sd] = startStr.split("-").map(Number);
+    const [ey, em, ed] = endStr.split("-").map(Number);
+    const start = new Date(sy, sm - 1, sd);
+    const end = new Date(ey, em - 1, ed);
+    const locale = lang === "es" ? "es-MX" : "en-US";
+    if (sy === ey && sm === em) {
+      // Same month: "5 – 7 de mayo, 2026"
+      const monthYear = end.toLocaleDateString(locale, { month: "long", year: "numeric" });
+      const sep = lang === "es" ? "–" : "–";
+      const connector = lang === "es" ? " de " : " ";
+      return `${sd} ${sep} ${ed}${connector}${monthYear}`;
+    }
+    const startStr2 = start.toLocaleDateString(locale, { day: "numeric", month: "short" });
+    const endStr2 = end.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
+    return `${startStr2} – ${endStr2}`;
+  } catch {
+    return `${startStr} – ${endStr}`;
+  }
+}
+
 export default function Eventos() {
   const { events, loading } = useEvents();
   const { lang } = useLanguage();
 
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = (events || []).filter((e) => (e.event_date || "") >= today);
+  const upcoming = (events || []).filter((e) => (e.end_date || e.event_date || "") >= today);
 
   return (
     <div data-testid="eventos-page" className="min-h-screen bg-orange-50">
@@ -120,7 +144,7 @@ export default function Eventos() {
                 </div>
                 <div className="p-6">
                   <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-slate-500">
-                    {formatDate(ev.event_date, lang)}
+                    {formatDateRange(ev.event_date, ev.end_date, lang)}
                   </p>
                   <h3 className="mt-1 text-2xl font-extrabold text-slate-900 leading-tight">
                     {ev.title}

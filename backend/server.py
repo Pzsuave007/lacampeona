@@ -245,9 +245,10 @@ class EventIn(BaseModel):
     title: str
     description: Optional[str] = ""
     location: Optional[str] = ""
-    event_date: str  # "YYYY-MM-DD"  (station local)
+    event_date: str  # "YYYY-MM-DD"  (start date, station local)
+    end_date: Optional[str] = ""  # "YYYY-MM-DD"  (last day; empty = same as event_date)
     start_time: str = "19:00"  # "HH:MM"
-    end_time: str = "23:00"  # "HH:MM"
+    end_time: str = "23:00"  # "HH:MM"  (end time on the last day)
     image_path: Optional[str] = ""  # banner / flyer
     ticket_url: Optional[str] = ""
     category: str = Field(default="concierto")  # concierto | promocion | comunidad
@@ -384,13 +385,24 @@ async def resolve_active_advertiser() -> Optional[dict]:
 
 def is_event_eligible_for_cta(event: dict, now: datetime) -> bool:
     """Event is shown in SmartCTA rotation when promoted_as_cta=true and now
-    falls between promote_from_date and end of event_date+end_time."""
+    falls between promote_from_date and end of (end_date or event_date) + end_time."""
     if not event.get("promoted_as_cta"):
         return False
     try:
         event_date = datetime.strptime(event["event_date"], "%Y-%m-%d").date()
     except Exception:
         return False
+    end_date_str = (event.get("end_date") or "").strip()
+    try:
+        end_date = (
+            datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            if end_date_str
+            else event_date
+        )
+    except Exception:
+        end_date = event_date
+    if end_date < event_date:
+        end_date = event_date
     today = now.date()
     promote_from = (event.get("promote_from_date") or "").strip()
     try:
@@ -401,9 +413,9 @@ def is_event_eligible_for_cta(event: dict, now: datetime) -> bool:
         )
     except Exception:
         from_date = event_date - timedelta(days=7)
-    if today < from_date or today > event_date:
+    if today < from_date or today > end_date:
         return False
-    if today == event_date:
+    if today == end_date:
         try:
             eh, em = map(int, (event.get("end_time") or "23:59").split(":"))
             event_end = now.replace(hour=eh, minute=em, second=0, microsecond=0)
@@ -508,15 +520,18 @@ async def get_advertiser(slug: str):
 # ---------------------- Events (public) ---------------------- #
 @api.get("/events")
 async def list_events(include_past: bool = False):
-    """Public events list. By default returns only today + future events,
-    sorted by event_date asc."""
+    """Public events list. By default returns only events whose end_date (or
+    event_date if no end_date) is today or future, sorted by event_date asc."""
     cursor = db.events.find({}, {"_id": 0}).sort([("event_date", 1), ("start_time", 1)])
     items = await cursor.to_list(500)
     if include_past:
         return items
     now = await station_now()
     today_str = now.date().isoformat()
-    return [e for e in items if (e.get("event_date") or "") >= today_str]
+    return [
+        e for e in items
+        if (e.get("end_date") or e.get("event_date") or "") >= today_str
+    ]
 
 
 @api.get("/events/{slug}")

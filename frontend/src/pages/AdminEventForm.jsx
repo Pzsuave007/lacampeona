@@ -8,6 +8,7 @@ const empty = {
   description: "",
   location: "",
   event_date: "",
+  end_date: "",
   start_time: "19:00",
   end_time: "23:00",
   image_path: "",
@@ -104,7 +105,8 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field testid="event-form-title" label="Título" wide value={form.title} onChange={(v) => set("title", v)} required />
             <Field testid="event-form-location" label="Ubicación" wide value={form.location} onChange={(v) => set("location", v)} placeholder="Salón XYZ, Dallas, OR" />
-            <Field testid="event-form-date" label="Fecha del evento" type="date" value={form.event_date} onChange={(v) => set("event_date", v)} required />
+            <Field testid="event-form-date" label="Fecha de inicio" type="date" value={form.event_date} onChange={(v) => set("event_date", v)} required />
+            <Field testid="event-form-end-date" label="Fecha de fin (opcional)" type="date" value={form.end_date} onChange={(v) => set("end_date", v)} placeholder="Igual que inicio si es 1 día" />
             <label className="block">
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Categoría</span>
               <select
@@ -121,7 +123,7 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
               </select>
             </label>
             <Field testid="event-start" label="Hora inicio" type="time" value={form.start_time} onChange={(v) => set("start_time", v)} />
-            <Field testid="event-end" label="Hora fin" type="time" value={form.end_time} onChange={(v) => set("end_time", v)} />
+            <Field testid="event-end" label="Hora fin (último día)" type="time" value={form.end_time} onChange={(v) => set("end_time", v)} />
             <Field testid="event-tickets" label="Link a boletos / RSVP" wide value={form.ticket_url} onChange={(v) => set("ticket_url", v)} placeholder="https://eventbrite.com/..." />
             <Field testid="event-color" type="color" label="Color" value={form.color || "#7F1D1D"} onChange={(v) => set("color", v)} />
             <TextArea testid="event-description" label="Descripción" value={form.description} onChange={(v) => set("description", v)} />

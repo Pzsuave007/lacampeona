@@ -668,7 +668,9 @@ function EventAdminCard({ ev, onEdit, onDelete }) {
           )}
         </div>
         <p className="text-xs text-slate-700 mt-1.5 font-bold">
-          📅 {ev.event_date} · {ev.start_time}–{ev.end_time}
+          📅 {ev.event_date}
+          {ev.end_date && ev.end_date !== ev.event_date ? ` → ${ev.end_date}` : ""}
+          {" "}· {ev.start_time}–{ev.end_time}
         </p>
         {ev.promoted_as_cta && (
           <p className="text-[11px] text-amber-700 font-bold mt-1 inline-flex items-center gap-1">

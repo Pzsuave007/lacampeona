@@ -102,9 +102,9 @@ export default function AdminEventForm({ initial, onCancel, onSaved }) {
 
         <form onSubmit={submit} className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field testid="event-title" label="Título" wide value={form.title} onChange={(v) => set("title", v)} required />
-            <Field testid="event-location" label="Ubicación" wide value={form.location} onChange={(v) => set("location", v)} placeholder="Salón XYZ, Dallas, OR" />
-            <Field testid="event-date" label="Fecha del evento" type="date" value={form.event_date} onChange={(v) => set("event_date", v)} required />
+            <Field testid="event-form-title" label="Título" wide value={form.title} onChange={(v) => set("title", v)} required />
+            <Field testid="event-form-location" label="Ubicación" wide value={form.location} onChange={(v) => set("location", v)} placeholder="Salón XYZ, Dallas, OR" />
+            <Field testid="event-form-date" label="Fecha del evento" type="date" value={form.event_date} onChange={(v) => set("event_date", v)} required />
             <label className="block">
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Categoría</span>
               <select

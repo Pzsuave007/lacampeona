@@ -1,0 +1,106 @@
+{
+  "project_context": {
+    "domain": "Radio Station / Advertising",
+    "theme": "Light",
+    "archetype": "Archetype 6 (Vibrant Play) crossed with Latin Cultural Vibrancy",
+    "vibe": "Modern, energetic, friendly, culturally resonant, mobile-first"
+  },
+  "colors": {
+    "background_base": "#FFF7ED",
+    "surface": "#FFFFFF",
+    "surface_glass": "bg-white/80 backdrop-blur-xl border border-orange-900/10",
+    "primary": "#EA580C",
+    "primary_hover": "#C2410C",
+    "secondary": "#FACC15",
+    "text_main": "#0F172A",
+    "text_muted": "#475569",
+    "accent_whatsapp": "#25D366",
+    "accent_whatsapp_hover": "#16A34A",
+    "audio_player_bg": "#0F172A",
+    "audio_player_text": "#FFFFFF",
+    "admin_sidebar_bg": "#F8FAFC",
+    "admin_surface": "#FFFFFF"
+  },
+  "typography": {
+    "font_family_headings": "Outfit, sans-serif",
+    "font_family_body": "Manrope, sans-serif",
+    "h1": "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-slate-900",
+    "h2": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900",
+    "h3": "text-2xl sm:text-3xl font-bold tracking-tight text-slate-900",
+    "body_lg": "text-lg text-slate-700 leading-relaxed",
+    "body_base": "text-base text-slate-700 leading-relaxed",
+    "body_sm": "text-sm text-slate-500",
+    "labels": "text-xs font-bold uppercase tracking-[0.2em] text-orange-600"
+  },
+  "layout_and_spacing": {
+    "philosophy": "Generous Spacing Philosophy with Bento Grid modes",
+    "section_padding": "py-16 md:py-24",
+    "container_padding": "px-4 sm:px-6 lg:px-8",
+    "card_padding": "p-6 sm:p-8",
+    "gap_large": "gap-8 lg:gap-12",
+    "gap_small": "gap-4 sm:gap-6",
+    "border_radius": {
+      "card": "rounded-3xl",
+      "button": "rounded-full",
+      "player": "rounded-t-3xl sm:rounded-3xl"
+    }
+  },
+  "components": {
+    "icons_library": "lucide-react",
+    "buttons": {
+      "primary": "bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-8 py-4 shadow-[0_8px_30px_rgba(234,88,12,0.3)] transition-all hover:-translate-y-1",
+      "whatsapp": "bg-[#25D366] hover:bg-[#16A34A] text-white font-bold rounded-full px-8 py-4 shadow-[0_8px_30px_rgba(37,211,102,0.3)] flex items-center gap-2 transition-all hover:-translate-y-1",
+      "secondary": "bg-white text-slate-900 border-2 border-slate-200 hover:border-slate-900 font-bold rounded-full px-8 py-4 transition-all"
+    },
+    "cards": {
+      "advertiser": "bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100",
+      "admin_widget": "bg-white rounded-xl shadow-sm border border-slate-200 p-6"
+    },
+    "audio_player": {
+      "layout": "Fixed bottom, z-50, w-full sm:w-[calc(100%-2rem)] sm:bottom-4 sm:left-4 sm:right-4 bg-slate-900 text-white rounded-t-3xl sm:rounded-3xl shadow-2xl",
+      "controls": "Min 44x44px touch targets. Play button in primary orange.",
+      "now_playing": "Scrolling marquee for long track names, fast-marquee library recommended."
+    },
+    "hero_banner": {
+      "overlay": "bg-gradient-to-r from-slate-900/80 via-slate-900/40 to-transparent",
+      "style": "Full bleed image, heavy text on the left, warm tones."
+    }
+  },
+  "motion_and_interactions": {
+    "hover_states": "All buttons must lift (-translate-y-1) and increase shadow opacity.",
+    "page_transitions": "Fade in with slight upward translation (framer-motion).",
+    "active_states": "Scale down slightly (scale-95) on click."
+  },
+  "media": {
+    "hero_radio_studio": {
+      "url": "https://images.pexels.com/photos/32213239/pexels-photo-32213239.jpeg",
+      "description": "Main hero background showing radio hosts in a dynamic studio environment",
+      "category": "Hero / Branding"
+    },
+    "listener_joy": {
+      "url": "https://images.pexels.com/photos/4651036/pexels-photo-4651036.jpeg",
+      "description": "Happy listeners wearing headphones, used for community/engagement sections",
+      "category": "Content / Social Proof"
+    },
+    "advertiser_food": {
+      "url": "https://images.pexels.com/photos/31822998/pexels-photo-31822998.jpeg",
+      "description": "Placeholder image for a local food/restaurant advertiser (Sopes with cheese)",
+      "category": "Advertiser Placeholder"
+    },
+    "advertiser_retail": {
+      "url": "https://images.pexels.com/photos/32351724/pexels-photo-32351724.jpeg",
+      "description": "Placeholder image for a local cafe or secondary advertiser (Quesadilla)",
+      "category": "Advertiser Placeholder 2"
+    }
+  },
+  "instructions_to_main_agent": [
+    "MUST USE HTML/Tailwind for marketing layout and Advertiser Pages. Do NOT use standard Shadcn Cards for creative marketing sections.",
+    "MUST USE Shadcn UI exclusively for the Admin Dashboard (Tables, Dialogs, Select, Forms).",
+    "Ensure 'Now Playing' player is sticky at the bottom with high z-index (z-50) and thumb-friendly controls (min 44px).",
+    "Do NOT use pure #000000 or #808080. Use Slate-900 and Slate-500 instead.",
+    "Include a prominent bilingual toggle (ES/EN) in the main navigation.",
+    "Implement 'data-testid' attributes on ALL interactive elements (buttons, inputs, links).",
+    "For the Advertiser Active state, the homepage should visually transition to feature the active advertiser's brand prominently in the hero section.",
+    "Integrate WhatsApp links using generic format 'https://wa.me/number?text=encoded_message'."
+  ]
+}

@@ -94,10 +94,24 @@ export default function SmartCTA() {
           <span className="flex-1 text-left min-w-0">
             <span className="block text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[0.2em] sm:tracking-[0.25em] opacity-90">
               {t.home.activeBadge}
+              {!expanded && (
+                <span className="opacity-75 normal-case tracking-normal font-bold">
+                  {" · "}
+                  {t.home.tapToOpen}
+                </span>
+              )}
             </span>
-            <span className="block font-extrabold truncate text-sm sm:text-base">
+            <span className="block font-extrabold truncate text-sm sm:text-base leading-tight">
               {active.name}
             </span>
+            {!expanded && active.special_offer && (
+              <span
+                data-testid="smart-cta-collapsed-offer"
+                className="block text-[11px] sm:text-xs font-semibold opacity-95 truncate leading-tight mt-0.5"
+              >
+                {active.special_offer}
+              </span>
+            )}
           </span>
           <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
             {expanded ? (

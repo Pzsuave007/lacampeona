@@ -178,7 +178,8 @@ export default function SmartCTA() {
             <Link
               to={`/a/${active.slug}`}
               data-testid="smart-cta-visit"
-              className="text-center text-[11px] sm:text-xs font-bold text-slate-600 hover:text-slate-900 underline underline-offset-2"
+              className="text-center text-[13px] sm:text-sm font-bold text-slate-700 hover:text-slate-900 underline underline-offset-4 decoration-2 py-1"
+              style={{ textDecorationColor: color }}
             >
               {t.home.visitPage} →
             </Link>

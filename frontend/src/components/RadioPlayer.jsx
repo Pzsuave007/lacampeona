@@ -57,6 +57,14 @@ export default function RadioPlayer() {
       data-testid="radio-player"
       className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-4 sm:left-4 sm:right-4 mx-auto max-w-5xl"
     >
+      {error && (
+        <div
+          className="absolute left-3 right-3 sm:left-6 sm:right-6 -top-8 px-3 py-1.5 text-[11px] text-red-100 bg-red-700/95 rounded-full text-center shadow-lg"
+          data-testid="player-error"
+        >
+          Stream unavailable. Verify the stream URL in admin settings.
+        </div>
+      )}
       <div className="bg-slate-900 text-white sm:rounded-3xl shadow-2xl shadow-orange-900/30 border border-white/5 overflow-hidden">
         <div className="flex items-center gap-4 p-3 sm:p-4">
           {/* Logo / live indicator */}
@@ -84,13 +92,17 @@ export default function RadioPlayer() {
               <span className="text-[10px] uppercase tracking-[0.2em] text-orange-300 font-bold">
                 {t.live.nowPlaying}
               </span>
-              {playing && (
-                <span className="flex items-end gap-0.5 h-3 text-orange-300">
-                  <span className="eq-bar" style={{ width: 2, height: 10 }} />
-                  <span className="eq-bar" style={{ width: 2, height: 10 }} />
-                  <span className="eq-bar" style={{ width: 2, height: 10 }} />
-                </span>
-              )}
+              {/* EQ bars - always rendered (opacity) so player height stays stable */}
+              <span
+                className={`flex items-end gap-0.5 h-3 text-orange-300 transition-opacity ${
+                  playing ? "opacity-100" : "opacity-0"
+                }`}
+                aria-hidden="true"
+              >
+                <span className="eq-bar" style={{ width: 2, height: 10 }} />
+                <span className="eq-bar" style={{ width: 2, height: 10 }} />
+                <span className="eq-bar" style={{ width: 2, height: 10 }} />
+              </span>
             </div>
             <div className="font-extrabold text-base sm:text-lg truncate" data-testid="now-playing-text">
               {nowPlaying}
@@ -133,12 +145,13 @@ export default function RadioPlayer() {
             </button>
           </div>
         </div>
-        {error && (
-          <div className="px-4 pb-3 text-xs text-red-300" data-testid="player-error">
-            Stream unavailable. Verify the stream URL in admin settings.
-          </div>
-        )}
-        <audio ref={audioRef} src={streamUrl} preload="none" crossOrigin="anonymous" />
+        <audio
+          ref={audioRef}
+          src={streamUrl}
+          preload="none"
+          crossOrigin="anonymous"
+          style={{ display: "none" }}
+        />
       </div>
     </div>
   );

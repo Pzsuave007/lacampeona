@@ -72,16 +72,18 @@ export default function RadioPlayer() {
                 className="w-full h-full object-contain p-1"
               />
             </div>
-            <span className="absolute -top-1 -right-1 inline-flex items-center gap-1 bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-white live-dot" />
-              {t.live.label}
-            </span>
           </div>
 
           {/* Now playing */}
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-orange-300 font-bold flex items-center gap-2">
-              {t.live.nowPlaying}
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="inline-flex items-center gap-1 bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-white live-dot" />
+                {t.live.label}
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-orange-300 font-bold">
+                {t.live.nowPlaying}
+              </span>
               {playing && (
                 <span className="flex items-end gap-0.5 h-3 text-orange-300">
                   <span className="eq-bar" style={{ width: 2, height: 10 }} />

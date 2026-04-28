@@ -120,7 +120,7 @@ export default function AdvertiserForm({ initial, onCancel, onSaved }) {
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Banner</span>
             <div className="mt-2 flex items-center gap-4">
               <div className="w-32 h-20 bg-slate-100 rounded-xl overflow-hidden shrink-0">
-                {form.banner_path && (
+                {form.banner_path && bannerUrl(form.banner_path) && (
                   <img src={bannerUrl(form.banner_path)} alt="banner" className="w-full h-full object-cover" />
                 )}
               </div>

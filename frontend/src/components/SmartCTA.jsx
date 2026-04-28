@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Phone, MessageCircle, MapPin, Sparkles, ChevronUp, ChevronDown } from "lucide-react";
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -8,6 +8,7 @@ import { telLink, waLink, mapsLink } from "../lib/api";
 export default function SmartCTA() {
   const { active, settings } = useStation();
   const { t } = useLanguage();
+  const location = useLocation();
   const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
@@ -15,6 +16,8 @@ export default function SmartCTA() {
   }, [active?.id]);
 
   if (!active) return null;
+  // Hide on login and admin to reduce visual clutter
+  if (location.pathname.startsWith("/login") || location.pathname.startsWith("/admin")) return null;
 
   const wa = waLink(active.whatsapp || settings?.station_whatsapp, t.home.heardOnRadio + " — " + active.name);
   const tel = telLink(active.phone);

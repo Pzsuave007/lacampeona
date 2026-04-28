@@ -86,8 +86,8 @@ export default function HostHero({ host, stationName, stationTagline }) {
       {/* Decorative blob */}
       <div className="absolute -top-24 -right-24 w-[30rem] h-[30rem] rounded-full bg-amber-400/20 blur-3xl blob-b pointer-events-none" />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 sm:pt-12 sm:pb-16 md:pt-20 md:pb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-end">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-12 sm:pt-12 sm:pb-16 md:pt-20 md:pb-28">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-10 items-end">
           {/* Mobile-only DJ portrait card (above the text) */}
           <div className="lg:hidden -mx-2">
             <div className="relative">

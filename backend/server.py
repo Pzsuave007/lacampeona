@@ -478,13 +478,19 @@ async def login(payload: LoginIn, response: Response):
     token = create_access_token(user["id"], user["email"])
     set_auth_cookie(response, token)
     return {
-        "user": {"id": user["id"], "email": user["email"], "name": user["name"], "role": user["role"]},
+        "user": {
+            "id": user["id"], "email": user["email"], "name": user["name"],
+            "role": user["role"], "host_slug": user.get("host_slug", ""),
+        },
         "access_token": token,
     }
 
 @api.get("/auth/me")
 async def me(user: dict = Depends(get_current_user)):
-    return {"id": user["id"], "email": user["email"], "name": user["name"], "role": user["role"]}
+    return {
+        "id": user["id"], "email": user["email"], "name": user["name"],
+        "role": user["role"], "host_slug": user.get("host_slug", ""),
+    }
 
 @api.post("/auth/logout")
 async def logout(response: Response):
@@ -953,6 +959,298 @@ async def admin_upload(file: UploadFile = File(...), _: dict = Depends(get_admin
     })
     return {"path": final_path, "url": f"/api/files/{final_path}"}
 
+# ---------------------- Content Studio (DJ) ---------------------- #
+# 8 transformative templates for safe-repost / original DJ content.
+# Spanish-first (latino US station). Each template defines the input fields the
+# DJ must fill and a per-template instruction appended to the base system msg.
+CONTENT_TEMPLATES: dict = {
+    "today_in_history": {
+        "label": "Hoy en la historia",
+        "emoji": "📜",
+        "description": "Un evento memorable de la música o cultura latina que pasó un día como hoy.",
+        "fields": [
+            {"key": "topic", "label": "Tema o evento", "placeholder": "Ej: estreno de 'La Bamba', cumpleaños de Selena…", "required": True},
+            {"key": "year", "label": "Año (opcional)", "placeholder": "1987", "required": False},
+        ],
+        "instruction": "Crea un post tipo 'Un día como hoy' sobre: {topic}. Año: {year}. Si solo dan el tema, agrega el contexto histórico adecuado. Cierra invitando a la audiencia a sintonizar para escuchar canciones relacionadas.",
+    },
+    "hot_take": {
+        "label": "Opinión picante",
+        "emoji": "🔥",
+        "description": "Una opinión que invite al debate respetuoso.",
+        "fields": [
+            {"key": "topic", "label": "Tema musical", "placeholder": "Ej: ¿Bad Bunny merece ser el rey del reggaetón?", "required": True},
+            {"key": "stance", "label": "Tu postura (opcional)", "placeholder": "A favor / en contra / matizado", "required": False},
+        ],
+        "instruction": "Genera una opinión picante pero respetuosa sobre: {topic}. Postura sugerida: {stance}. Termina con una pregunta directa que invite a la audiencia a contestar en los comentarios.",
+    },
+    "throwback": {
+        "label": "Throwback / Recuerdo",
+        "emoji": "📼",
+        "description": "Nostalgia musical para conectar con la comunidad.",
+        "fields": [
+            {"key": "memory", "label": "Recuerdo o canción", "placeholder": "Ej: 'Vivir mi vida' de Marc Anthony", "required": True},
+            {"key": "year", "label": "Año (opcional)", "placeholder": "2013", "required": False},
+        ],
+        "instruction": "Genera un post nostálgico sobre: {memory}. Año: {year}. Conecta con sentimientos de comunidad latina y termina invitando a compartir su recuerdo favorito.",
+    },
+    "poll": {
+        "label": "Encuesta",
+        "emoji": "📊",
+        "description": "Pregunta directa con opciones para activar la audiencia.",
+        "fields": [
+            {"key": "question", "label": "Pregunta", "placeholder": "¿Cuál es la mejor canción del verano?", "required": True},
+            {"key": "options", "label": "Opciones (separadas por coma)", "placeholder": "Despechá, Tití me preguntó, Provenza", "required": True},
+        ],
+        "instruction": "Genera una encuesta para redes sobre: {question}. Opciones a votar: {options}. Si son menos de 2, sugiere 3-4 opciones tú mismo. Formato listo para Instagram/Facebook.",
+    },
+    "behind_scenes": {
+        "label": "Detrás de cámaras",
+        "emoji": "🎙️",
+        "description": "Momento auténtico de la cabina o el estudio.",
+        "fields": [
+            {"key": "situation", "label": "Situación", "placeholder": "Ej: cómo me preparo para el show de las 6am", "required": True},
+        ],
+        "instruction": "Genera un post tipo 'detrás de cámaras' sobre: {situation}. Tono auténtico, cercano, como si lo contara el DJ a un amigo. Cierra con una invitación a sintonizar.",
+    },
+    "important_day": {
+        "label": "Día importante",
+        "emoji": "🎉",
+        "description": "Efeméride o celebración relevante para la comunidad latina.",
+        "fields": [
+            {"key": "day_name", "label": "Nombre del día", "placeholder": "Día de la Independencia de México, Día del Padre…", "required": True},
+            {"key": "angle", "label": "Ángulo o mensaje (opcional)", "placeholder": "Ej: agradecer a los papás trabajadores", "required": False},
+        ],
+        "instruction": "Genera un post celebrando: {day_name}. Ángulo o mensaje: {angle}. Conecta emocionalmente con la comunidad latina en EE.UU. y propone una canción o saludo en vivo.",
+    },
+    "inspirational_quote": {
+        "label": "Frase inspiradora",
+        "emoji": "✨",
+        "description": "Frase motivadora con contexto.",
+        "fields": [
+            {"key": "topic", "label": "Tema o emoción", "placeholder": "Perseverancia, familia, amor propio…", "required": True},
+            {"key": "author", "label": "Autor sugerido (opcional)", "placeholder": "Selena, Celia Cruz, anónimo…", "required": False},
+        ],
+        "instruction": "Genera una frase inspiradora ORIGINAL (no copies frases famosas literalmente — reformula) sobre: {topic}. Atribuye libremente a: {author}, o si no aplica, déjala anónima/inspirada. Acompaña con un mini-mensaje del DJ a la audiencia.",
+    },
+    "musical_recommendation": {
+        "label": "Recomendación musical",
+        "emoji": "🎵",
+        "description": "Una canción o artista para descubrir.",
+        "fields": [
+            {"key": "song_artist", "label": "Canción / artista", "placeholder": "Karol G - Mañana Será Bonito", "required": True},
+            {"key": "why", "label": "Por qué la recomiendas (opcional)", "placeholder": "Es perfecta para manejar al trabajo", "required": False},
+        ],
+        "instruction": "Recomienda: {song_artist}. Razón del DJ: {why}. Da 2-3 datos curiosos del artista o canción y cierra invitando a pedirla en vivo.",
+    },
+}
+
+
+def build_dj_system_message(platform: str, station_name: str, host_name: str) -> str:
+    return (
+        f"Eres un copywriter experto en redes sociales para una estación de radio latina "
+        f"({station_name}) en Estados Unidos. Hablas como el DJ {host_name}. "
+        f"Tu trabajo es generar contenido en ESPAÑOL, pegadizo, breve, con tono coloquial latino, "
+        f"optimizado para {platform}. Evita reposts literales — todo debe ser TRANSFORMATIVO y original.\n\n"
+        f"DEVUELVE EXACTAMENTE este formato (sin explicaciones extra):\n"
+        f"[CAPTION]\n<texto del post, 2-5 líneas, máximo 280 caracteres si es Twitter/X, "
+        f"hasta 2200 si es Instagram/Facebook>\n\n"
+        f"[HASHTAGS]\n<5-8 hashtags relevantes mezclando español e inglés, separados por espacios, todos comenzando con #>\n\n"
+        f"[CTA]\n<una sola línea con una llamada a la acción que dirija al oyente a sintonizar la radio, "
+        f"comentar o compartir>"
+    )
+
+
+def build_dj_user_message(template_key: str, inputs: dict, station_name: str) -> str:
+    tmpl = CONTENT_TEMPLATES[template_key]
+    safe_inputs = {f["key"]: (inputs.get(f["key"]) or "—").strip() or "—" for f in tmpl["fields"]}
+    instruction = tmpl["instruction"].format(**safe_inputs)
+    return (
+        f"Estación: {station_name}\n"
+        f"Plantilla: {tmpl['label']}\n"
+        f"Datos del DJ:\n"
+        + "\n".join([f"- {f['label']}: {safe_inputs[f['key']]}" for f in tmpl["fields"]])
+        + f"\n\nInstrucción: {instruction}"
+    )
+
+
+async def get_dj(user: dict = Depends(get_current_user)) -> dict:
+    """Allow role=dj or role=admin to use the Content Studio."""
+    if user.get("role") not in ("dj", "admin"):
+        raise HTTPException(status_code=403, detail="DJ only")
+    return user
+
+
+def dj_host_slug(user: dict) -> str:
+    """Each draft is scoped to a host_slug. Admins acting in DJ console use
+    the special slug '__admin__' so they don't collide with real DJ drafts."""
+    return (user.get("host_slug") or "").strip() or ("__admin__" if user.get("role") == "admin" else "")
+
+
+class GenerateDraftIn(BaseModel):
+    template_type: str
+    inputs: dict = {}
+    platform: str = "instagram"  # instagram | facebook | tiktok | twitter
+    save: bool = False  # if true, also persists the generated text as a draft
+
+
+class ContentDraftIn(BaseModel):
+    template_type: str
+    inputs: dict = {}
+    text: str
+    platform: str = "instagram"
+    title: Optional[str] = ""
+    status: str = "draft"  # draft | scheduled | published
+    scheduled_at: Optional[str] = ""  # ISO date "YYYY-MM-DD" or full ISO datetime
+
+
+class ContentDraftPatch(BaseModel):
+    text: Optional[str] = None
+    platform: Optional[str] = None
+    title: Optional[str] = None
+    status: Optional[str] = None
+    scheduled_at: Optional[str] = None
+
+
+@api.get("/dj/templates")
+async def dj_list_templates(_: dict = Depends(get_dj)):
+    return [
+        {"key": k, **{kk: vv for kk, vv in v.items() if kk != "instruction"}}
+        for k, v in CONTENT_TEMPLATES.items()
+    ]
+
+
+@api.get("/dj/me")
+async def dj_me(user: dict = Depends(get_dj)):
+    host = None
+    slug = (user.get("host_slug") or "").strip()
+    if slug:
+        host = await db.hosts.find_one({"slug": slug}, {"_id": 0})
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "name": user["name"],
+        "role": user["role"],
+        "host_slug": slug,
+        "host": host,
+    }
+
+
+@api.post("/dj/generate")
+async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
+    if payload.template_type not in CONTENT_TEMPLATES:
+        raise HTTPException(status_code=400, detail="Plantilla inválida")
+    if not EMERGENT_KEY:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no configurado")
+
+    settings = await get_settings_doc()
+    station_name = settings.get("station_name") or "La Campeona"
+    slug = dj_host_slug(user)
+    host_name = user.get("name") or "el DJ"
+    if slug and slug != "__admin__":
+        h = await db.hosts.find_one({"slug": slug}, {"_id": 0, "name": 1, "show_name": 1})
+        if h:
+            host_name = h.get("show_name") or h.get("name") or host_name
+
+    system_msg = build_dj_system_message(payload.platform, station_name, host_name)
+    user_msg = build_dj_user_message(payload.template_type, payload.inputs, station_name)
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = (
+            LlmChat(
+                api_key=EMERGENT_KEY,
+                session_id=f"dj-{user['id']}-{uuid.uuid4().hex[:8]}",
+                system_message=system_msg,
+            )
+            .with_model("anthropic", "claude-sonnet-4-5-20250929")
+        )
+        text = await chat.send_message(UserMessage(text=user_msg))
+    except Exception as e:
+        logger.exception("DJ generation failed")
+        raise HTTPException(status_code=502, detail=f"Generación falló: {e}")
+
+    result = {
+        "text": text,
+        "template_type": payload.template_type,
+        "platform": payload.platform,
+        "inputs": payload.inputs,
+    }
+
+    if payload.save:
+        now = now_iso()
+        doc = {
+            "id": str(uuid.uuid4()),
+            "host_slug": slug,
+            "user_id": user["id"],
+            "template_type": payload.template_type,
+            "inputs": payload.inputs,
+            "text": text,
+            "platform": payload.platform,
+            "title": "",
+            "status": "draft",
+            "scheduled_at": "",
+            "created_at": now,
+            "updated_at": now,
+        }
+        await db.content_drafts.insert_one(doc.copy())
+        result["draft"] = {k: v for k, v in doc.items() if k != "_id"}
+
+    return result
+
+
+@api.get("/dj/drafts")
+async def dj_list_drafts(user: dict = Depends(get_dj)):
+    slug = dj_host_slug(user)
+    query: dict = {}
+    if user.get("role") == "dj":
+        query["host_slug"] = slug
+    cursor = db.content_drafts.find(query, {"_id": 0}).sort("created_at", -1)
+    return await cursor.to_list(500)
+
+
+@api.post("/dj/drafts")
+async def dj_create_draft(payload: ContentDraftIn, user: dict = Depends(get_dj)):
+    if payload.template_type not in CONTENT_TEMPLATES:
+        raise HTTPException(status_code=400, detail="Plantilla inválida")
+    now = now_iso()
+    doc = {
+        "id": str(uuid.uuid4()),
+        "host_slug": dj_host_slug(user),
+        "user_id": user["id"],
+        **payload.model_dump(),
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.content_drafts.insert_one(doc.copy())
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+
+@api.patch("/dj/drafts/{draft_id}")
+async def dj_update_draft(draft_id: str, payload: ContentDraftPatch, user: dict = Depends(get_dj)):
+    existing = await db.content_drafts.find_one({"id": draft_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Borrador no encontrado")
+    if user.get("role") == "dj" and existing.get("host_slug") != dj_host_slug(user):
+        raise HTTPException(status_code=403, detail="No es tu borrador")
+    update = {k: v for k, v in payload.model_dump().items() if v is not None}
+    update["updated_at"] = now_iso()
+    await db.content_drafts.update_one({"id": draft_id}, {"$set": update})
+    doc = await db.content_drafts.find_one({"id": draft_id}, {"_id": 0})
+    return doc
+
+
+@api.delete("/dj/drafts/{draft_id}")
+async def dj_delete_draft(draft_id: str, user: dict = Depends(get_dj)):
+    existing = await db.content_drafts.find_one({"id": draft_id}, {"_id": 0})
+    if not existing:
+        return {"ok": True}
+    if user.get("role") == "dj" and existing.get("host_slug") != dj_host_slug(user):
+        raise HTTPException(status_code=403, detail="No es tu borrador")
+    await db.content_drafts.delete_one({"id": draft_id})
+    return {"ok": True}
+
+
 # ---------------------- Seeding ---------------------- #
 async def seed_admin():
     email = os.environ.get("ADMIN_EMAIL", "admin@radiolatina.fm").lower()
@@ -971,6 +1269,37 @@ async def seed_admin():
     elif not verify_password(pw, existing.get("password_hash", "")):
         await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(pw)}})
         logger.info(f"Updated admin password: {email}")
+
+
+async def seed_demo_dj():
+    """Seed a demo DJ account linked to the first host (DJ Carlos Ramírez)."""
+    email = os.environ.get("DJ_EMAIL", "dj@radiolatina.fm").lower()
+    pw = os.environ.get("DJ_PASSWORD", "dj123")
+    host = await db.hosts.find_one({}, {"_id": 0, "slug": 1, "name": 1}, sort=[("created_at", 1)])
+    host_slug = host["slug"] if host else ""
+    existing = await db.users.find_one({"email": email})
+    if not existing:
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()),
+            "email": email,
+            "password_hash": hash_password(pw),
+            "name": (host or {}).get("name") or "DJ Demo",
+            "role": "dj",
+            "host_slug": host_slug,
+            "created_at": now_iso(),
+        })
+        logger.info(f"Seeded demo DJ: {email} -> {host_slug}")
+    else:
+        update = {}
+        if not verify_password(pw, existing.get("password_hash", "")):
+            update["password_hash"] = hash_password(pw)
+        if not existing.get("host_slug") and host_slug:
+            update["host_slug"] = host_slug
+        if existing.get("role") != "dj":
+            update["role"] = "dj"
+        if update:
+            await db.users.update_one({"email": email}, {"$set": update})
+            logger.info(f"Updated demo DJ: {email}")
 
 DEMO_ADVERTISERS = [
     {
@@ -1104,9 +1433,12 @@ async def on_startup():
     await db.cta_events.create_index([("entity_id", 1), ("created_at", 1)])
     await db.cta_events.create_index([("kind", 1)])
     await db.settings.create_index("id", unique=True)
+    await db.content_drafts.create_index("id", unique=True)
+    await db.content_drafts.create_index([("host_slug", 1), ("created_at", -1)])
     await seed_admin()
     await seed_demo_advertisers()
     await seed_demo_hosts()
+    await seed_demo_dj()
     await backfill_report_tokens()
     await get_settings_doc()
     init_storage()

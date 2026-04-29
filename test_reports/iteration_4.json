@@ -1,0 +1,41 @@
+{
+  "summary": "Sprint 1 Content Studio (DJ) end-to-end testing. Backend: 19/19 pytest tests pass including real Claude Sonnet 4.5 generation (musical_recommendation + hot_take with save) — outputs contain [CAPTION]/[HASHTAGS]/[CTA] sections in Spanish. Auth login/me return role + host_slug, /api/dj/me returns DJ profile with linked host (and admin gets host=null), /api/dj/templates returns exactly 8 transformative templates (no 'instruction' field leaked), invalid template_type → 400, full draft CRUD works, DJ-vs-DJ isolation enforced (DJ cannot PATCH/DELETE another host_slug → 403, cannot see admin __admin__ drafts), admin can use all DJ endpoints. Regression endpoints (/active, /advertisers, /events, /admin/analytics/overview, /track) all 200. Frontend: /login with dj@radiolatina.fm/dj123 redirects to /dj and renders dj-studio-title + dj-empty-state, nav-dj-link visible, 'Nuevo post' opens dj-composer with 8-template grid, calendar toggle works, admin login redirects to /admin.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "DjStudio Nuevo Post button", "issue": "data-testid is 'dj-new-draft-btn' but review spec referenced 'dj-new-post-btn'. Test had to fall back to get_by_role('button', name='Nuevo post'). Recommend aligning testid with spec or updating spec to match.", "selector": "[data-testid=\"dj-new-draft-btn\"]", "priority": "LOW"},
+      {"component": "DjStudio template grid", "issue": "Selector '[data-testid^=\"dj-template-\"]' matches 9 elements (likely includes a container/wrapper using same prefix). Backend verifies exactly 8 templates. Recommend renaming the wrapper testid (e.g. 'dj-template-grid' has overlapping prefix) so prefix queries match exactly 8 cards.", "selector": "[data-testid^=\"dj-template-\"]", "priority": "LOW"},
+      {"component": "Various pages", "issue": "Console warning '<img src=\"\">' still emitted (carry-over from iter 2/3) — empty image src for entities without photo/banner.", "selector": "img[src='']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_content_studio.py",
+    "/app/test_reports/pytest/content_studio_results.xml"
+  ],
+  "action_items": [
+    "(LOW) Align Nuevo Post button testid: rename 'dj-new-draft-btn' to 'dj-new-post-btn' (or update review spec).",
+    "(LOW) Make 'dj-template-' prefix unique per card only — rename wrapper testid (e.g. 'dj-templates') so [data-testid^='dj-template-'] returns exactly 8.",
+    "(LOW carry-over) Avoid <img src=''>; render null/placeholder when image_path/photo_path/banner_path is empty."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now ~1460 lines — Sprint 1 added ~250 lines of Content Studio code inline; recommend splitting into routers (dj_router.py, auth_router.py, analytics_router.py).",
+    "/api/dj/generate calls Claude with a 12h-token user; no rate-limit/abuse guard. A DJ could spam expensive LLM calls. Add per-user rate limiting (e.g. 30/hour) or a daily quota.",
+    "GenerateDraftIn.inputs is a free-form dict — Pydantic does not validate per-template required fields server-side. Frontend disables the button, but server should also validate (raise 400 if a 'required: True' field is missing/empty) to harden the API.",
+    "ContentDraftIn.status accepts any string (no Literal enum). Should be Literal['draft','scheduled','published'] to reject typos. Same for ContentDraftPatch.status.",
+    "dj_host_slug returns '__admin__' for admins — that's fine, but it's a magic string used in /dj/drafts permission checks; consider a constant ADMIN_HOST_SLUG to avoid typos.",
+    "seed_demo_dj() runs on every startup and only updates password if mismatched — good. But host_slug only assigned when the field is empty; if hosts collection is wiped & reseeded, the DJ user will keep the stale host_slug pointing to a missing host. Consider re-linking when the referenced host doesn't exist.",
+    "/api/dj/templates is gated behind get_dj — fine, but the list is static; could be cached or even served as a public constant since it leaks no secrets (instruction is already stripped).",
+    "Draft list query has no pagination (to_list(500)). For an active DJ this could grow; add limit/skip params."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_content_studio.py (new — 19 tests, 22s incl. real LLM)"
+  ],
+  "success_rate": {"backend": "100% (19/19)", "frontend": "100% on critical flows (DJ login→/dj, composer, templates, calendar toggle, admin→/admin)"},
+  "test_credentials": "admin@radiolatina.fm/admin123 and dj@radiolatina.fm/dj123 (from /app/memory/test_credentials.md; DJ seeded automatically and linked to first host)",
+  "seed_data_creation": "Tests create TEST_-prefixed drafts and clean them up via DELETE in same test. Admin draft with host_slug='__admin__' also cleaned up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New backend pytest file: /app/backend/tests/test_content_studio.py. Run with: pytest backend/tests/test_content_studio.py -v. Two tests perform real Claude Sonnet 4.5 calls (~5-10s each); use --timeout if needed. Existing test files still apply: test_radio_api.py, test_events_rotation.py, test_tracking_analytics.py. The DJ user's host_slug is whatever the FIRST host's slug is at first seed time (e.g. 'dj-carlos-ram-rez'). Admin in DJ console uses host_slug='__admin__'. Templates registry CONTENT_TEMPLATES is in server.py around line 966-1046 and is Spanish-first."
+}

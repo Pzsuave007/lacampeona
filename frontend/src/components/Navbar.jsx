@@ -65,6 +65,11 @@ export default function Navbar() {
               </span>
             </NavLink>
           )}
+          {user?.role === "dj" && (
+            <NavLink to="/dj" className={linkClass} data-testid="nav-dj-link">
+              <span className="inline-flex items-center gap-1">✨ Studio</span>
+            </NavLink>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -86,7 +91,7 @@ export default function Navbar() {
               {t.nav.login}
             </Link>
           )}
-          {user?.role === "admin" && (
+          {(user?.role === "admin" || user?.role === "dj") && (
             <button
               data-testid="nav-logout-btn"
               onClick={async () => {
@@ -134,12 +139,17 @@ export default function Navbar() {
                 {t.nav.admin}
               </NavLink>
             )}
+            {user?.role === "dj" && (
+              <NavLink to="/dj" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-dj">
+                ✨ Studio
+              </NavLink>
+            )}
             {user === null && (
               <Link to="/login" onClick={() => setOpen(false)} className="px-3 py-2 rounded-full text-sm font-bold bg-slate-900 text-white text-center" data-testid="nav-mobile-login">
                 {t.nav.login}
               </Link>
             )}
-            {user?.role === "admin" && (
+            {(user?.role === "admin" || user?.role === "dj") && (
               <button
                 data-testid="nav-mobile-logout"
                 onClick={async () => {

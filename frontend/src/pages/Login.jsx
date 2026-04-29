@@ -27,9 +27,10 @@ export default function Login() {
     setErr("");
     setBusy(true);
     try {
-      await login(email, password);
+      const u = await login(email, password);
       toast.success("¡Bienvenido!");
-      navigate("/admin");
+      if (u?.role === "dj") navigate("/dj");
+      else navigate("/admin");
     } catch (e) {
       const msg = formatErr(e?.response?.data?.detail) || t.auth.invalid;
       setErr(msg);

@@ -19,6 +19,7 @@ import Anuncia from "@/pages/Anuncia";
 import Eventos from "@/pages/Eventos";
 import EventoLanding from "@/pages/EventoLanding";
 import ReportePublic from "@/pages/ReportePublic";
+import DjStudio from "@/pages/DjStudio";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
                   <Route path="/a/:slug" element={<AdvertiserDetail />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/dj" element={<DjStudio />} />
                 </Routes>
               </main>
               <SmartCTA />

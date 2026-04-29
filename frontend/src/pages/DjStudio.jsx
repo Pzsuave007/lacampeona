@@ -355,7 +355,7 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
         </div>
 
         {step === "pick" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-5" data-testid="dj-template-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-5" data-testid="dj-templates">
             {templates.map((t) => (
               <button
                 key={t.key}

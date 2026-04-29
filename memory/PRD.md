@@ -62,20 +62,36 @@ Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanis
 - `/anuncia` — Advertising sales pitch
 - `/advertisers` + `/a/:slug` — Advertisers
 - `/admin` — Admin dashboard (5 tabs: Radio, Locutores, Anunciantes, Eventos, Reportes)
+- `/dj` — **DJ Content Studio** (NEW)
+
+### Content Studio for DJs (Sprint 1 — Feb 2026) ✅
+- **Auth**: shared `/login`, role-based redirect — admins → `/admin`, DJs → `/dj`. Demo DJ seeded: `dj@radiolatina.fm / dj123` linked to first host (`host_slug` field on user).
+- **AI generation**: POST `/api/dj/generate` → Claude Sonnet 4.5 via `emergentintegrations` (uses `EMERGENT_LLM_KEY`). System prompt enforces format `[CAPTION] / [HASHTAGS] / [CTA]` in Spanish. Per-template instruction injected.
+- **8 transformative templates** (copyright-safe reposts): `today_in_history`, `hot_take`, `throwback`, `poll`, `behind_scenes`, `important_day`, `inspirational_quote`, `musical_recommendation`. GET `/api/dj/templates` exposes label/emoji/fields (instruction kept server-side only).
+- **Drafts CRUD**: POST/GET/PATCH/DELETE `/api/dj/drafts`. DJs see only their `host_slug`; admin sees all. Status enum: `draft | scheduled | published`. Optional `scheduled_at` for editorial calendar.
+- **Frontend**: `/dj` shows DJ greeting + drafts list + monthly calendar view. Composer modal: pick template → fill inputs → generate → edit textarea → save. Copy-to-clipboard + status pills + platform selector (IG/FB/TikTok/X).
+- **Tests**: `/app/backend/tests/test_content_studio.py` (19/19 pass, 2 real LLM calls).
 
 ## Backlog
 ### P1
 - Visual Weekly Schedule Grid for Advertisers in Admin
 - Add `owner_email` field to AdminAdvertiserForm/AdminEventForm with copy-link button inline
+- Content Studio Sprint 2: UGC Inbox (permission flow), gamified DJ missions (points/streaks), banco de "Días Importantes"
+- Server-side validation of required template fields in /api/dj/generate (currently only frontend)
+- Per-user rate limit on /api/dj/generate (e.g. 30/hour) to prevent LLM abuse
 
 ### P2
+- Content Studio Sprint 3: Auto-Share Kit + métricas de tráfico social
+- "Compartir" button on event cards (native share sheet)
 - Stripe-powered self-serve advertiser portal
 - Reorder gallery images (drag & drop)
 - Token rotation: `POST /admin/{type}/{id}/rotate-token`
 - Mongo aggregation pipeline for analytics (currently in-memory aggregation)
 - Rate limiting on `/api/track`
-- Refactor server.py into routers (auth, advertisers, events, hosts, analytics, settings, files)
+- Refactor server.py (~1460 lines) into routers (auth, advertisers, events, hosts, analytics, dj, settings, files)
 - Replace native date/time pickers with shadcn Calendar in AdminEventForm
+- Pagination on `/api/dj/drafts` (currently `to_list(500)`)
+- Tighten ContentDraft.status as `Literal['draft','scheduled','published']`
 
 ## Key Files
 - `/app/backend/server.py` — all API

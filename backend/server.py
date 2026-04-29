@@ -1127,6 +1127,109 @@ class ContentDraftPatch(BaseModel):
     scheduled_at: Optional[str] = None
 
 
+# Per-template ideation prompt used by /api/dj/suggest. Returns 10 ready-to-use
+# ideas with prefilled inputs that match the template's fields schema.
+SUGGESTION_PROMPTS: dict = {
+    "today_in_history": "Hoy es {today}. Dame 10 eventos memorables de la MÚSICA O CULTURA LATINA que pasaron exactamente esta fecha (mismo mes y día) en distintos años. Estrenos de canciones, nacimientos de artistas, premios, hitos. Mezcla salsa, regional mexicano, reggaetón, balada, pop latino.",
+    "hot_take": "Dame 10 opiniones picantes pero respetuosas para debatir en redes sobre la música latina ACTUAL. Cada una sobre un tema/artista/género distinto. Para cada idea propón también una postura concreta.",
+    "throwback": "Dame 10 canciones LATINAS icónicas perfectas para un Throwback Thursday. Mezcla décadas (80s-2010s) y géneros. Para cada una incluye el año.",
+    "poll": "Dame 10 ideas de ENCUESTAS musicales latinas para Instagram/Facebook. Cada idea es una pregunta concreta con 3-4 opciones cortas separadas por coma.",
+    "behind_scenes": "Dame 10 momentos AUTÉNTICOS de detrás de cámaras que un DJ de radio latina puede compartir (preparación del show, anécdotas, técnica del estudio, momento gracioso). Concretos, no genéricos.",
+    "important_day": "Hoy es {today}. Dame 10 DÍAS IMPORTANTES o efemérides relevantes para la comunidad LATINA en EE.UU. en los próximos 60 días. Días patrios latinoamericanos, días culturales, Hispanic Heritage Month, etc. Indica la fecha en el título.",
+    "inspirational_quote": "Dame 10 IDEAS DE TEMAS para frases inspiradoras dirigidas a la comunidad latina trabajadora en EE.UU. (perseverancia, familia, raíces, sueños, segunda generación). Solo el TEMA, no copies frases famosas.",
+    "musical_recommendation": "Dame 10 CANCIONES LATINAS recientes (2024-2026) para recomendar al aire. Mezcla géneros y popularidad. Para cada una incluye una razón corta.",
+}
+
+
+class SuggestIn(BaseModel):
+    template_type: str
+
+
+@api.post("/dj/suggest")
+async def dj_suggest(payload: SuggestIn, user: dict = Depends(get_dj)):
+    """Returns 10 ready-to-use ideas for the given template, with each idea's
+    inputs prefilled so the DJ can pick one and generate the post in one click."""
+    import json
+    import re
+
+    if payload.template_type not in CONTENT_TEMPLATES:
+        raise HTTPException(status_code=400, detail="Plantilla inválida")
+    if not EMERGENT_KEY:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no configurado")
+
+    settings = await get_settings_doc()
+    station_name = settings.get("station_name") or "La Campeona"
+    tmpl = CONTENT_TEMPLATES[payload.template_type]
+    today = datetime.now(timezone.utc).strftime("%d de %B de %Y")
+
+    fields_desc = ", ".join([f'"{f["key"]}" ({f["label"]})' for f in tmpl["fields"]])
+    schema_example = ", ".join([f'"{f["key"]}": "valor concreto"' for f in tmpl["fields"]])
+    base_prompt = SUGGESTION_PROMPTS.get(
+        payload.template_type, "Dame 10 ideas creativas relevantes."
+    ).format(today=today)
+
+    system_msg = (
+        f"Eres asistente de contenido para la radio latina {station_name} (EE.UU., audiencia hispana). "
+        f"Genera EXACTAMENTE 10 ideas para la plantilla '{tmpl['label']}'. "
+        f"Cada idea debe completar estos campos: {fields_desc}.\n\n"
+        f"REGLAS DE SALIDA — IMPORTANTÍSIMO:\n"
+        f"- Devuelve SOLAMENTE un JSON válido (un array de 10 objetos).\n"
+        f"- NO uses bloques markdown, NO escribas texto antes ni después.\n"
+        f"- Cada objeto tiene esta forma exacta:\n"
+        f'  {{"title": "título descriptivo corto (max 90 chars)", "inputs": {{ {schema_example} }}}}\n'
+        f"- Valores en español. Las ideas deben ser CONCRETAS, no genéricas."
+    )
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = (
+            LlmChat(
+                api_key=EMERGENT_KEY,
+                session_id=f"dj-sg-{user['id']}-{uuid.uuid4().hex[:8]}",
+                system_message=system_msg,
+            )
+            .with_model("anthropic", "claude-sonnet-4-5-20250929")
+        )
+        raw = await chat.send_message(UserMessage(text=base_prompt))
+    except Exception as e:
+        logger.exception("DJ suggest failed")
+        raise HTTPException(status_code=502, detail=f"Sugerencia falló: {e}")
+
+    cleaned = raw.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE | re.MULTILINE).strip()
+    m = re.search(r"\[\s*{.*}\s*\]", cleaned, re.DOTALL)
+    if m:
+        cleaned = m.group(0)
+
+    try:
+        suggestions = json.loads(cleaned)
+    except json.JSONDecodeError:
+        logger.error(f"Invalid JSON from Claude (template={payload.template_type}): {raw[:400]}")
+        raise HTTPException(status_code=502, detail="La IA devolvió un formato inesperado. Inténtalo de nuevo.")
+
+    if not isinstance(suggestions, list):
+        raise HTTPException(status_code=502, detail="La IA no devolvió una lista")
+
+    valid_keys = {f["key"] for f in tmpl["fields"]}
+    out: list = []
+    for s in suggestions[:10]:
+        if not isinstance(s, dict):
+            continue
+        title = str(s.get("title", "")).strip()[:200]
+        ins_raw = s.get("inputs") or {}
+        if not isinstance(ins_raw, dict):
+            continue
+        inputs = {k: str(v).strip() for k, v in ins_raw.items() if isinstance(k, str) and k in valid_keys}
+        if not title:
+            continue
+        out.append({"title": title, "inputs": inputs})
+
+    if not out:
+        raise HTTPException(status_code=502, detail="La IA no devolvió ideas válidas. Inténtalo de nuevo.")
+
+    return {"suggestions": out, "template_type": payload.template_type}
+
+
 @api.get("/dj/templates")
 async def dj_list_templates(_: dict = Depends(get_dj)):
     return [

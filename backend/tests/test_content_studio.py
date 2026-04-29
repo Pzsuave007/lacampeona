@@ -253,6 +253,63 @@ class TestDraftsCRUD:
         assert r.status_code == 200
 
 
+# ---------- /api/dj/suggest (AI ideation) ----------
+class TestSuggest:
+    def test_suggest_unauth_returns_401(self):
+        r = requests.post(f"{API}/dj/suggest", json={"template_type": "today_in_history"}, timeout=10)
+        assert r.status_code == 401
+
+    def test_suggest_invalid_template_returns_400(self, dj_token):
+        r = requests.post(
+            f"{API}/dj/suggest",
+            headers=_h(dj_token),
+            json={"template_type": "not_a_template"},
+            timeout=15,
+        )
+        assert r.status_code == 400
+
+    @pytest.mark.timeout(120)
+    def test_suggest_today_in_history_returns_10(self, dj_token):
+        r = requests.post(
+            f"{API}/dj/suggest",
+            headers=_h(dj_token),
+            json={"template_type": "today_in_history"},
+            timeout=90,
+        )
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["template_type"] == "today_in_history"
+        assert "suggestions" in d
+        sugg = d["suggestions"]
+        assert isinstance(sugg, list)
+        assert len(sugg) == 10, f"Expected 10, got {len(sugg)}"
+        for s in sugg:
+            assert "title" in s and isinstance(s["title"], str) and len(s["title"]) > 0
+            assert "inputs" in s and isinstance(s["inputs"], dict)
+
+    @pytest.mark.timeout(120)
+    def test_suggest_poll_returns_10_with_question_and_options(self, dj_token):
+        r = requests.post(
+            f"{API}/dj/suggest",
+            headers=_h(dj_token),
+            json={"template_type": "poll"},
+            timeout=90,
+        )
+        assert r.status_code == 200, r.text
+        d = r.json()
+        sugg = d["suggestions"]
+        assert isinstance(sugg, list)
+        assert len(sugg) == 10
+        # poll template's fields are 'question' and 'options'
+        valid_keys = {"question", "options"}
+        # Most suggestions should have at least one valid key (server filters by valid_keys)
+        with_keys = [s for s in sugg if set(s["inputs"].keys()) & valid_keys]
+        assert len(with_keys) >= 8, f"Expected >=8 suggestions with question/options, got {len(with_keys)}"
+        # Check at least one has both
+        with_both = [s for s in sugg if {"question", "options"}.issubset(set(s["inputs"].keys()))]
+        assert len(with_both) >= 5, f"Expected >=5 suggestions with both question and options, got {len(with_both)}"
+
+
 # ---------- Regression on existing endpoints ----------
 class TestRegression:
     def test_active(self):

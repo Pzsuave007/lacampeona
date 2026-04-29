@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
@@ -302,6 +302,41 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [variantTone, setVariantTone] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+
+  const fetchSuggestions = async () => {
+    setSuggesting(true);
+    try {
+      const { data } = await api.post("/dj/suggest", { template_type: tmpl.key });
+      setSuggestions(data.suggestions || []);
+      if (!data.suggestions?.length) toast.error("No hubo sugerencias, inténtalo de nuevo");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "No se pudieron cargar las ideas");
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const pickSuggestion = async (s) => {
+    setInputs(s.inputs || {});
+    // Generate immediately with the chosen idea
+    setGenerating(true);
+    try {
+      const { data } = await api.post("/dj/generate", {
+        template_type: tmpl.key,
+        inputs: s.inputs || {},
+        platform,
+        save: false,
+      });
+      setText(data.text);
+      setStep("edit");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Generación falló");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const generate = async (tone = "") => {
     setGenerating(true);
@@ -363,7 +398,7 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
               <button
                 key={t.key}
                 data-testid={`dj-template-${t.key}`}
-                onClick={() => { setTmpl(t); setStep("inputs"); }}
+                onClick={() => { setTmpl(t); setStep("inputs"); setSuggestions([]); setInputs({}); }}
                 className="text-left bg-orange-50 hover:bg-orange-100 border-2 border-transparent hover:border-orange-300 rounded-2xl p-4 transition"
               >
                 <div className="text-3xl mb-2">{t.emoji}</div>
@@ -377,6 +412,53 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
         {step === "inputs" && tmpl && (
           <div className="p-5 space-y-4" data-testid="dj-inputs-form">
             <p className="text-sm text-slate-600">{tmpl.description}</p>
+
+            {/* AI suggestions panel */}
+            <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 p-4" data-testid="dj-suggestions-panel">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5 text-amber-600" />
+                  <span className="font-bold text-amber-900">¿Sin idea? Deja que la IA proponga</span>
+                </div>
+                <button
+                  data-testid="dj-suggest-btn"
+                  onClick={fetchSuggestions}
+                  disabled={suggesting || generating}
+                  className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-sm rounded-full px-4 py-2 transition active:scale-95"
+                >
+                  {suggesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
+                  {suggesting ? "Buscando ideas…" : suggestions.length ? "Otras 10 ideas" : "Dame 10 ideas"}
+                </button>
+              </div>
+              {suggestions.length > 0 && (
+                <div className="mt-3 space-y-2 max-h-72 overflow-y-auto pr-1" data-testid="dj-suggestions-list">
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      data-testid={`dj-suggestion-${i}`}
+                      onClick={() => pickSuggestion(s)}
+                      disabled={generating}
+                      className="w-full text-left bg-white hover:bg-orange-50 border border-amber-200 hover:border-orange-400 rounded-xl p-3 transition disabled:opacity-50 group"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="shrink-0 w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-black flex items-center justify-center">{i + 1}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-sm text-slate-900">{s.title}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                            {Object.entries(s.inputs || {}).map(([k, v]) => `${k}: ${v}`).join(" · ")}
+                          </div>
+                        </div>
+                        <Wand2 className="w-4 h-4 text-orange-500 opacity-0 group-hover:opacity-100 transition shrink-0 mt-0.5" />
+                      </div>
+                    </button>
+                  ))}
+                  <p className="text-[11px] text-amber-700 text-center pt-1">Toca una idea para generar el post al instante</p>
+                </div>
+              )}
+            </div>
+
+            <div className="text-center text-xs font-bold uppercase tracking-[0.2em] text-slate-400 py-1">— o llena los campos manualmente —</div>
+
             {tmpl.fields.map((f) => (
               <div key={f.key}>
                 <label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">

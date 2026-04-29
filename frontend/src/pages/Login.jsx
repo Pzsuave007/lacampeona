@@ -29,7 +29,8 @@ export default function Login() {
     try {
       const u = await login(email, password);
       toast.success("¡Bienvenido!");
-      if (u?.role === "dj") navigate("/dj");
+      if (u?.role === "super_admin") navigate("/super");
+      else if (u?.role === "dj") navigate("/dj");
       else navigate("/admin");
     } catch (e) {
       const msg = formatErr(e?.response?.data?.detail) || t.auth.invalid;

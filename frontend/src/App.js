@@ -20,6 +20,7 @@ import Eventos from "@/pages/Eventos";
 import EventoLanding from "@/pages/EventoLanding";
 import ReportePublic from "@/pages/ReportePublic";
 import DjStudio from "@/pages/DjStudio";
+import SuperAdmin from "@/pages/SuperAdmin";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/dj" element={<DjStudio />} />
+                  <Route path="/super" element={<SuperAdmin />} />
                 </Routes>
               </main>
               <SmartCTA />

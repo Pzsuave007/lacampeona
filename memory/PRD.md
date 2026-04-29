@@ -62,7 +62,16 @@ Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanis
 - `/anuncia` — Advertising sales pitch
 - `/advertisers` + `/a/:slug` — Advertisers
 - `/admin` — Admin dashboard (5 tabs: Radio, Locutores, Anunciantes, Eventos, Reportes)
-- `/dj` — **DJ Content Studio** (NEW)
+- `/dj` — **DJ Content Studio**
+- `/super` — **Super Admin Center** (NEW — owner-only)
+
+### Super Admin Center (Feb 2026) ✅
+- New role `super_admin` (>admin >dj). Single owner account: `pzsuave007@gmail.com / MXmedia007`, seeded from `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` env vars on backend startup.
+- Access: `/login` redirects super_admin → `/super` (owner-only). Super admin also bypasses `get_admin` and `get_dj` checks.
+- **Tab Usuarios**: full user CRUD (create/edit/delete admins, DJs, additional super admins). Email is the unique identifier; can't self-delete or self-demote. DJ creation includes a Host dropdown to set `host_slug`. Password reset modal per user.
+- **Tab Estadísticas**: 8 platform cards — total users by role, hosts/advertisers/events count, drafts (total + 30d), impressions/clicks/CTR (30d).
+- **Tab Herramientas**: regenerate `report_token` for any advertiser or event (auto-copies new public URL to clipboard); shortcut tiles to `/admin`, `/dj`, public site.
+- API: `GET/POST/PATCH/DELETE /api/super/users`, `POST /api/super/users/{id}/password`, `GET /api/super/stats`, `POST /api/super/rotate-token/{type}/{id}`.
 
 ### Content Studio for DJs (Sprint 1 — Feb 2026) ✅
 - **Auth**: shared `/login`, role-based redirect — admins → `/admin`, DJs → `/dj`. Demo DJ seeded: `dj@radiolatina.fm / dj123` linked to first host (`host_slug` field on user).

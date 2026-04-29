@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Menu, X, Languages, LogOut, ShieldCheck } from "lucide-react";
+import { Menu, X, Languages, LogOut, ShieldCheck, Crown } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useStation } from "../contexts/StationContext";
@@ -58,7 +58,7 @@ export default function Navbar() {
           <NavLink to="/advertisers" className={linkClass} data-testid="nav-advertisers-link">
             {t.nav.advertisers}
           </NavLink>
-          {user?.role === "admin" && (
+          {(user?.role === "admin" || user?.role === "super_admin") && (
             <NavLink to="/admin" className={linkClass} data-testid="nav-admin-link">
               <span className="inline-flex items-center gap-1">
                 <ShieldCheck className="w-4 h-4" /> {t.nav.admin}
@@ -68,6 +68,13 @@ export default function Navbar() {
           {user?.role === "dj" && (
             <NavLink to="/dj" className={linkClass} data-testid="nav-dj-link">
               <span className="inline-flex items-center gap-1">✨ Studio</span>
+            </NavLink>
+          )}
+          {user?.role === "super_admin" && (
+            <NavLink to="/super" className={linkClass} data-testid="nav-super-link">
+              <span className="inline-flex items-center gap-1">
+                <Crown className="w-4 h-4" /> Super
+              </span>
             </NavLink>
           )}
         </nav>
@@ -91,7 +98,7 @@ export default function Navbar() {
               {t.nav.login}
             </Link>
           )}
-          {(user?.role === "admin" || user?.role === "dj") && (
+          {(user?.role === "admin" || user?.role === "super_admin" || user?.role === "dj") && (
             <button
               data-testid="nav-logout-btn"
               onClick={async () => {
@@ -134,7 +141,7 @@ export default function Navbar() {
             <NavLink to="/advertisers" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-advertisers">
               {t.nav.advertisers}
             </NavLink>
-            {user?.role === "admin" && (
+            {(user?.role === "admin" || user?.role === "super_admin") && (
               <NavLink to="/admin" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-admin">
                 {t.nav.admin}
               </NavLink>
@@ -144,12 +151,17 @@ export default function Navbar() {
                 ✨ Studio
               </NavLink>
             )}
+            {user?.role === "super_admin" && (
+              <NavLink to="/super" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-super">
+                👑 Super
+              </NavLink>
+            )}
             {user === null && (
               <Link to="/login" onClick={() => setOpen(false)} className="px-3 py-2 rounded-full text-sm font-bold bg-slate-900 text-white text-center" data-testid="nav-mobile-login">
                 {t.nav.login}
               </Link>
             )}
-            {(user?.role === "admin" || user?.role === "dj") && (
+            {(user?.role === "admin" || user?.role === "super_admin" || user?.role === "dj") && (
               <button
                 data-testid="nav-mobile-logout"
                 onClick={async () => {

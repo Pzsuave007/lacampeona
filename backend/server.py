@@ -80,8 +80,13 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 async def get_admin(user: dict = Depends(get_current_user)) -> dict:
-    if user.get("role") != "admin":
+    if user.get("role") not in ("admin", "super_admin"):
         raise HTTPException(status_code=403, detail="Admin only")
+    return user
+
+async def get_super_admin(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") != "super_admin":
+        raise HTTPException(status_code=403, detail="Super admin only")
     return user
 
 # ---------------------- Object Storage ---------------------- #
@@ -1084,8 +1089,8 @@ def build_dj_user_message(template_key: str, inputs: dict, station_name: str) ->
 
 
 async def get_dj(user: dict = Depends(get_current_user)) -> dict:
-    """Allow role=dj or role=admin to use the Content Studio."""
-    if user.get("role") not in ("dj", "admin"):
+    """Allow role=dj, role=admin, or role=super_admin to use the Content Studio."""
+    if user.get("role") not in ("dj", "admin", "super_admin"):
         raise HTTPException(status_code=403, detail="DJ only")
     return user
 
@@ -1261,6 +1266,173 @@ async def dj_delete_draft(draft_id: str, user: dict = Depends(get_dj)):
     return {"ok": True}
 
 
+# ---------------------- Super Admin ---------------------- #
+VALID_ROLES = {"super_admin", "admin", "dj"}
+
+
+def _public_user(u: dict) -> dict:
+    return {
+        "id": u["id"],
+        "email": u["email"],
+        "name": u.get("name", ""),
+        "role": u.get("role", ""),
+        "host_slug": u.get("host_slug", ""),
+        "created_at": u.get("created_at", ""),
+    }
+
+
+class SuperUserIn(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: str  # super_admin | admin | dj
+    host_slug: Optional[str] = ""
+
+
+class SuperUserPatch(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    host_slug: Optional[str] = None
+
+
+class SuperPasswordIn(BaseModel):
+    password: str
+
+
+@api.get("/super/users")
+async def super_list_users(_: dict = Depends(get_super_admin)):
+    cursor = db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1)
+    items = await cursor.to_list(500)
+    return [_public_user(u) for u in items]
+
+
+@api.post("/super/users")
+async def super_create_user(payload: SuperUserIn, _: dict = Depends(get_super_admin)):
+    if payload.role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail="Rol inválido")
+    if len(payload.password) < 6:
+        raise HTTPException(status_code=400, detail="Contraseña mínima 6 caracteres")
+    email = payload.email.lower().strip()
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=409, detail="Ese correo ya existe")
+    host_slug = (payload.host_slug or "").strip()
+    if payload.role == "dj" and host_slug:
+        h = await db.hosts.find_one({"slug": host_slug}, {"_id": 0, "id": 1})
+        if not h:
+            raise HTTPException(status_code=400, detail="host_slug no existe")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "email": email,
+        "password_hash": hash_password(payload.password),
+        "name": payload.name.strip() or email.split("@")[0],
+        "role": payload.role,
+        "host_slug": host_slug,
+        "created_at": now_iso(),
+    }
+    await db.users.insert_one(doc.copy())
+    return _public_user(doc)
+
+
+@api.patch("/super/users/{user_id}")
+async def super_update_user(user_id: str, payload: SuperUserPatch, current: dict = Depends(get_super_admin)):
+    target = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    update: dict = {}
+    if payload.name is not None:
+        update["name"] = payload.name.strip()
+    if payload.role is not None:
+        if payload.role not in VALID_ROLES:
+            raise HTTPException(status_code=400, detail="Rol inválido")
+        # Prevent demoting yourself accidentally
+        if user_id == current["id"] and payload.role != "super_admin":
+            raise HTTPException(status_code=400, detail="No puedes cambiar tu propio rol")
+        update["role"] = payload.role
+    if payload.host_slug is not None:
+        slug = payload.host_slug.strip()
+        if slug:
+            h = await db.hosts.find_one({"slug": slug}, {"_id": 0, "id": 1})
+            if not h:
+                raise HTTPException(status_code=400, detail="host_slug no existe")
+        update["host_slug"] = slug
+    if not update:
+        return _public_user(target)
+    update["updated_at"] = now_iso()
+    await db.users.update_one({"id": user_id}, {"$set": update})
+    fresh = await db.users.find_one({"id": user_id}, {"_id": 0})
+    return _public_user(fresh)
+
+
+@api.post("/super/users/{user_id}/password")
+async def super_reset_password(user_id: str, payload: SuperPasswordIn, _: dict = Depends(get_super_admin)):
+    if len(payload.password) < 6:
+        raise HTTPException(status_code=400, detail="Contraseña mínima 6 caracteres")
+    target = await db.users.find_one({"id": user_id}, {"_id": 0, "id": 1})
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password_hash": hash_password(payload.password), "updated_at": now_iso()}},
+    )
+    return {"ok": True}
+
+
+@api.delete("/super/users/{user_id}")
+async def super_delete_user(user_id: str, current: dict = Depends(get_super_admin)):
+    if user_id == current["id"]:
+        raise HTTPException(status_code=400, detail="No puedes eliminar tu propia cuenta")
+    res = await db.users.delete_one({"id": user_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return {"ok": True}
+
+
+@api.get("/super/stats")
+async def super_stats(_: dict = Depends(get_super_admin)):
+    now = datetime.now(timezone.utc)
+    since30 = now - timedelta(days=30)
+    users_count = await db.users.count_documents({})
+    by_role = {}
+    async for u in db.users.find({}, {"_id": 0, "role": 1}):
+        r = u.get("role", "unknown")
+        by_role[r] = by_role.get(r, 0) + 1
+    advertisers_count = await db.advertisers.count_documents({})
+    events_count = await db.events.count_documents({})
+    hosts_count = await db.hosts.count_documents({})
+    drafts_count = await db.content_drafts.count_documents({})
+    drafts_30d = await db.content_drafts.count_documents({"created_at": {"$gte": since30.isoformat()}})
+    impressions_30d = await db.cta_events.count_documents({"kind": "impression", "created_at": {"$gte": since30}})
+    clicks_30d = await db.cta_events.count_documents({"kind": {"$ne": "impression"}, "created_at": {"$gte": since30}})
+    return {
+        "users": {"total": users_count, "by_role": by_role},
+        "content": {
+            "hosts": hosts_count,
+            "advertisers": advertisers_count,
+            "events": events_count,
+            "drafts_total": drafts_count,
+            "drafts_30d": drafts_30d,
+        },
+        "engagement_30d": {
+            "impressions": impressions_30d,
+            "clicks": clicks_30d,
+            "ctr": (clicks_30d / impressions_30d) if impressions_30d > 0 else 0.0,
+        },
+    }
+
+
+@api.post("/super/rotate-token/{entity_type}/{entity_id}")
+async def super_rotate_token(entity_type: str, entity_id: str, _: dict = Depends(get_super_admin)):
+    if entity_type not in VALID_TRACK_TYPES:
+        raise HTTPException(status_code=400, detail="entity_type inválido")
+    coll = db.advertisers if entity_type == "advertiser" else db.events
+    new_token = uuid.uuid4().hex
+    res = await coll.update_one({"id": entity_id}, {"$set": {"report_token": new_token, "updated_at": now_iso()}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    return {"ok": True, "report_token": new_token}
+
+
 # ---------------------- Seeding ---------------------- #
 async def seed_admin():
     email = os.environ.get("ADMIN_EMAIL", "admin@radiolatina.fm").lower()
@@ -1279,6 +1451,35 @@ async def seed_admin():
     elif not verify_password(pw, existing.get("password_hash", "")):
         await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(pw)}})
         logger.info(f"Updated admin password: {email}")
+
+
+async def seed_super_admin():
+    """Seed the platform super admin (the station owner)."""
+    email = os.environ.get("SUPER_ADMIN_EMAIL", "").lower().strip()
+    pw = os.environ.get("SUPER_ADMIN_PASSWORD", "")
+    if not email or not pw:
+        return
+    existing = await db.users.find_one({"email": email})
+    if not existing:
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()),
+            "email": email,
+            "password_hash": hash_password(pw),
+            "name": "Super Admin",
+            "role": "super_admin",
+            "host_slug": "",
+            "created_at": now_iso(),
+        })
+        logger.info(f"Seeded super admin: {email}")
+    else:
+        update = {}
+        if existing.get("role") != "super_admin":
+            update["role"] = "super_admin"
+        if not verify_password(pw, existing.get("password_hash", "")):
+            update["password_hash"] = hash_password(pw)
+        if update:
+            await db.users.update_one({"email": email}, {"$set": update})
+            logger.info(f"Updated super admin: {email}")
 
 
 async def seed_demo_dj():
@@ -1446,6 +1647,7 @@ async def on_startup():
     await db.content_drafts.create_index("id", unique=True)
     await db.content_drafts.create_index([("host_slug", 1), ("created_at", -1)])
     await seed_admin()
+    await seed_super_admin()
     await seed_demo_advertisers()
     await seed_demo_hosts()
     await seed_demo_dj()

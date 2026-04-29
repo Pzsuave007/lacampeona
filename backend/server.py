@@ -1046,8 +1046,8 @@ CONTENT_TEMPLATES: dict = {
 }
 
 
-def build_dj_system_message(platform: str, station_name: str, host_name: str) -> str:
-    return (
+def build_dj_system_message(platform: str, station_name: str, host_name: str, variant_tone: str = "") -> str:
+    base = (
         f"Eres un copywriter experto en redes sociales para una estación de radio latina "
         f"({station_name}) en Estados Unidos. Hablas como el DJ {host_name}. "
         f"Tu trabajo es generar contenido en ESPAÑOL, pegadizo, breve, con tono coloquial latino, "
@@ -1059,6 +1059,15 @@ def build_dj_system_message(platform: str, station_name: str, host_name: str) ->
         f"[CTA]\n<una sola línea con una llamada a la acción que dirija al oyente a sintonizar la radio, "
         f"comentar o compartir>"
     )
+    tone_extras = {
+        "casual": "\n\nTONO ESPECIAL: muy casual y juvenil, como si estuvieras hablando con tus mejores amigos en el grupo de WhatsApp. Usa expresiones cotidianas latinas, tutea, suelta una broma si encaja.",
+        "motivational": "\n\nTONO ESPECIAL: motivacional e inspirador. Conecta con sueños, perseverancia, orgullo latino. Que el lector termine sintiendo que puede con el día.",
+        "shorter": "\n\nTONO ESPECIAL: ultra-corto y punchy. CAPTION máximo 200 caracteres, ideal para X/Twitter. Una frase que pegue duro, sin relleno.",
+        "emotional": "\n\nTONO ESPECIAL: muy emocional, familiar, cercano. Habla de la familia, los recuerdos, la patria. Que provoque guardar el post y compartirlo con un ser querido.",
+    }
+    if variant_tone in tone_extras:
+        base += tone_extras[variant_tone]
+    return base
 
 
 def build_dj_user_message(template_key: str, inputs: dict, station_name: str) -> str:
@@ -1092,6 +1101,7 @@ class GenerateDraftIn(BaseModel):
     inputs: dict = {}
     platform: str = "instagram"  # instagram | facebook | tiktok | twitter
     save: bool = False  # if true, also persists the generated text as a draft
+    variant_tone: Optional[str] = ""  # ""|casual|motivational|shorter|emotional
 
 
 class ContentDraftIn(BaseModel):
@@ -1152,7 +1162,7 @@ async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
         if h:
             host_name = h.get("show_name") or h.get("name") or host_name
 
-    system_msg = build_dj_system_message(payload.platform, station_name, host_name)
+    system_msg = build_dj_system_message(payload.platform, station_name, host_name, payload.variant_tone or "")
     user_msg = build_dj_user_message(payload.template_type, payload.inputs, station_name)
 
     try:

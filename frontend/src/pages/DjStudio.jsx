@@ -301,8 +301,9 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
   const [scheduledAt, setScheduledAt] = useState((editing?.scheduled_at || "").slice(0, 10));
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [variantTone, setVariantTone] = useState("");
 
-  const generate = async () => {
+  const generate = async (tone = "") => {
     setGenerating(true);
     try {
       const { data } = await api.post("/dj/generate", {
@@ -310,9 +311,11 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
         inputs,
         platform,
         save: false,
+        variant_tone: tone || "",
       });
       setText(data.text);
       setStep("edit");
+      if (tone) toast.success("¡Variante generada!");
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Generación falló");
     } finally {
@@ -407,7 +410,7 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
               <button onClick={() => setStep("pick")} className="px-4 py-2 rounded-full text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">Atrás</button>
               <button
                 data-testid="dj-generate-btn"
-                onClick={generate}
+                onClick={() => generate("")}
                 disabled={generating || tmpl.fields.some((f) => f.required && !(inputs[f.key] || "").trim())}
                 className="ml-auto inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold rounded-full px-5 py-2.5 transition active:scale-95"
               >
@@ -427,6 +430,36 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
               rows={12}
               className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition font-sans text-sm"
             />
+
+            {tmpl && (
+              <div className="rounded-2xl border-2 border-dashed border-orange-200 bg-orange-50/50 p-4" data-testid="dj-variants">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wand2 className="w-4 h-4 text-orange-600" />
+                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-orange-700">Generar variante con otro tono</span>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { key: "casual", label: "🤙 Casual" },
+                    { key: "motivational", label: "🚀 Motivacional" },
+                    { key: "shorter", label: "⚡ Corto (X)" },
+                    { key: "emotional", label: "💖 Emocional" },
+                  ].map((t) => (
+                    <button
+                      key={t.key}
+                      data-testid={`dj-variant-${t.key}`}
+                      onClick={() => { setVariantTone(t.key); generate(t.key); }}
+                      disabled={generating}
+                      className={`text-sm font-bold px-4 py-2 rounded-full transition disabled:opacity-50 ${variantTone === t.key && generating ? "bg-orange-600 text-white" : "bg-white border-2 border-orange-300 text-orange-700 hover:bg-orange-100"}`}
+                    >
+                      {generating && variantTone === t.key ? <Loader2 className="w-4 h-4 animate-spin inline mr-1" /> : null}
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-2">El texto actual se reemplazará. Si te gustó, copia o guarda primero.</p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Plataforma</label>

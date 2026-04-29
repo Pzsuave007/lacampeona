@@ -49,10 +49,10 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (user?.role === "admin") loadAll();
+    if (user?.role === "admin" || user?.role === "super_admin") loadAll();
   }, [user]);
 
-  if (!user || user.role !== "admin") {
+  if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
     return <div className="min-h-screen p-10 text-slate-500">…</div>;
   }
 

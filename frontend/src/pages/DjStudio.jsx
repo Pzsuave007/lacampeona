@@ -70,10 +70,10 @@ export default function DjStudio() {
   };
 
   useEffect(() => {
-    if (user && (user.role === "dj" || user.role === "admin")) loadAll();
+    if (user && (user.role === "dj" || user.role === "admin" || user.role === "super_admin")) loadAll();
   }, [user]);
 
-  if (!user || (user.role !== "dj" && user.role !== "admin")) {
+  if (!user || (user.role !== "dj" && user.role !== "admin" && user.role !== "super_admin")) {
     return <div className="min-h-screen p-10 text-slate-500">…</div>;
   }
 

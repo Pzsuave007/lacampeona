@@ -75,12 +75,13 @@ if [ ! -d "$REPO/.git" ]; then
     fi
 
     # Run installer as lacampeona (no pause since .env already exists)
+    # NOTE: -s /bin/bash bypasses cPanel's "no shell access" restriction
     echo "[4/5] Running installer as $CPANEL_USER ..."
-    su - "$CPANEL_USER" -c "bash $REPO/deploy/install_server.sh"
+    su -s /bin/bash -l "$CPANEL_USER" -c "bash $REPO/deploy/install_server.sh"
 
     # Auto-restart on reboot
     echo "[5/5] Configuring auto-restart on reboot ..."
-    su - "$CPANEL_USER" -c "bash $REPO/deploy/setup-autostart.sh"
+    su -s /bin/bash -l "$CPANEL_USER" -c "bash $REPO/deploy/setup-autostart.sh"
 
     echo ""
     echo "============================================"
@@ -96,8 +97,12 @@ else
     chown -R "$CPANEL_USER:$CPANEL_USER" "$REPO"
 
     # Run fix.sh as lacampeona
+    # NOTE: -s /bin/bash bypasses cPanel's "no shell access" restriction
     echo "[1/1] Running fix.sh as $CPANEL_USER ..."
-    su - "$CPANEL_USER" -c "bash $REPO/deploy/fix.sh"
+    if ! su -s /bin/bash -l "$CPANEL_USER" -c "bash $REPO/deploy/fix.sh"; then
+        echo "❌ fix.sh failed — see output above"
+        exit 1
+    fi
 
     echo ""
     echo "============================================"

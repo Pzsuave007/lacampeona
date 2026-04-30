@@ -33,13 +33,11 @@ git --version   || { echo "ERROR: git missing. dnf install git"; exit 1; }
 # Trust this dir for git (cPanel users hit dubious-ownership errors otherwise)
 git config --global --add safe.directory "$REPO" || true
 
-# Apache needs to traverse home dir — chmod 711 is safe (no listing, but exec)
-chmod 711 "/home/${CPANEL_USER}" || true
+# Apache needs traversal — already handled by deploy.sh (chmod 711 as root)
 
-# ----- 2. Create prod backend dir with correct ownership -----
-echo "[2/9] Creating /opt/${APP_NAME}/backend ..."
-sudo mkdir -p "$PROD"
-sudo chown -R "${CPANEL_USER}:${CPANEL_USER}" "/opt/${APP_NAME}"
+# ----- 2. Verify prod backend dir (created by deploy.sh as root) -----
+echo "[2/9] Verifying $PROD exists..."
+[ ! -d "$PROD" ] && { echo "ERROR: $PROD missing. Run via deploy.sh"; exit 1; }
 
 # ----- 3. Python venv + slim prod deps (no pinned versions) -----
 echo "[3/9] Creating Python venv + installing prod deps..."
@@ -95,7 +93,7 @@ mkdir -p "$WEB"
 rm -rf "$WEB/static" "$WEB/index.html" "$WEB/asset-manifest.json" "$WEB/manifest.json"
 cp -rf "$REPO/frontend/build/"* "$WEB/"
 cp -f  "$REPO/deploy/htaccess"  "$WEB/.htaccess"
-chown -R "${CPANEL_USER}:${CPANEL_USER}" "$WEB"
+# chown not needed — lacampeona already owns public_html
 find "$WEB" -type f -exec chmod 644 {} \;
 find "$WEB" -type d -exec chmod 755 {} \;
 

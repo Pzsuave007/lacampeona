@@ -57,7 +57,7 @@ echo "[5/6] Deploying frontend to $WEB ..."
 rm -rf "$WEB/static" "$WEB/index.html" "$WEB/asset-manifest.json" "$WEB/manifest.json"
 cp -rf "$REPO/frontend/build/"* "$WEB/"
 cp -f  "$REPO/deploy/htaccess"  "$WEB/.htaccess"
-chown -R "${CPANEL_USER}:${CPANEL_USER}" "$WEB"
+# chown not needed — lacampeona already owns public_html
 find "$WEB" -type f -exec chmod 644 {} \;
 find "$WEB" -type d -exec chmod 755 {} \;
 

@@ -75,8 +75,9 @@ Tu repo de Emergent debe tener esta estructura **antes** de hacer push:
 14. **Operaciones de root EN deploy.sh**, operaciones de user EN install_server.sh
 
 ### ❌ NO HACER
-1. **NO** repo en `/home/USER/` directamente (conflicto con cPanel system folders)
-2. **NO** `sudo` adentro de install_server.sh/fix.sh (corren como user, sudo pide password)
+1. **NO** correr `yarn build` en el servidor de producción (poca RAM → crashea). El frontend se construye en Emergent (dev) y `frontend/build/` se commitea al repo
+2. **NO** repo en `/home/USER/` directamente (conflicto con cPanel system folders)
+3. **NO** `sudo` adentro de install_server.sh/fix.sh (corren como user, sudo pide password)
 3. **NO** versiones pineadas en `requirements.prod.txt` (rompe en Python 3.9)
 4. **NO** `pandas`/`numpy`/`pytest` en prod (no se usan, agregan 500MB)
 5. **NO** apt — usa `dnf` (AlmaLinux es RHEL)

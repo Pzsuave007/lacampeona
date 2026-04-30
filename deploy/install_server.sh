@@ -76,16 +76,16 @@ cp -rf "$REPO/backend/utils/"*.py   "$PROD/utils/"   2>/dev/null || true
 cp -rf "$REPO/backend/models/"*.py  "$PROD/models/"  2>/dev/null || true
 cp -rf "$REPO/backend/tests/"*.py   "$PROD/tests/"   2>/dev/null || true
 
-# ----- 6. Build frontend (yarn with --ignore-engines for Node 18) -----
-echo "[6/9] Building frontend (yarn install + yarn build)..."
-cd "$REPO/frontend"
-# React reads .env at build time. REACT_APP_BACKEND_URL is BAKED into the bundle.
-cat > .env <<EOF
-REACT_APP_BACKEND_URL=https://${DOMAIN}
-WDS_SOCKET_PORT=443
-EOF
-yarn install --ignore-engines --silent
-yarn build
+# ----- 6. Verify pre-built frontend (built locally and committed to repo) -----
+echo "[6/9] Verifying pre-built frontend at $REPO/frontend/build ..."
+if [ ! -f "$REPO/frontend/build/index.html" ]; then
+    echo "ERROR: $REPO/frontend/build/index.html missing."
+    echo "Build the frontend LOCALLY (in Emergent) before deploying:"
+    echo "  cd frontend && REACT_APP_BACKEND_URL=https://${DOMAIN} yarn build"
+    echo "Then commit frontend/build/ and 'git push'."
+    exit 1
+fi
+echo "    ✓ build/ found ($(du -sh "$REPO/frontend/build" | cut -f1))"
 
 # ----- 7. Deploy frontend + fix ownership/permissions -----
 echo "[7/9] Deploying frontend to $WEB ..."

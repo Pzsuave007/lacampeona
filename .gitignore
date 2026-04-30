@@ -26,7 +26,7 @@ next-env.d.ts
 *.tsbuildinfo
 
 # Production builds
-/build
+# /build  -- intentionally tracked: prod server has low RAM and can't run yarn build
 dist/
 dist
 

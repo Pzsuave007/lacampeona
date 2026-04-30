@@ -1,188 +1,187 @@
-[
-  {
-    "_id": {
-      "$oid": "69f048c599ef71cdd2a48b5a"
-    },
-    "name": "El Sabor Latino",
-    "tagline": "Auténtica cocina mexicana",
-    "description": "Restaurante familiar con recetas tradicionales de México. Tacos, sopes, quesadillas y más, hechos con ingredientes frescos cada día.",
-    "special_offer": "20% OFF en tu primera orden — menciona la radio",
-    "cta_text": "Order Now",
-    "phone": "+13105550199",
-    "whatsapp": "13105550199",
-    "address": "1234 Sunset Blvd, Los Angeles, CA",
-    "maps_url": "https://maps.google.com/?q=1234+Sunset+Blvd+Los+Angeles+CA",
-    "website_url": "",
-    "banner_path": "https://images.pexels.com/photos/31822998/pexels-photo-31822998.jpeg",
-    "color": "#EA580C",
-    "schedule": [
-      {
-        "day_of_week": 0,
-        "start_time": "06:00",
-        "end_time": "21:00"
-      },
-      {
-        "day_of_week": 1,
-        "start_time": "06:00",
-        "end_time": "21:00"
-      },
-      {
-        "day_of_week": 2,
-        "start_time": "06:00",
-        "end_time": "21:00"
-      },
-      {
-        "day_of_week": 3,
-        "start_time": "06:00",
-        "end_time": "21:00"
-      },
-      {
-        "day_of_week": 4,
-        "start_time": "06:00",
-        "end_time": "21:00"
-      },
-      {
-        "day_of_week": 5,
-        "start_time": "06:00",
-        "end_time": "21:00"
-      },
-      {
-        "day_of_week": 6,
-        "start_time": "06:00",
-        "end_time": "21:00"
-      }
-    ],
-    "id": "337459b4-d984-4364-8bd1-e89a7ca26b22",
-    "slug": "el-sabor-latino",
-    "created_at": "2026-04-28T05:42:29.732337+00:00",
-    "priority": 5,
-    "spot_duration_sec": 60,
-    "spots_per_hour": 4,
-    "updated_at": "2026-04-28T19:44:08.925719+00:00",
-    "report_token": "753498fc9bc74d3ca58f397afe03fdb0"
-  },
-  {
-    "_id": {
-      "$oid": "69f048c599ef71cdd2a48b5b"
-    },
-    "name": "Café Aroma",
-    "tagline": "El mejor café latino de la ciudad",
-    "description": "Café de especialidad de Colombia y Costa Rica. Pastelería casera, ambiente acogedor, Wi-Fi gratis.",
-    "special_offer": "Compra un café, llévate una concha gratis",
-    "cta_text": "Visit Us",
-    "phone": "+13105550150",
-    "whatsapp": "13105550150",
-    "address": "5678 Olvera St, Los Angeles, CA",
-    "maps_url": "https://maps.google.com/?q=Olvera+Street+Los+Angeles",
-    "website_url": "",
-    "banner_path": "https://images.pexels.com/photos/32351724/pexels-photo-32351724.jpeg",
-    "color": "#B45309",
-    "schedule": [
-      {
-        "day_of_week": 0,
-        "start_time": "07:00",
-        "end_time": "22:00"
-      },
-      {
-        "day_of_week": 1,
-        "start_time": "07:00",
-        "end_time": "22:00"
-      },
-      {
-        "day_of_week": 2,
-        "start_time": "07:00",
-        "end_time": "22:00"
-      },
-      {
-        "day_of_week": 3,
-        "start_time": "07:00",
-        "end_time": "22:00"
-      },
-      {
-        "day_of_week": 4,
-        "start_time": "07:00",
-        "end_time": "22:00"
-      },
-      {
-        "day_of_week": 5,
-        "start_time": "07:00",
-        "end_time": "22:00"
-      },
-      {
-        "day_of_week": 6,
-        "start_time": "07:00",
-        "end_time": "22:00"
-      }
-    ],
-    "id": "3a86c36e-1838-4218-b5b8-4bb94cd623dd",
-    "slug": "caf-aroma",
-    "created_at": "2026-04-28T05:42:29.732787+00:00",
-    "priority": 6,
-    "spot_duration_sec": 60,
-    "spots_per_hour": 4,
-    "updated_at": "2026-04-28T19:43:53.155085+00:00",
-    "report_token": "45bdc47c55d645dda54322a5b86f0ef0"
-  },
-  {
-    "_id": {
-      "$oid": "69f06479ee100e791f9bb6b1"
-    },
-    "name": "Unidos Marketing",
-    "tagline": "Trabajando Juntos Llegaremos Lejos!",
-    "description": "En Uni2 Marketing Group, ayudamos a negocios latinos a destacar y crecer en el mercado estadounidense con estrategias digitales que combinan creatividad, automatización e inteligencia artificial. No solo diseñamos, creamos sistemas digitales que generan resultados reales",
-    "special_offer": "¿Quieres saber por qué tu negocio no aparece en los resultados de Google? Te damos un reporte que te dirá por qué no sale y cómo arreglar el problema!",
-    "cta_text": "Pide Tu Consulta Gratis",
-    "phone": "9712270595",
-    "whatsapp": "9712270595",
-    "address": "",
-    "maps_url": "",
-    "website_url": "uni2mkt.com",
-    "banner_path": "",
-    "color": "#EA580C",
-    "schedule": [
-      {
-        "day_of_week": 0,
-        "start_time": "06:00",
-        "end_time": "20:00"
-      },
-      {
-        "day_of_week": 1,
-        "start_time": "06:00",
-        "end_time": "20:00"
-      },
-      {
-        "day_of_week": 2,
-        "start_time": "06:00",
-        "end_time": "20:00"
-      },
-      {
-        "day_of_week": 3,
-        "start_time": "06:00",
-        "end_time": "20:00"
-      },
-      {
-        "day_of_week": 4,
-        "start_time": "06:00",
-        "end_time": "20:00"
-      },
-      {
-        "day_of_week": 5,
-        "start_time": "06:00",
-        "end_time": "20:00"
-      },
-      {
-        "day_of_week": 6,
-        "start_time": "06:00",
-        "end_time": "20:00"
-      }
-    ],
-    "id": "1223b4f0-2b9f-418f-96ab-8610cde240d2",
-    "slug": "unidos-marketing",
-    "created_at": "2026-04-28T07:40:41.579506+00:00",
-    "priority": 5,
-    "spot_duration_sec": 60,
-    "spots_per_hour": 4,
-    "updated_at": "2026-04-28T22:15:29.551792+00:00",
-    "report_token": "584784aad756470299bc8a40fa4f1861"
-  }
-]
+[{
+	"_id": {
+		"$oid": "69f048c599ef71cdd2a48b5a"
+	},
+	"name": "El Sabor Latino",
+	"tagline": "Auténtica cocina mexicana",
+	"description": "Restaurante familiar con recetas tradicionales de México. Tacos, sopes, quesadillas y más, hechos con ingredientes frescos cada día.",
+	"special_offer": "20% OFF en tu primera orden — menciona la radio",
+	"cta_text": "Order Now",
+	"phone": "+13105550199",
+	"whatsapp": "13105550199",
+	"address": "1234 Sunset Blvd, Los Angeles, CA",
+	"maps_url": "https://maps.google.com/?q=1234+Sunset+Blvd+Los+Angeles+CA",
+	"website_url": "",
+	"banner_path": "https://images.pexels.com/photos/31822998/pexels-photo-31822998.jpeg",
+	"color": "#EA580C",
+	"schedule": [
+		{
+			"day_of_week": 0,
+			"start_time": "06:00",
+			"end_time": "21:00"
+		},
+		{
+			"day_of_week": 1,
+			"start_time": "06:00",
+			"end_time": "21:00"
+		},
+		{
+			"day_of_week": 2,
+			"start_time": "06:00",
+			"end_time": "21:00"
+		},
+		{
+			"day_of_week": 3,
+			"start_time": "06:00",
+			"end_time": "21:00"
+		},
+		{
+			"day_of_week": 4,
+			"start_time": "06:00",
+			"end_time": "21:00"
+		},
+		{
+			"day_of_week": 5,
+			"start_time": "06:00",
+			"end_time": "21:00"
+		},
+		{
+			"day_of_week": 6,
+			"start_time": "06:00",
+			"end_time": "21:00"
+		}
+	],
+	"id": "337459b4-d984-4364-8bd1-e89a7ca26b22",
+	"slug": "el-sabor-latino",
+	"created_at": "2026-04-28T05:42:29.732337+00:00",
+	"priority": 5,
+	"spot_duration_sec": 60,
+	"spots_per_hour": 4,
+	"updated_at": "2026-04-28T19:44:08.925719+00:00",
+	"report_token": "753498fc9bc74d3ca58f397afe03fdb0"
+},
+{
+	"_id": {
+		"$oid": "69f048c599ef71cdd2a48b5b"
+	},
+	"name": "Café Aroma",
+	"tagline": "El mejor café latino de la ciudad",
+	"description": "Café de especialidad de Colombia y Costa Rica. Pastelería casera, ambiente acogedor, Wi-Fi gratis.",
+	"special_offer": "Compra un café, llévate una concha gratis",
+	"cta_text": "Visit Us",
+	"phone": "+13105550150",
+	"whatsapp": "13105550150",
+	"address": "5678 Olvera St, Los Angeles, CA",
+	"maps_url": "https://maps.google.com/?q=Olvera+Street+Los+Angeles",
+	"website_url": "",
+	"banner_path": "https://images.pexels.com/photos/32351724/pexels-photo-32351724.jpeg",
+	"color": "#B45309",
+	"schedule": [
+		{
+			"day_of_week": 0,
+			"start_time": "07:00",
+			"end_time": "22:00"
+		},
+		{
+			"day_of_week": 1,
+			"start_time": "07:00",
+			"end_time": "22:00"
+		},
+		{
+			"day_of_week": 2,
+			"start_time": "07:00",
+			"end_time": "22:00"
+		},
+		{
+			"day_of_week": 3,
+			"start_time": "07:00",
+			"end_time": "22:00"
+		},
+		{
+			"day_of_week": 4,
+			"start_time": "07:00",
+			"end_time": "22:00"
+		},
+		{
+			"day_of_week": 5,
+			"start_time": "07:00",
+			"end_time": "22:00"
+		},
+		{
+			"day_of_week": 6,
+			"start_time": "07:00",
+			"end_time": "22:00"
+		}
+	],
+	"id": "3a86c36e-1838-4218-b5b8-4bb94cd623dd",
+	"slug": "caf-aroma",
+	"created_at": "2026-04-28T05:42:29.732787+00:00",
+	"priority": 6,
+	"spot_duration_sec": 60,
+	"spots_per_hour": 4,
+	"updated_at": "2026-04-28T19:43:53.155085+00:00",
+	"report_token": "45bdc47c55d645dda54322a5b86f0ef0"
+},
+{
+	"_id": {
+		"$oid": "69f06479ee100e791f9bb6b1"
+	},
+	"name": "Unidos Marketing",
+	"tagline": "Trabajando Juntos Llegaremos Lejos!",
+	"description": "En Uni2 Marketing Group, ayudamos a negocios latinos a destacar y crecer en el mercado estadounidense con estrategias digitales que combinan creatividad, automatización e inteligencia artificial. No solo diseñamos, creamos sistemas digitales que generan resultados reales",
+	"special_offer": "¿Quieres saber por qué tu negocio no aparece en los resultados de Google? Te damos un reporte que te dirá por qué no sale y cómo arreglar el problema!",
+	"cta_text": "Pide Tu Consulta Gratis",
+	"phone": "9712270595",
+	"whatsapp": "9712270595",
+	"address": "",
+	"maps_url": "",
+	"website_url": "uni2mkt.com",
+	"banner_path": "radio-latina/banners/b5d129b0-3065-4589-a6c9-2e7f3b0a5a3c.png",
+	"color": "#EA580C",
+	"schedule": [
+		{
+			"day_of_week": 0,
+			"start_time": "06:00",
+			"end_time": "20:00"
+		},
+		{
+			"day_of_week": 1,
+			"start_time": "06:00",
+			"end_time": "20:00"
+		},
+		{
+			"day_of_week": 2,
+			"start_time": "06:00",
+			"end_time": "20:00"
+		},
+		{
+			"day_of_week": 3,
+			"start_time": "06:00",
+			"end_time": "20:00"
+		},
+		{
+			"day_of_week": 4,
+			"start_time": "06:00",
+			"end_time": "20:00"
+		},
+		{
+			"day_of_week": 5,
+			"start_time": "06:00",
+			"end_time": "20:00"
+		},
+		{
+			"day_of_week": 6,
+			"start_time": "06:00",
+			"end_time": "20:00"
+		}
+	],
+	"id": "1223b4f0-2b9f-418f-96ab-8610cde240d2",
+	"slug": "unidos-marketing",
+	"created_at": "2026-04-28T07:40:41.579506+00:00",
+	"priority": 5,
+	"spot_duration_sec": 60,
+	"spots_per_hour": 4,
+	"updated_at": "2026-04-28T22:15:29.551792+00:00",
+	"report_token": "584784aad756470299bc8a40fa4f1861"
+}]
+

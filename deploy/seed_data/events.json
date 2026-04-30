@@ -1,54 +1,58 @@
-[
-  {
-    "_id": {
-      "$oid": "69f114fba949aaf5e38f6122"
-    },
-    "title": "Noche de Banda en Vivo",
-    "description": "Concierto especial con las mejores bandas regionales. Boletos limitados.",
-    "location": "Salón Aztlan, Dallas, OR",
-    "event_date": "2026-04-30",
-    "start_time": "20:00",
-    "end_time": "23:30",
-    "image_path": "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg",
-    "ticket_url": "https://eventbrite.com/example",
-    "category": "concierto",
-    "color": "#7F1D1D",
-    "promoted_as_cta": true,
-    "promote_from_date": "",
-    "priority": 8,
-    "spots_per_hour": 4,
-    "spot_duration_sec": 30,
-    "id": "bef8ed01-6004-4c82-9e47-03edc1f4664b",
-    "slug": "noche-de-banda-en-vivo",
-    "created_at": "2026-04-28T20:13:47.550447+00:00",
-    "report_token": "90156c8e399941d496d7c5391c5b20f8"
-  },
-  {
-    "_id": {
-      "$oid": "69f121974d3ebc086c34c9a4"
-    },
-    "title": "Cinco de Mayo Festival 2026",
-    "description": "Tres días de música, comida y baile celebrando nuestra cultura.\n\nÚnete a nosotros para una celebración épica con artistas de Oregon, Washington y California. Comida típica mexicana, ballet folclórico, mariachis y mucho más.\n\nPortland’s Cinco de Mayo Fiesta is the largest multicultural festival in the state of Oregon. This bilingual event will be open between 11 am and 11 pm Friday-Sunday and from 4 pm to 10 pm on Monday, May 4th & Tuesday, May 5th, 2026 with special attractions and featured performances each day.",
-    "location": "Tom McCall Waterfront Park in downtown Portland, Oregon",
-    "event_date": "2026-05-05",
-    "end_date": "2026-05-07",
-    "start_time": "11:00",
-    "end_time": "22:00",
-    "image_path": "",
-    "ticket_url": "https://aftontickets.com/event/group/g3xlpmr960?aff=CDMWeb",
-    "category": "comunidad",
-    "color": "#0E3B26",
-    "promoted_as_cta": true,
-    "promote_from_date": "",
-    "priority": 9,
-    "spots_per_hour": 6,
-    "spot_duration_sec": 30,
-    "id": "7ad1ef61-1811-4b8e-8069-57f35477302f",
-    "slug": "cinco-de-mayo-festival",
-    "created_at": "2026-04-28T21:07:35.230673+00:00",
-    "updated_at": "2026-04-28T22:12:29.286683+00:00",
-    "address": "98 SW Naito Pkwy, Portland, OR 97204",
-    "gallery": [],
-    "report_token": "9867a3e8dba94d6cb177757f67457954"
-  }
-]
+[{
+	"_id": {
+		"$oid": "69f114fba949aaf5e38f6122"
+	},
+	"title": "Noche de Banda en Vivo",
+	"description": "Concierto especial con las mejores bandas regionales. Boletos limitados.",
+	"location": "Salón Aztlan, Dallas, OR",
+	"event_date": "2026-04-30",
+	"start_time": "20:00",
+	"end_time": "23:30",
+	"image_path": "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg",
+	"ticket_url": "https://eventbrite.com/example",
+	"category": "concierto",
+	"color": "#7F1D1D",
+	"promoted_as_cta": true,
+	"promote_from_date": "",
+	"priority": 8,
+	"spots_per_hour": 4,
+	"spot_duration_sec": 30,
+	"id": "bef8ed01-6004-4c82-9e47-03edc1f4664b",
+	"slug": "noche-de-banda-en-vivo",
+	"created_at": "2026-04-28T20:13:47.550447+00:00",
+	"report_token": "90156c8e399941d496d7c5391c5b20f8"
+},
+{
+	"_id": {
+		"$oid": "69f121974d3ebc086c34c9a4"
+	},
+	"title": "Cinco de Mayo Festival 2026",
+	"description": "Tres días de música, comida y baile celebrando nuestra cultura.\n\nÚnete a nosotros para una celebración épica con artistas de Oregon, Washington y California. Comida típica mexicana, ballet folclórico, mariachis y mucho más.\n\nPortland’s Cinco de Mayo Fiesta is the largest multicultural festival in the state of Oregon. This bilingual event will be open between 11 am and 11 pm Friday-Sunday and from 4 pm to 10 pm on Monday, May 4th & Tuesday, May 5th, 2026 with special attractions and featured performances each day.",
+	"location": "Tom McCall Waterfront Park in downtown Portland, Oregon",
+	"event_date": "2026-05-05",
+	"end_date": "2026-05-07",
+	"start_time": "11:00",
+	"end_time": "22:00",
+	"image_path": "radio-latina/banners/9c360c91-3df3-4a41-8c31-6ba0280ab124.jpg",
+	"ticket_url": "https://aftontickets.com/event/group/g3xlpmr960?aff=CDMWeb",
+	"category": "comunidad",
+	"color": "#0E3B26",
+	"promoted_as_cta": true,
+	"promote_from_date": "",
+	"priority": 9,
+	"spots_per_hour": 6,
+	"spot_duration_sec": 30,
+	"id": "7ad1ef61-1811-4b8e-8069-57f35477302f",
+	"slug": "cinco-de-mayo-festival",
+	"created_at": "2026-04-28T21:07:35.230673+00:00",
+	"updated_at": "2026-04-28T22:12:29.286683+00:00",
+	"address": "98 SW Naito Pkwy, Portland, OR 97204",
+	"gallery": [
+		"radio-latina/banners/3741c18a-949b-4005-ab45-2faba084668c.jpg",
+		"radio-latina/banners/446c46a6-4fa9-45d9-ab2d-ca3d50cc1d9e.jpg",
+		"radio-latina/banners/8043918e-ce16-4224-82cf-fd1ea05b5c8b.jpg",
+		"radio-latina/banners/5dcd7553-98fb-42d8-b275-079241de7bc3.jpg"
+	],
+	"report_token": "9867a3e8dba94d6cb177757f67457954"
+}]
+

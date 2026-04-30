@@ -42,15 +42,16 @@ cp -rf "$REPO/backend/utils/"*.py   "$PROD/utils/"   2>/dev/null || true
 cp -rf "$REPO/backend/models/"*.py  "$PROD/models/"  2>/dev/null || true
 cp -rf "$REPO/backend/tests/"*.py   "$PROD/tests/"   2>/dev/null || true
 
-# ----- 4. Build frontend (yarn --ignore-engines for Node 18) -----
-echo "[4/6] Building frontend..."
-cd "$REPO/frontend"
-cat > .env <<EOF
-REACT_APP_BACKEND_URL=https://${DOMAIN}
-WDS_SOCKET_PORT=443
-EOF
-yarn install --ignore-engines --silent
-yarn build
+# ----- 4. Verify pre-built frontend (low-RAM VPS — never build on server) -----
+echo "[4/6] Verifying pre-built frontend at $REPO/frontend/build ..."
+if [ ! -f "$REPO/frontend/build/index.html" ]; then
+    echo "ERROR: $REPO/frontend/build/index.html missing."
+    echo "Build the frontend LOCALLY (in Emergent) before deploying:"
+    echo "  cd frontend && REACT_APP_BACKEND_URL=https://${DOMAIN} yarn build"
+    echo "Then commit frontend/build/ and 'git push'."
+    exit 1
+fi
+echo "    ✓ build/ found ($(du -sh "$REPO/frontend/build" | cut -f1))"
 
 # ----- 5. Deploy frontend + fix ownership -----
 echo "[5/6] Deploying frontend to $WEB ..."

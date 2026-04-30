@@ -8,9 +8,9 @@ export default function Footer() {
   return (
     <footer
       data-testid="site-footer"
-      className="relative bg-slate-950 text-white/70 border-t border-white/10"
+      className="relative bg-slate-950 text-white/70 border-t border-white/10 app-bottom-pad"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
         <p className="order-2 sm:order-1">
           © {year} KWIP La Campeona 880 AM / 103.9 FM
         </p>

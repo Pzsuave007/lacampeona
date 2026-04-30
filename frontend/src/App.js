@@ -31,7 +31,7 @@ function App() {
           <BrowserRouter>
             <div className="min-h-screen flex flex-col bg-orange-50">
               <Navbar />
-              <main className="flex-1 app-bottom-pad">
+              <main className="flex-1">
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/mundial" element={<Mundial />} />

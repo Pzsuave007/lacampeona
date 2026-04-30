@@ -6,7 +6,7 @@
 # ============================================================
 set -e
 
-REPO="/home/lacampeona"
+REPO="/home/lacampeona/repo"
 PROD="/opt/lacampeona/backend"
 WEB="/home/lacampeona/public_html"
 PORT=8006

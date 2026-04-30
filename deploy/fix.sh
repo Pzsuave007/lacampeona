@@ -1,13 +1,13 @@
 #!/bin/bash
 # ============================================================
 #  La Campeona 880 AM — Deploy Updates
-#  Run after every git push to main:  bash /home/lacampeona/deploy/fix.sh
+#  Run after every git push to main:  bash /home/lacampeona/repo/deploy/fix.sh
 #  Server: AlmaLinux + cPanel + Apache + Python 3.9 + Node 18
 #  Port: 8006   |   Domain: lacampeona880am.com
 # ============================================================
 set -e
 
-REPO="/home/lacampeona"
+REPO="/home/lacampeona/repo"
 PROD="/opt/lacampeona/backend"
 WEB="/home/lacampeona/public_html"
 PORT=8006

@@ -78,32 +78,6 @@ agenthub/agents/youtube/db
 
 memory/test_credentials.md
 
-# cPanel system directories — DO NOT track when /home/<user>/ IS the repo
-# These are managed by cPanel/WHM and have user-specific data.
-public_html/
-mail/
-etc/
-ssl/
-tmp/
-logs/
-.htpasswds
-.cagefs/
-.cpanel/
-.trash/
-access-logs
-ssh/
-.ssh/
-.bash_history
-.bash_logout
-.bashrc
-.lastlogin
-.cl.selector/
-.contactemail
-.HttpRequest/
-cpmove-*
-public_ftp/
-backup-*
-
 # Mobile development
 android-sdk/frontend/node_modules/.cache/default-development/8.pack
 frontend/node_modules/.cache/default-development/8.pack

@@ -7,7 +7,7 @@
 |---|---|
 | Domain | `lacampeona880am.com` (+ `www.lacampeona880am.com`) |
 | Backend port | **`8006`** (unique on this shared server) |
-| Repo location | `/home/lacampeona/` (the cPanel home dir IS the repo) |
+| Repo location | `/home/lacampeona/repo/` |
 | Prod backend | `/opt/lacampeona/backend/` (with `venv/`) |
 | Web root | `/home/lacampeona/public_html/` |
 | Process manager | `nohup uvicorn` + crontab `@reboot` |
@@ -50,27 +50,23 @@ npm install -g yarn
 
 ---
 
-## 1. First-time install
-
-> ⚠️ `/home/lacampeona/` already has cPanel folders (`mail/`, `public_html/`, `etc/`, etc.). The `.gitignore` excludes them so we initialize git INSIDE the home dir without breaking cPanel.
+## 1. First-time install (run as root)
 
 ```bash
-# As the lacampeona cPanel user (NOT root)
+# 1a. Clone the repo INTO the lacampeona home
 cd /home/lacampeona
+git clone https://github.com/Pzsuave007/lacampeona.git repo
+chown -R lacampeona:lacampeona /home/lacampeona/repo
 
-# Initialize git inside the home dir
-git init
-git branch -M main
-git remote add origin https://github.com/Pzsuave007/<YOUR-LACAMPEONA-REPO>.git
-git fetch origin main
-git config --global --add safe.directory /home/lacampeona
-git reset --hard origin/main
+# 1b. Create prod backend dir
+mkdir -p /opt/lacampeona
+chown -R lacampeona:lacampeona /opt/lacampeona
 
-# Run installer
-bash /home/lacampeona/deploy/install_server.sh
+# 1c. Run installer (as the lacampeona user — important for file ownership)
+sudo -u lacampeona bash /home/lacampeona/repo/deploy/install_server.sh
 
-# Configure auto-restart on reboot
-bash /home/lacampeona/deploy/setup-autostart.sh
+# 1d. Auto-restart on reboot
+sudo -u lacampeona bash /home/lacampeona/repo/deploy/setup-autostart.sh
 ```
 
 The installer pauses ONCE for you to edit `/opt/lacampeona/backend/.env`:
@@ -98,7 +94,7 @@ openssl rand -hex 64
 - cPanel → **Domains** → toggle **Force HTTPS Redirect** ON
 
 ### 2b. Verify `.htaccess` is in place
-The installer copies `/home/lacampeona/deploy/htaccess` → `/home/lacampeona/public_html/.htaccess`. Verify:
+The installer copies `/home/lacampeona/repo/deploy/htaccess` → `/home/lacampeona/public_html/.htaccess`. Verify:
 
 ```bash
 cat /home/lacampeona/public_html/.htaccess | head -20
@@ -118,24 +114,24 @@ curl -i https://lacampeona880am.com/api/
 ## 3. Deploy updates (every push to `main`)
 
 ```bash
-bash /home/lacampeona/deploy/fix.sh
+sudo -u lacampeona bash /home/lacampeona/repo/deploy/fix.sh
 ```
 
 The script is idempotent and does:
 1. `git pull origin main`
 2. Re-installs Python deps (handles `emergentintegrations` private index)
 3. Copies backend files to `/opt/lacampeona/backend/`
-4. **Builds frontend with `REACT_APP_BACKEND_URL=https://lacampeona880am.com`** (was missing in the old script — this is THE fix that prevents `localhost` URLs leaking into the prod bundle)
+4. **Builds frontend with `REACT_APP_BACKEND_URL=https://lacampeona880am.com`**
 5. Deploys static files + `.htaccess` to `public_html/`
 6. `chown` to `lacampeona:lacampeona` + correct file permissions (prevents 403)
-7. Restarts backend on port 8006 (same port everywhere — no contradictions)
+7. Restarts backend on port 8006 (consistent everywhere)
 8. `curl`-verifies the API responds locally
 
 ---
 
 ## 4. 403 Forbidden? (permissions fix)
 
-If Apache returns 403, run as root or via WHM:
+If Apache returns 403, run as root:
 
 ```bash
 chmod 711 /home/lacampeona
@@ -160,6 +156,7 @@ find /home/lacampeona/public_html -type d -exec chmod 755 {} \;
 | Need to reset super admin password | Edit `.env` → `bash /home/lacampeona/restart.sh` (seed re-hashes on boot) |
 | `pip install emergentintegrations` fails | Missing `--extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/` |
 | `yarn install` fails on engine check | Add `--ignore-engines` flag |
+| `git pull` says "dubious ownership" | Run as the dir owner: `sudo -u lacampeona bash /home/lacampeona/repo/deploy/fix.sh` |
 
 ### Useful commands
 ```bash
@@ -167,7 +164,7 @@ tail -f /opt/lacampeona/backend/backend.log    # live backend log
 pgrep -af "uvicorn.*8006"                      # is it running?
 curl http://localhost:8006/api/                # backend reachable locally?
 curl -i https://lacampeona880am.com/api/       # backend through proxy?
-crontab -l                                     # auto-restart configured?
+crontab -l -u lacampeona                       # auto-restart configured?
 ```
 
 ---

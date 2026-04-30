@@ -8,8 +8,9 @@
 # testing
 /coverage
 
-# production
-/build
+# production build is COMMITTED (VPS has no RAM to run `yarn build`)
+# Regenerate locally with: bash /app/build-for-prod.sh
+# /build
 
 # misc
 .DS_Store

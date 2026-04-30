@@ -19,9 +19,9 @@ echo "============================================"
 rm -rf build
 REACT_APP_BACKEND_URL="https://$DOMAIN" yarn build 2>&1 | tail -3
 
-# Verify URL was baked correctly
-COUNT=$(grep -oc "$DOMAIN" build/static/js/main.*.js 2>/dev/null || echo 0)
-PREVIEW=$(grep -oc "preview.emergentagent" build/static/js/main.*.js 2>/dev/null || echo 0)
+# Verify URL was baked correctly (sum across all matching bundle files)
+COUNT=$(grep -o "$DOMAIN" build/static/js/main.*.js 2>/dev/null | wc -l)
+PREVIEW=$(grep -o "preview.emergentagent" build/static/js/main.*.js 2>/dev/null | wc -l)
 
 if [ "$COUNT" -gt 0 ] && [ "$PREVIEW" -eq 0 ]; then
     SIZE=$(du -sh build | cut -f1)

@@ -9,6 +9,7 @@ import { StationProvider } from "@/contexts/StationContext";
 import Navbar from "@/components/Navbar";
 import RadioPlayer from "@/components/RadioPlayer";
 import SmartCTA from "@/components/SmartCTA";
+import Footer from "@/components/Footer";
 import Home from "@/pages/Home";
 import AdvertisersList from "@/pages/AdvertisersList";
 import AdvertiserDetail from "@/pages/AdvertiserDetail";
@@ -46,6 +47,7 @@ function App() {
                   <Route path="/super" element={<SuperAdmin />} />
                 </Routes>
               </main>
+              <Footer />
               <SmartCTA />
               <RadioPlayer />
               <Toaster position="top-center" richColors />

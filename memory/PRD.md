@@ -115,3 +115,16 @@ Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanis
 
 ## Test Credentials
 See `/app/memory/test_credentials.md` (admin@radiolatina.fm / admin123).
+
+## Changelog — Apr 30, 2026
+
+### Seed data export (prod migration)
+- Created `/app/deploy/export_seed.sh` so dev DB (hosts/advertisers/events/settings) can be refreshed into `deploy/seed_data/*.json` before pushing to GitHub.
+- Re-exported current dev data: 3 hosts, 3 advertisers, 2 events, 1 settings.
+- Flow: `bash /app/deploy/export_seed.sh` → Save to Github → on VPS `git pull && bash deploy/import_seed.sh && bash restart.sh`.
+- `import_seed.sh` leaves users, dj_drafts, cta_events untouched.
+
+### Global Footer with attribution
+- New `/app/frontend/src/components/Footer.jsx` (bilingual ES/EN) with copyright + link to https://uni2mkt.com ("Uni2 Marketing Group").
+- Wired into `App.js` — visible on all routes above the sticky RadioPlayer.
+- Built for prod via `bash build-for-prod.sh` (fixed `grep -oc` bug in the verification step).

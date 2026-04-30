@@ -50,40 +50,30 @@ npm install -g yarn
 
 ---
 
-## 1. First-time install (run as root)
+## 1. First-time install — UN SOLO COMANDO 🎯
+
+Como root:
 
 ```bash
-# 1a. Clone the repo INTO the lacampeona home
-cd /home/lacampeona
-git clone https://github.com/Pzsuave007/lacampeona.git repo
-chown -R lacampeona:lacampeona /home/lacampeona/repo
-
-# 1b. Create prod backend dir
-mkdir -p /opt/lacampeona
-chown -R lacampeona:lacampeona /opt/lacampeona
-
-# 1c. Run installer (as the lacampeona user — important for file ownership)
-sudo -u lacampeona bash /home/lacampeona/repo/deploy/install_server.sh
-
-# 1d. Auto-restart on reboot
-sudo -u lacampeona bash /home/lacampeona/repo/deploy/setup-autostart.sh
+curl -sSL https://raw.githubusercontent.com/Pzsuave007/lacampeona/main/deploy/bootstrap.sh | bash
 ```
 
-The installer pauses ONCE for you to edit `/opt/lacampeona/backend/.env`:
+Eso es TODO. El bootstrap clona el repo, ejecuta `deploy.sh`, que:
+- Crea `/opt/lacampeona/`
+- Genera un `JWT_SECRET` aleatorio de 64 chars (no lo tienes que escribir tú)
+- Crea `/opt/lacampeona/backend/.env` desde la plantilla
+- Hace `pip install`, `yarn build`, despliega frontend al `public_html/`
+- Arranca el backend en port `8006`
+- Configura `crontab @reboot` para auto-restart
+- Verifica que la API responde
 
-```bash
-# In another terminal (or after Ctrl+C the pause):
-nano /opt/lacampeona/backend/.env
+Cuando termine, abre **https://lacampeona880am.com/login** y entra con `pzsuave007@gmail.com / MXmedia007`. 🎉
 
-# Generate a strong JWT_SECRET:
-openssl rand -hex 64
-# Paste the output as the value of JWT_SECRET=
-
-# Verify SUPER_ADMIN_EMAIL=pzsuave007@gmail.com
-# Verify SUPER_ADMIN_PASSWORD=MXmedia007
-# Verify EMERGENT_LLM_KEY=sk-emergent-eEbDa9fBf2b61E3F28
-# Save (Ctrl+O, Enter, Ctrl+X), then press ENTER in the installer.
-```
+> Si después quieres editar `.env` (ej. cambiar la contraseña del super admin):
+> ```bash
+> nano /opt/lacampeona/backend/.env
+> bash /home/lacampeona/restart.sh
+> ```
 
 ---
 
@@ -111,21 +101,13 @@ curl -i https://lacampeona880am.com/api/
 
 ---
 
-## 3. Deploy updates (every push to `main`)
+## 3. Deploy updates — UN SOLO COMANDO 🎯
 
 ```bash
-sudo -u lacampeona bash /home/lacampeona/repo/deploy/fix.sh
+bash /home/lacampeona/repo/deploy/deploy.sh
 ```
 
-The script is idempotent and does:
-1. `git pull origin main`
-2. Re-installs Python deps (handles `emergentintegrations` private index)
-3. Copies backend files to `/opt/lacampeona/backend/`
-4. **Builds frontend with `REACT_APP_BACKEND_URL=https://lacampeona880am.com`**
-5. Deploys static files + `.htaccess` to `public_html/`
-6. `chown` to `lacampeona:lacampeona` + correct file permissions (prevents 403)
-7. Restarts backend on port 8006 (consistent everywhere)
-8. `curl`-verifies the API responds locally
+(Como root. El script detecta automáticamente que ya hay repo y hace update.)
 
 ---
 

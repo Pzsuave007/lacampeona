@@ -2,79 +2,119 @@
 # ============================================================
 #  La Campeona 880 AM — ONE-COMMAND DEPLOY (run as root)
 #     bash /home/lacampeona/repo/deploy.sh
+#
+#  • First install → clones repo, sets up backend, builds frontend,
+#    auto-imports seed data (hosts/advertisers/events/settings).
+#  • Update → git pull + rebuild frontend + restart backend.
+#  • Re-import seed manually any time:
+#       bash /home/lacampeona/repo/deploy.sh --seed
 # ============================================================
 set -e
 
 REPO_URL="https://github.com/Pzsuave007/lacampeona.git"
 REPO="/home/lacampeona/repo"
 PROD="/opt/lacampeona/backend"
-WEB="/home/lacampeona/public_html"
+SEED_DIR="$REPO/deploy/seed_data"
 CPANEL_USER="lacampeona"
 PORT=8006
 DOMAIN="lacampeona880am.com"
+DB_NAME="radio_latina_prod"
+MONGO_URL="mongodb://localhost:27017"
 
 [ "$EUID" -ne 0 ] && { echo "❌ Run as root"; exit 1; }
 id "$CPANEL_USER" >/dev/null 2>&1 || { echo "❌ User $CPANEL_USER missing"; exit 1; }
 
-# Trust git everywhere (one-time, persistent)
 git config --global --add safe.directory '*' 2>/dev/null || true
+
+as_user() { su -s /bin/bash -l "$CPANEL_USER" -c "$1"; }
+
+# ----- Seed import helper (runs on first install OR --seed flag) -----
+import_seed() {
+    if ! command -v mongoimport >/dev/null 2>&1; then
+        echo "  ⚠️  mongoimport not found — installing mongodb-database-tools..."
+        dnf install -y mongodb-database-tools 2>&1 | tail -5 || {
+            echo "  ❌ Failed to install mongo tools. Skipping seed import."
+            return 0
+        }
+    fi
+    if [ ! -d "$SEED_DIR" ]; then
+        echo "  ⚠️  No seed_data/ folder, skipping seed import"
+        return 0
+    fi
+    echo ""
+    echo ">>> IMPORTING SEED DATA (hosts, advertisers, events, settings)"
+    for COL in hosts advertisers events settings; do
+        FILE="$SEED_DIR/${COL}.json"
+        [ ! -f "$FILE" ] && { echo "  ⚠️  $FILE missing, skipping"; continue; }
+        mongosh --quiet "$MONGO_URL/$DB_NAME" --eval "db.${COL}.drop()" >/dev/null 2>&1 || true
+        mongoimport --uri="$MONGO_URL/$DB_NAME" \
+            --collection="$COL" --file="$FILE" --jsonArray --quiet
+        COUNT=$(mongosh --quiet "$MONGO_URL/$DB_NAME" --eval "db.${COL}.countDocuments({})")
+        echo "  ✅ ${COL}: ${COUNT} docs"
+    done
+}
+
+# ----- Manual --seed flag -----
+if [ "$1" = "--seed" ]; then
+    import_seed
+    bash /home/lacampeona/restart.sh 2>/dev/null || pkill -HUP -f "uvicorn.*$PORT" 2>/dev/null
+    echo "🎉 Seed re-imported. Backend reloading."
+    exit 0
+fi
 
 echo "============================================"
 echo "  La Campeona — DEPLOY"
 echo "  Domain: $DOMAIN  |  Port: $PORT"
 echo "============================================"
 
-# Helper: run a command as the cPanel user (bypasses cPanel "no shell" restriction)
-as_user() {
-    su -s /bin/bash -l "$CPANEL_USER" -c "$1"
-}
-
-# ----- Detect FIRST-TIME vs UPDATE based on prod backend -----
+# ----- Detect FIRST-TIME vs UPDATE -----
 if [ ! -d "$PROD/venv" ]; then
     echo ""
-    echo ">>> FIRST-TIME INSTALL (no $PROD/venv yet)"
+    echo ">>> FIRST-TIME INSTALL"
     echo ""
 
-    # 1. Make sure repo exists & ownership is correct
+    # 1. Clone or update repo
     if [ ! -d "$REPO/.git" ]; then
-        echo "[1/5] Cloning repo..."
+        echo "[1/6] Cloning repo..."
         rm -rf "$REPO"
         git clone "$REPO_URL" "$REPO"
     else
-        echo "[1/5] Repo exists, pulling latest..."
+        echo "[1/6] Repo exists, pulling latest..."
         ( cd "$REPO" && git pull --ff-only origin main )
     fi
     chown -R "$CPANEL_USER:$CPANEL_USER" "$REPO"
     chmod 711 "/home/$CPANEL_USER"
 
-    # 2. Create prod dirs with correct ownership
-    echo "[2/5] Creating /opt/lacampeona ..."
+    # 2. Create prod dirs
+    echo "[2/6] Creating /opt/lacampeona ..."
     mkdir -p "$PROD"
     chown -R "$CPANEL_USER:$CPANEL_USER" "/opt/lacampeona"
 
-    # 3. Pre-generate .env so installer doesn't pause
-    echo "[3/5] Generating .env with random JWT_SECRET ..."
+    # 3. Pre-generate .env
+    echo "[3/6] Generating .env with random JWT_SECRET ..."
     if [ ! -f "$PROD/.env" ]; then
         cp "$REPO/deploy/backend.env.production.example" "$PROD/.env"
-        JWT=$(openssl rand -hex 64)
-        sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$JWT|" "$PROD/.env"
+        sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 64)|" "$PROD/.env"
         chown "$CPANEL_USER:$CPANEL_USER" "$PROD/.env"
         chmod 600 "$PROD/.env"
-        echo "    ✓ .env created at $PROD/.env"
+        echo "    ✓ .env created"
     fi
 
-    # 4. Run installer as lacampeona (clean shell)
-    echo "[4/5] Running installer ..."
+    # 4. Run installer
+    echo "[4/6] Running installer ..."
     as_user "bash $REPO/deploy/install_server.sh"
 
     # 5. Auto-restart on reboot
-    echo "[5/5] Setting up @reboot auto-restart ..."
+    echo "[5/6] Setting up @reboot ..."
     as_user "bash $REPO/deploy/setup-autostart.sh"
+
+    # 6. Auto-import seed on first install
+    echo "[6/6] Importing seed data ..."
+    import_seed
 else
     echo ""
-    echo ">>> UPDATE (prod backend already installed)"
+    echo ">>> UPDATE"
     echo ""
-
     chown -R "$CPANEL_USER:$CPANEL_USER" "$REPO"
     as_user "bash $REPO/deploy/fix.sh"
 fi
@@ -95,4 +135,7 @@ echo "============================================"
 echo "  🎉 DONE!"
 echo "  https://$DOMAIN/login"
 echo "  Super: pzsuave007@gmail.com / MXmedia007"
+echo ""
+echo "  Re-import seed data any time:"
+echo "    bash $REPO/deploy.sh --seed"
 echo "============================================"

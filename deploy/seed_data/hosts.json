@@ -1,0 +1,145 @@
+[
+  {
+    "_id": {
+      "$oid": "69f06f26748f97d6257337b1"
+    },
+    "name": "El Genio Lucas",
+    "show_name": "El Mañanero Con El Genio Lucas",
+    "tagline": "Despierta En La Mañanera Con El Genio Lucas",
+    "bio": "Todas las mañanas con los éxitos regionales, noticias locales y mucho sabor. Pide tu canción al WhatsApp.",
+    "photo_path": "radio-latina/banners/2d036048-e4dc-436f-883d-09058ab83460.jpg",
+    "phone": "+15036230244",
+    "whatsapp": "15036230244",
+    "facebook": "https://www.facebook.com/lacampeona.laquemanda",
+    "instagram": "",
+    "color": "#7F1D1D",
+    "schedule": [
+      {
+        "day_of_week": 0,
+        "start_time": "06:00",
+        "end_time": "10:00"
+      },
+      {
+        "day_of_week": 1,
+        "start_time": "06:00",
+        "end_time": "10:00"
+      },
+      {
+        "day_of_week": 2,
+        "start_time": "06:00",
+        "end_time": "10:00"
+      },
+      {
+        "day_of_week": 3,
+        "start_time": "06:00",
+        "end_time": "10:00"
+      },
+      {
+        "day_of_week": 4,
+        "start_time": "06:00",
+        "end_time": "10:00"
+      },
+      {
+        "day_of_week": 5,
+        "start_time": "06:00",
+        "end_time": "10:00"
+      }
+    ],
+    "id": "89ac974b-33e5-47f8-a67f-3120e886fa20",
+    "slug": "dj-carlos-ram-rez",
+    "created_at": "2026-04-28T08:26:14.623794+00:00",
+    "updated_at": "2026-04-28T17:28:46.901771+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69f06f26748f97d6257337b2"
+    },
+    "name": "La Jarochita",
+    "show_name": "La Hora del Sabor",
+    "tagline": "Corridos, banda y la mejor bohemia",
+    "bio": "La Jarochita te acompaña en las mañanas con lo mejor del regional mexicano, dedicatorias y saludos para toda la comunidad.",
+    "photo_path": "radio-latina/banners/ed5ff3f5-f446-4bc6-a0dc-69be070f49d5.jpg",
+    "phone": "+15036230244",
+    "whatsapp": "15036230244",
+    "facebook": "https://www.facebook.com/lacampeona.laquemanda",
+    "instagram": "",
+    "color": "#991B1B",
+    "schedule": [
+      {
+        "day_of_week": 0,
+        "start_time": "10:00",
+        "end_time": "14:00"
+      },
+      {
+        "day_of_week": 1,
+        "start_time": "10:00",
+        "end_time": "14:00"
+      },
+      {
+        "day_of_week": 2,
+        "start_time": "10:00",
+        "end_time": "14:00"
+      },
+      {
+        "day_of_week": 3,
+        "start_time": "10:00",
+        "end_time": "14:00"
+      },
+      {
+        "day_of_week": 4,
+        "start_time": "10:00",
+        "end_time": "14:00"
+      }
+    ],
+    "id": "4a3f9b1b-e19f-4720-b205-d0bb07d23a3b",
+    "slug": "dj-lupita-flores",
+    "created_at": "2026-04-28T08:26:14.624267+00:00",
+    "updated_at": "2026-04-28T17:28:27.692511+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69f06f26748f97d6257337b3"
+    },
+    "name": "Jose Alfaro",
+    "show_name": "Tardes de Complasencias ",
+    "tagline": "La mejor musica de todos los tiempos!",
+    "bio": "Las mejores cumbias, rancheras y éxitos de la noche. Dedica una canción a esa persona especial.",
+    "photo_path": "radio-latina/banners/9875c79b-f20a-451a-b9e8-42ba3e8cf13e.jpg",
+    "phone": "+15036230244",
+    "whatsapp": "15036230244",
+    "facebook": "https://www.facebook.com/lacampeona.laquemanda",
+    "instagram": "",
+    "color": "#450A0A",
+    "schedule": [
+      {
+        "day_of_week": 0,
+        "start_time": "14:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 1,
+        "start_time": "14:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 2,
+        "start_time": "14:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 3,
+        "start_time": "14:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 4,
+        "start_time": "14:00",
+        "end_time": "18:00"
+      }
+    ],
+    "id": "059aafae-e455-4f23-a5c3-bc70c8adfa9a",
+    "slug": "dj-el-compa-beto",
+    "created_at": "2026-04-28T08:26:14.624549+00:00",
+    "updated_at": "2026-04-28T17:29:21.013630+00:00"
+  }
+]

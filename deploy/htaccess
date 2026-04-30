@@ -1,0 +1,49 @@
+# ============================================================
+#  La Campeona 880 AM — public_html/.htaccess
+#  Handles:
+#    1. Reverse-proxy /api/* and /docs/* to backend on port 8006
+#    2. SPA fallback so React Router routes (/super, /dj, /eventos/:slug)
+#       don't 404 when the user reloads or shares a link.
+#  Drop this file at: /home/lacampeona/public_html/.htaccess
+# ============================================================
+
+# Compress text responses
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json
+</IfModule>
+
+# Long cache for hashed assets, no cache for index.html
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|svg|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+RewriteEngine On
+
+# Force HTTPS (cPanel SSL must be active)
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Reverse proxy: /api/*  →  http://localhost:8006/api/*
+# Requires mod_proxy + mod_proxy_http enabled at WHM level.
+<IfModule mod_proxy.c>
+  ProxyPreserveHost On
+  ProxyPass        /api/ http://127.0.0.1:8006/api/
+  ProxyPassReverse /api/ http://127.0.0.1:8006/api/
+  ProxyPass        /docs http://127.0.0.1:8006/docs
+  ProxyPassReverse /docs http://127.0.0.1:8006/docs
+  ProxyPass        /openapi.json http://127.0.0.1:8006/openapi.json
+  ProxyPassReverse /openapi.json http://127.0.0.1:8006/openapi.json
+</IfModule>
+
+# SPA fallback — every non-file, non-/api/ URL falls back to index.html
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{REQUEST_URI} !^/docs
+RewriteCond %{REQUEST_URI} !^/openapi.json
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

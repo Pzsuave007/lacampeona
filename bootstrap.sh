@@ -2,10 +2,10 @@
 # ============================================================
 #  La Campeona — Bootstrap (download + run deploy.sh)
 #  Use ONLY the first time on a fresh server. After that just
-#  run /home/lacampeona/repo/deploy/deploy.sh.
+#  run /home/lacampeona/repo/deploy.sh.
 #
 #  Usage (as root, ONE LINE):
-#     curl -sSL https://raw.githubusercontent.com/Pzsuave007/lacampeona/main/deploy/bootstrap.sh | bash
+#     curl -sSL https://raw.githubusercontent.com/Pzsuave007/lacampeona/main/bootstrap.sh | bash
 # ============================================================
 set -e
 
@@ -32,4 +32,4 @@ chown -R "$CPANEL_USER:$CPANEL_USER" "$REPO"
 
 # Now hand off to the full deploy script
 echo ">>> Handing off to deploy.sh ..."
-bash "$REPO/deploy/deploy.sh"
+bash "$REPO/deploy.sh"

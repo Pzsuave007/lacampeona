@@ -55,7 +55,7 @@ npm install -g yarn
 Como root:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Pzsuave007/lacampeona/main/deploy/bootstrap.sh | bash
+curl -sSL https://raw.githubusercontent.com/Pzsuave007/lacampeona/main/bootstrap.sh | bash
 ```
 
 Eso es TODO. El bootstrap clona el repo, ejecuta `deploy.sh`, que:
@@ -104,7 +104,7 @@ curl -i https://lacampeona880am.com/api/
 ## 3. Deploy updates — UN SOLO COMANDO 🎯
 
 ```bash
-bash /home/lacampeona/repo/deploy/deploy.sh
+bash /home/lacampeona/repo/deploy.sh
 ```
 
 (Como root. El script detecta automáticamente que ya hay repo y hace update.)

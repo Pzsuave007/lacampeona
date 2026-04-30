@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 #  La Campeona 880 AM — ONE-COMMAND DEPLOY (run as root)
-#     bash /home/lacampeona/repo/deploy/deploy.sh
+#     bash /home/lacampeona/repo/deploy.sh
 # ============================================================
 set -e
 

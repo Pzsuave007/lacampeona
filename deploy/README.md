@@ -37,25 +37,38 @@ sudo systemctl status mongod  # or install mongodb-org if missing
 
 ## 1. First-time install
 
-```bash
-# As the lacampeona cPanel user
-cd ~
-git clone <your-github-repo-url> lacampeona
-# repo now at /home/lacampeona/
+> ⚠️ `/home/lacampeona/` already exists in cPanel with system folders (`mail/`, `public_html/`, `etc/`, etc.). We'll initialize git **inside** that home dir without wiping those folders.
 
-# Run installer (creates /opt/lacampeona/, venv, installs deps,
-# builds frontend with prod URL, starts backend on 8006)
+```bash
+# As the lacampeona cPanel user (NOT root)
+cd /home/lacampeona
+
+# Initialize git in the existing home dir, fetch repo content
+git init
+git branch -M main
+git remote add origin https://github.com/<YOUR-USER>/<YOUR-REPO>.git
+git fetch origin main
+# Reset working tree to match the repo. cPanel-managed folders
+# (public_html/, mail/, etc.) are listed in the repo's .gitignore
+# so they are left intact.
+git reset --hard origin/main
+
+# Create prod backend dir + set ownership
 sudo mkdir -p /opt/lacampeona && sudo chown -R $USER:$USER /opt/lacampeona
+
+# Run installer (creates venv, installs deps, builds frontend with prod URL,
+# starts backend on 8006, deploys static files to public_html/)
 bash /home/lacampeona/deploy/install_server.sh
 
 # Auto-restart on reboot
 bash /home/lacampeona/deploy/setup-autostart.sh
 ```
 
-The installer will pause and ask you to edit `/opt/lacampeona/backend/.env`. Fill in:
-- `JWT_SECRET` → run `openssl rand -hex 64` and paste
+The installer will pause once and ask you to edit `/opt/lacampeona/backend/.env`. Fill in:
+- `JWT_SECRET` → run `openssl rand -hex 64` and paste the result
 - `ADMIN_PASSWORD` → strong password
 - Confirm `SUPER_ADMIN_EMAIL=pzsuave007@gmail.com` and `SUPER_ADMIN_PASSWORD=MXmedia007`
+- `EMERGENT_LLM_KEY` → already pre-filled with `sk-emergent-eEbDa9fBf2b61E3F28`
 
 ---
 

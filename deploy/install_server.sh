@@ -104,7 +104,7 @@ sleep 2
 cd "$PROD"
 source "$PROD/venv/bin/activate"
 nohup "$PROD/venv/bin/uvicorn" server:app \
-    --host 0.0.0.0 --port ${PORT} --reload \
+    --host 0.0.0.0 --port ${PORT} --workers 2 \
     > "$PROD/backend.log" 2>&1 &
 sleep 5
 

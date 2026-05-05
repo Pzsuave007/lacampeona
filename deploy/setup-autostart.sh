@@ -19,7 +19,7 @@ source "$PROD/venv/bin/activate"
 pkill -f "uvicorn.*$PORT" 2>/dev/null
 sleep 2
 nohup "$PROD/venv/bin/uvicorn" server:app \\
-    --host 0.0.0.0 --port $PORT --reload \\
+    --host 0.0.0.0 --port $PORT --workers 2 \\
     > "$PROD/backend.log" 2>&1 &
 EOF
 chmod +x "$RESTART_SCRIPT"

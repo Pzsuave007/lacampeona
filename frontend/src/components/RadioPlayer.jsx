@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { Play, Pause, Volume2, VolumeX, Radio } from "lucide-react";
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import { api } from "../lib/api";
+
+const FALLBACK_LOGO =
+  "https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png";
 
 export default function RadioPlayer() {
   const { settings } = useStation();
@@ -11,6 +15,8 @@ export default function RadioPlayer() {
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(0.85);
   const [error, setError] = useState(false);
+  const [np, setNp] = useState({ title: "", artist: "", image: "", ok: false });
+  const [artworkBroken, setArtworkBroken] = useState(false);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -31,6 +37,32 @@ export default function RadioPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.stream_url]);
 
+  // Poll now-playing every 20s
+  useEffect(() => {
+    let cancelled = false;
+    let timer;
+    const fetchNp = async () => {
+      try {
+        const { data } = await api.get("/now-playing");
+        if (!cancelled) {
+          setNp((prev) => {
+            // Reset artwork-broken flag when image URL changes
+            if (data.image !== prev.image) setArtworkBroken(false);
+            return data || { title: "", artist: "", image: "", ok: false };
+          });
+        }
+      } catch {
+        if (!cancelled) setNp({ title: "", artist: "", image: "", ok: false });
+      }
+    };
+    fetchNp();
+    timer = setInterval(fetchNp, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
   const toggle = async () => {
     if (!audioRef.current) return;
     try {
@@ -49,8 +81,16 @@ export default function RadioPlayer() {
   };
 
   const stationName = settings?.station_name || "KWIP La Campeona";
-  const nowPlaying = settings?.now_playing || "—";
+  const fallbackNowPlaying = settings?.now_playing || "—";
   const streamUrl = settings?.stream_url || "";
+
+  // Use live metadata if available, otherwise fallback to manual setting
+  const hasLiveMeta = np.ok && (np.title || np.artist);
+  const showArtwork = hasLiveMeta && np.image && !artworkBroken;
+  const primaryLine = hasLiveMeta
+    ? [np.title, np.artist].filter(Boolean).join(" • ")
+    : fallbackNowPlaying;
+  const secondaryLine = hasLiveMeta ? stationName : stationName;
 
   return (
     <div
@@ -67,18 +107,28 @@ export default function RadioPlayer() {
       )}
       <div className="bg-slate-900 text-white sm:rounded-3xl shadow-2xl shadow-orange-900/30 border border-white/5 overflow-hidden">
         <div className="flex items-center gap-4 p-3 sm:p-4">
-          {/* Logo / live indicator */}
+          {/* Logo / artwork */}
           <div className="relative shrink-0">
             <div
               className={`w-14 h-14 rounded-full bg-white flex items-center justify-center overflow-hidden ring-2 ring-amber-300/60 shadow-md ${
                 playing ? "vinyl-spin" : ""
               }`}
+              data-testid="player-artwork"
             >
-              <img
-                src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png"
-                alt="La Campeona"
-                className="w-full h-full object-contain p-1"
-              />
+              {showArtwork ? (
+                <img
+                  src={np.image}
+                  alt={np.title || "Now playing"}
+                  className="w-full h-full object-cover"
+                  onError={() => setArtworkBroken(true)}
+                />
+              ) : (
+                <img
+                  src={FALLBACK_LOGO}
+                  alt="La Campeona"
+                  className="w-full h-full object-contain p-1"
+                />
+              )}
             </div>
           </div>
 
@@ -104,10 +154,10 @@ export default function RadioPlayer() {
                 <span className="eq-bar" style={{ width: 2, height: 10 }} />
               </span>
             </div>
-            <div className="font-extrabold text-base sm:text-lg truncate" data-testid="now-playing-text">
-              {nowPlaying}
+            <div className="font-extrabold text-base sm:text-lg truncate" data-testid="now-playing-text" title={primaryLine}>
+              {primaryLine}
             </div>
-            <div className="text-xs text-slate-300 truncate">{stationName}</div>
+            <div className="text-xs text-slate-300 truncate">{secondaryLine}</div>
           </div>
 
           {/* Controls */}

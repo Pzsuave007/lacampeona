@@ -514,6 +514,49 @@ async def public_settings():
     s.pop("active_host_id", None)  # internal
     return s
 
+
+# ---- Now playing (proxy to Streaming Pulse / maindigitalstream) ----
+# Cached in memory for 15s to avoid hammering the upstream provider.
+NOW_PLAYING_URL = os.environ.get(
+    "NOW_PLAYING_URL",
+    "https://us7.maindigitalstream.com/4550/?c=KWIP",
+)
+_now_playing_cache: dict = {"data": None, "fetched_at": 0.0}
+
+@api.get("/now-playing")
+async def now_playing():
+    """Return current song metadata from the streaming provider, cached 15s."""
+    import time as _time
+    now = _time.time()
+    if _now_playing_cache["data"] and (now - _now_playing_cache["fetched_at"]) < 15:
+        return _now_playing_cache["data"]
+    try:
+        r = requests.get(
+            NOW_PLAYING_URL,
+            headers={"User-Agent": "LaCampeona/1.0", "Accept": "application/json"},
+            timeout=4,
+        )
+        r.raise_for_status()
+        raw = r.json()
+        artist = (raw.get("artist") or "").strip()
+        title = (raw.get("title") or "").strip()
+        image = raw.get("image") or ""
+        if image.startswith("//"):
+            image = "https:" + image
+        data = {
+            "artist": artist,
+            "title": title,
+            "image": image,
+            "ok": bool(title or artist),
+        }
+    except Exception as e:
+        logger.warning("now_playing fetch failed: %s", e)
+        data = {"artist": "", "title": "", "image": "", "ok": False}
+    _now_playing_cache["data"] = data
+    _now_playing_cache["fetched_at"] = now
+    return data
+
+
 @api.get("/active")
 async def active_advertiser():
     adv = await resolve_active_advertiser()

@@ -133,3 +133,25 @@ echo "          Super: pzsuave007@gmail.com / MXmedia007"
 echo ""
 echo "Auto-restart on reboot: bash $REPO/deploy/setup-autostart.sh"
 echo "============================================"
+
+# ----- Create handy shortcuts in home directory -----
+# So you can run plain `bash fix.sh` from /home/lacampeona/
+HOME_DIR="/home/${CPANEL_USER}"
+cat > "${HOME_DIR}/fix.sh" << EOF
+#!/bin/bash
+# Shortcut → runs the real deploy/fix.sh from the repo
+exec bash "${REPO}/deploy/fix.sh" "\$@"
+EOF
+chmod +x "${HOME_DIR}/fix.sh"
+
+cat > "${HOME_DIR}/deploy.sh" << EOF
+#!/bin/bash
+# Shortcut → runs the real deploy/fix.sh from the repo
+exec bash "${REPO}/deploy/fix.sh" "\$@"
+EOF
+chmod +x "${HOME_DIR}/deploy.sh"
+
+echo ""
+echo "Shortcuts created:"
+echo "  ${HOME_DIR}/fix.sh    → bash fix.sh    (from your home dir)"
+echo "  ${HOME_DIR}/deploy.sh → bash deploy.sh (alias)"

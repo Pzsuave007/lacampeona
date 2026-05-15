@@ -2,21 +2,24 @@ import React, { useEffect, useRef, useState } from "react";
 import { Play, Pause, Volume2, VolumeX, Radio } from "lucide-react";
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
-import { api } from "../lib/api";
 
 const FALLBACK_LOGO =
   "https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png";
 
 export default function RadioPlayer() {
-  const { settings } = useStation();
+  const { settings, nowPlaying } = useStation();
   const { t } = useLanguage();
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(0.85);
   const [error, setError] = useState(false);
-  const [np, setNp] = useState({ title: "", artist: "", image: "", ok: false });
   const [artworkBroken, setArtworkBroken] = useState(false);
+
+  // Reset artwork-broken when image changes
+  useEffect(() => {
+    setArtworkBroken(false);
+  }, [nowPlaying?.image]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -37,31 +40,8 @@ export default function RadioPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.stream_url]);
 
-  // Poll now-playing every 20s
-  useEffect(() => {
-    let cancelled = false;
-    let timer;
-    const fetchNp = async () => {
-      try {
-        const { data } = await api.get("/now-playing");
-        if (!cancelled) {
-          setNp((prev) => {
-            // Reset artwork-broken flag when image URL changes
-            if (data.image !== prev.image) setArtworkBroken(false);
-            return data || { title: "", artist: "", image: "", ok: false };
-          });
-        }
-      } catch {
-        if (!cancelled) setNp({ title: "", artist: "", image: "", ok: false });
-      }
-    };
-    fetchNp();
-    timer = setInterval(fetchNp, 20000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, []);
+  // Poll now-playing every 20s (handled by StationContext now)
+  // (removed local polling — uses shared `nowPlaying` from useStation)
 
   // ---- MOBILE FIX #1: auto-reconnect when the stream stalls/errors ----
   // Mobile networks (WiFi <-> 4G handoff, weak signal) cause brief drops
@@ -113,11 +93,11 @@ export default function RadioPlayer() {
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
     const stationName = settings?.station_name || "KWIP La Campeona";
-    const artworkUrl = np.image || FALLBACK_LOGO;
+    const artworkUrl = nowPlaying.image || FALLBACK_LOGO;
     try {
       navigator.mediaSession.metadata = new window.MediaMetadata({
-        title: np.title || stationName,
-        artist: np.artist || stationName,
+        title: nowPlaying.title || stationName,
+        artist: nowPlaying.artist || stationName,
         album: stationName,
         artwork: [
           { src: artworkUrl, sizes: "256x256", type: "image/jpeg" },
@@ -136,7 +116,7 @@ export default function RadioPlayer() {
     } catch {
       /* ignore — older browsers */
     }
-  }, [np.title, np.artist, np.image, playing, settings?.station_name]);
+  }, [nowPlaying.title, nowPlaying.artist, nowPlaying.image, playing, settings?.station_name]);
 
   const toggle = async () => {
     if (!audioRef.current) return;
@@ -160,10 +140,10 @@ export default function RadioPlayer() {
   const streamUrl = settings?.stream_url || "";
 
   // Use live metadata if available, otherwise fallback to manual setting
-  const hasLiveMeta = np.ok && (np.title || np.artist);
-  const showArtwork = hasLiveMeta && np.image && !artworkBroken;
+  const hasLiveMeta = nowPlaying.ok && (nowPlaying.title || nowPlaying.artist);
+  const showArtwork = hasLiveMeta && nowPlaying.image && !artworkBroken;
   const primaryLine = hasLiveMeta
-    ? [np.title, np.artist].filter(Boolean).join(" • ")
+    ? [nowPlaying.title, nowPlaying.artist].filter(Boolean).join(" • ")
     : fallbackNowPlaying;
   const secondaryLine = hasLiveMeta ? stationName : stationName;
 
@@ -192,8 +172,8 @@ export default function RadioPlayer() {
             >
               {showArtwork ? (
                 <img
-                  src={np.image}
-                  alt={np.title || "Now playing"}
+                  src={nowPlaying.image}
+                  alt={nowPlaying.title || "Now playing"}
                   className="w-full h-full object-cover"
                   onError={() => setArtworkBroken(true)}
                 />

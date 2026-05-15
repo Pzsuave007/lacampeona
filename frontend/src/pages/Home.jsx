@@ -26,7 +26,7 @@ const POLA_2 = "https://images.pexels.com/photos/3851837/pexels-photo-3851837.jp
 const VIBE_BG = "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg";
 
 export default function Home() {
-  const { settings, liveHost } = useStation();
+  const { settings, liveHost, nowPlaying } = useStation();
   const { t, lang } = useLanguage();
   const { advertisers } = useAdvertisers();
   const { events } = useEvents();
@@ -84,7 +84,7 @@ export default function Home() {
       {events && events.length > 0 && <EventsTeaser events={events} lang={lang} />}
 
       {/* Vibe / "what's the show" section with photos */}
-      <VibeSection settings={settings} lang={lang} />
+      <VibeSection settings={settings} lang={lang} nowPlaying={nowPlaying} />
 
       {/* Featured advertisers */}
       <section
@@ -637,7 +637,11 @@ function EventsTeaser({ events, lang }) {
 }
 
 /* --------------------- Vibe section --------------------- */
-function VibeSection({ settings, lang }) {
+function VibeSection({ settings, lang, nowPlaying }) {
+  const hasLiveMeta = nowPlaying?.ok && (nowPlaying?.title || nowPlaying?.artist);
+  const npTitle = hasLiveMeta ? nowPlaying.title : (settings?.now_playing || "El Show de la Tarde");
+  const npArtist = hasLiveMeta ? nowPlaying.artist : "";
+  const npImage = hasLiveMeta ? nowPlaying.image : "";
   return (
     <section
       className="relative overflow-hidden text-white py-20 md:py-28"
@@ -677,9 +681,14 @@ function VibeSection({ settings, lang }) {
               <span className="block text-[10px] uppercase tracking-[0.25em] text-yellow-300 font-bold">
                 {lang === "es" ? "Sonando ahora" : "Now playing"}
               </span>
-              <span className="font-bold text-lg">
-                {settings?.now_playing || "El Show de la Tarde"}
+              <span className="font-bold text-lg block truncate max-w-[260px]" title={npTitle}>
+                {npTitle}
               </span>
+              {npArtist && (
+                <span className="block text-xs text-white/70 truncate max-w-[260px]" title={npArtist}>
+                  {npArtist}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -690,8 +699,17 @@ function VibeSection({ settings, lang }) {
             <div className="w-72 h-72 rounded-full bg-yellow-300/20 blur-2xl" />
           </div>
           <div className="relative w-72 h-72 rounded-full bg-slate-900 border-8 border-yellow-300 flex items-center justify-center vinyl-spin shadow-2xl">
-            <div className="w-44 h-44 rounded-full bg-gradient-to-br from-orange-600 to-amber-500 flex items-center justify-center">
-              <RadioIcon className="w-12 h-12 text-slate-900" strokeWidth={2.5} />
+            <div className="w-44 h-44 rounded-full overflow-hidden bg-gradient-to-br from-orange-600 to-amber-500 flex items-center justify-center">
+              {npImage ? (
+                <img
+                  src={npImage}
+                  alt={npTitle}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              ) : (
+                <RadioIcon className="w-12 h-12 text-slate-900" strokeWidth={2.5} />
+              )}
             </div>
             <div className="absolute w-3 h-3 rounded-full bg-yellow-300 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             {/* Grooves */}

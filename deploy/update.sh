@@ -65,11 +65,16 @@ bash "$REPO/deploy/fix.sh"
 # ----- 4. Create handy shortcut for next time + verify API -----
 echo ""
 echo "[4/4] Creating ~/update.sh shortcut & verifying..."
-cat > "${HOME_DIR}/update.sh" << EOF
+# Create in both lacampeona home AND root home, since SSH usually = root
+for TARGET_HOME in "${HOME_DIR}" "/root"; do
+    if [ -d "$TARGET_HOME" ]; then
+        cat > "${TARGET_HOME}/update.sh" << EOF
 #!/bin/bash
 exec bash "${REPO}/deploy/update.sh" "\$@"
 EOF
-chmod +x "${HOME_DIR}/update.sh"
+        chmod +x "${TARGET_HOME}/update.sh"
+    fi
+done
 chown ${CPANEL_USER}:${CPANEL_USER} "${HOME_DIR}/update.sh" 2>/dev/null || true
 
 # Verify API

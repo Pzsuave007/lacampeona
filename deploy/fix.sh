@@ -24,14 +24,24 @@ git config --global --add safe.directory "$REPO" || true
 cd "$REPO"
 git pull origin main
 
-# ----- 2. Backend deps (slim prod list, --extra-index-url for emergentintegrations) -----
+# ----- 2. Backend deps (skip if requirements.prod.txt unchanged) -----
 echo "[2/6] Backend dependencies..."
-cd "$PROD"
-source "$PROD/venv/bin/activate"
-pip install --quiet \
-    --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ \
-    -r "$REPO/deploy/requirements.prod.txt"
-deactivate
+REQ="$REPO/deploy/requirements.prod.txt"
+STAMP="$PROD/.last-requirements-hash"
+NEW_HASH=$(md5sum "$REQ" | awk '{print $1}')
+OLD_HASH=$(cat "$STAMP" 2>/dev/null || echo "")
+if [ "$NEW_HASH" = "$OLD_HASH" ]; then
+    echo "    ✓ unchanged, skipping pip install"
+else
+    cd "$PROD"
+    source "$PROD/venv/bin/activate"
+    pip install --quiet \
+        --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ \
+        -r "$REQ"
+    deactivate
+    echo "$NEW_HASH" > "$STAMP"
+    echo "    ✓ deps updated"
+fi
 
 # ----- 3. Copy backend files (subfolders optional) -----
 echo "[3/6] Backend files..."

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2, Calendar, CalendarDays, BarChart3, Copy, Eye, MousePointerClick, TrendingUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2, Calendar, CalendarDays, BarChart3, Copy, Eye, MousePointerClick, TrendingUp, Image as ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -112,6 +112,7 @@ export default function AdminDashboard() {
       default_cta_text: adminSettings.default_cta_text,
       default_cta_url: adminSettings.default_cta_url,
       cta_pause_seconds: Number(adminSettings.cta_pause_seconds ?? 60),
+      default_hero_bg: adminSettings.default_hero_bg,
     };
     const { data } = await api.put("/admin/settings", payload);
     setAdminSettings(data);
@@ -298,6 +299,12 @@ export default function AdminDashboard() {
                     Segundos sin anuncio entre cada spot (default 60s). Pon 0 para rotación continua.
                   </p>
                 </label>
+
+                {/* Default Hero Background (used when no host is live) */}
+                <HeroBgField
+                  value={adminSettings.default_hero_bg || ""}
+                  onChange={(v) => setAdminSettings({ ...adminSettings, default_hero_bg: v })}
+                />
               </div>
               <button
                 data-testid="settings-save-btn"
@@ -952,5 +959,81 @@ function StatCard({ label, value, icon: Icon, accent = "#7F1D1D", small }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function HeroBgField({ value, onChange }) {
+  const [uploading, setUploading] = useState(false);
+
+  const upload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { data } = await api.post("/admin/upload", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      onChange(data.path);
+      toast.success("Imagen subida — recuerda guardar");
+    } catch (e) {
+      toast.error("Error al subir imagen");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <label className="block sm:col-span-2">
+      <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600 flex items-center gap-2">
+        <ImageIcon className="w-3.5 h-3.5" />
+        Fondo del Hero (cuando no hay locutor en vivo)
+      </span>
+      <div className="mt-2 flex flex-col sm:flex-row gap-3 items-start">
+        {value && (
+          <div className="relative w-32 h-20 rounded-xl overflow-hidden border-2 border-slate-200 shrink-0">
+            <img
+              src={value}
+              alt="Hero background preview"
+              className="w-full h-full object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              data-testid="hero-bg-clear-btn"
+              title="Quitar y volver al default"
+              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        <div className="flex-1 w-full space-y-2">
+          <input
+            data-testid="set-hero-bg-url"
+            type="text"
+            value={value || ""}
+            placeholder="Pega una URL de imagen, o sube una abajo"
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition"
+          />
+          <label className="inline-flex items-center gap-2 cursor-pointer bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-full px-4 py-2 transition active:scale-95">
+            <ImageIcon className="w-4 h-4" />
+            {uploading ? "Subiendo..." : "Subir desde mi computadora"}
+            <input
+              type="file"
+              accept="image/*"
+              data-testid="hero-bg-upload-input"
+              onChange={(e) => upload(e.target.files?.[0])}
+              className="hidden"
+              disabled={uploading}
+            />
+          </label>
+          <p className="text-[11px] text-slate-500">
+            Aparece en la página principal cuando ningún locutor está al aire. Si lo dejas vacío, se usa la imagen por defecto.
+          </p>
+        </div>
+      </div>
+    </label>
   );
 }

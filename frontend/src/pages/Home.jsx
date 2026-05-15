@@ -66,6 +66,7 @@ export default function Home() {
           tagline={settings?.station_tagline}
           stationWa={stationWa}
           lang={lang}
+          heroBg={settings?.default_hero_bg}
         />
       )}
 
@@ -195,7 +196,8 @@ export default function Home() {
 }
 
 /* --------------------- Default Hero --------------------- */
-function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
+function DefaultHero({ t, stationName, tagline, stationWa, lang, heroBg }) {
+  const bgUrl = heroBg || HERO_BG;
   return (
     <section
       data-testid="home-hero"
@@ -212,7 +214,7 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang }) {
       <div
         className="absolute inset-0 opacity-[0.18] mix-blend-luminosity"
         style={{
-          backgroundImage: `url(${HERO_BG})`,
+          backgroundImage: `url(${bgUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

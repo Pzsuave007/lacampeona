@@ -161,7 +161,7 @@ export default function RadioPlayer() {
   const primaryLine = realSong
     ? [nowPlaying.title, nowPlaying.artist].filter(Boolean).join(" • ")
     : fallbackNowPlaying;
-  const secondaryLine = hasLiveMeta ? stationName : stationName;
+  const secondaryLine = stationName;
 
   return (
     <div

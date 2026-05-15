@@ -222,6 +222,7 @@ class SettingsIn(BaseModel):
     timezone: Optional[str] = None  # IANA, e.g. America/Los_Angeles
     cta_pause_seconds: Optional[int] = None  # gap between ads in rotation; default 60s
     default_hero_bg: Optional[str] = None  # background image URL for Home Hero when no host is live
+    default_artwork: Optional[str] = None  # fallback image for the spinning vinyl + player when no song artwork
 
 
 class HostScheduleSlot(BaseModel):

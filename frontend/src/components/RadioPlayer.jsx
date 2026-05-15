@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Play, Pause, Volume2, VolumeX, Radio } from "lucide-react";
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import { bannerUrl } from "../lib/api";
 
 const FALLBACK_LOGO =
   "https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png";
@@ -140,8 +141,15 @@ export default function RadioPlayer() {
   const streamUrl = settings?.stream_url || "";
 
   // Use live metadata if available, otherwise fallback to manual setting
+  // "Real song" = both title AND artist from streaming provider.
+  // When fake (show name etc), prefer admin's custom default_artwork.
+  const realSong = !!(nowPlaying.title && nowPlaying.artist);
+  const customArtwork = settings?.default_artwork ? bannerUrl(settings.default_artwork) : "";
+  const effectiveArtwork = realSong ? nowPlaying.image : (customArtwork || nowPlaying.image);
+
+  // Use live metadata if available, otherwise fallback to manual setting
   const hasLiveMeta = nowPlaying.ok && (nowPlaying.title || nowPlaying.artist);
-  const showArtwork = hasLiveMeta && nowPlaying.image && !artworkBroken;
+  const showArtwork = hasLiveMeta && effectiveArtwork && !artworkBroken;
   const primaryLine = hasLiveMeta
     ? [nowPlaying.title, nowPlaying.artist].filter(Boolean).join(" • ")
     : fallbackNowPlaying;
@@ -172,7 +180,7 @@ export default function RadioPlayer() {
             >
               {showArtwork ? (
                 <img
-                  src={nowPlaying.image}
+                  src={effectiveArtwork}
                   alt={nowPlaying.title || "Now playing"}
                   className="w-full h-full object-cover"
                   onError={() => setArtworkBroken(true)}

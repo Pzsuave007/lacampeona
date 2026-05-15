@@ -113,6 +113,7 @@ export default function AdminDashboard() {
       default_cta_url: adminSettings.default_cta_url,
       cta_pause_seconds: Number(adminSettings.cta_pause_seconds ?? 60),
       default_hero_bg: adminSettings.default_hero_bg,
+      default_artwork: adminSettings.default_artwork,
     };
     const { data } = await api.put("/admin/settings", payload);
     setAdminSettings(data);
@@ -302,8 +303,20 @@ export default function AdminDashboard() {
 
                 {/* Default Hero Background (used when no host is live) */}
                 <HeroBgField
+                  testid="hero-bg"
+                  iconLabel="Fondo del Hero (cuando no hay locutor en vivo)"
+                  helpText="Aparece en la página principal cuando ningún locutor está al aire. Si lo dejas vacío, se usa la imagen por defecto."
                   value={adminSettings.default_hero_bg || ""}
                   onChange={(v) => setAdminSettings({ ...adminSettings, default_hero_bg: v })}
+                />
+
+                {/* Default Artwork (used when no song image is available) */}
+                <HeroBgField
+                  testid="artwork"
+                  iconLabel="Foto del disco (cuando no hay carátula de canción)"
+                  helpText="Aparece en el disco girando y en el player cuando no hay carátula real de la canción (ej: durante shows en vivo o anuncios). Recomendado: imagen cuadrada del logo o foto del estudio."
+                  value={adminSettings.default_artwork || ""}
+                  onChange={(v) => setAdminSettings({ ...adminSettings, default_artwork: v })}
                 />
               </div>
               <button
@@ -962,7 +975,7 @@ function StatCard({ label, value, icon: Icon, accent = "#7F1D1D", small }) {
   );
 }
 
-function HeroBgField({ value, onChange }) {
+function HeroBgField({ value, onChange, testid = "hero-bg", iconLabel, helpText }) {
   const [uploading, setUploading] = useState(false);
 
   const upload = async (file) => {
@@ -987,20 +1000,20 @@ function HeroBgField({ value, onChange }) {
     <label className="block sm:col-span-2">
       <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600 flex items-center gap-2">
         <ImageIcon className="w-3.5 h-3.5" />
-        Fondo del Hero (cuando no hay locutor en vivo)
+        {iconLabel}
       </span>
       <div className="mt-2 flex flex-col sm:flex-row gap-3 items-start">
         {value && (
           <div className="relative w-32 h-20 rounded-xl overflow-hidden border-2 border-slate-200 shrink-0">
             <img
               src={bannerUrl(value)}
-              alt="Hero background preview"
+              alt="preview"
               className="w-full h-full object-cover"
             />
             <button
               type="button"
               onClick={() => onChange("")}
-              data-testid="hero-bg-clear-btn"
+              data-testid={`${testid}-clear-btn`}
               title="Quitar y volver al default"
               className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow"
             >
@@ -1010,7 +1023,7 @@ function HeroBgField({ value, onChange }) {
         )}
         <div className="flex-1 w-full space-y-2">
           <input
-            data-testid="set-hero-bg-url"
+            data-testid={`set-${testid}-url`}
             type="text"
             value={value || ""}
             placeholder="Pega una URL de imagen, o sube una abajo"
@@ -1023,15 +1036,13 @@ function HeroBgField({ value, onChange }) {
             <input
               type="file"
               accept="image/*"
-              data-testid="hero-bg-upload-input"
+              data-testid={`${testid}-upload-input`}
               onChange={(e) => upload(e.target.files?.[0])}
               className="hidden"
               disabled={uploading}
             />
           </label>
-          <p className="text-[11px] text-slate-500">
-            Aparece en la página principal cuando ningún locutor está al aire. Si lo dejas vacío, se usa la imagen por defecto.
-          </p>
+          <p className="text-[11px] text-slate-500">{helpText}</p>
         </div>
       </div>
     </label>

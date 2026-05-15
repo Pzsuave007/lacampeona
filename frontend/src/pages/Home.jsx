@@ -638,10 +638,14 @@ function EventsTeaser({ events, lang }) {
 
 /* --------------------- Vibe section --------------------- */
 function VibeSection({ settings, lang, nowPlaying }) {
-  const hasLiveMeta = nowPlaying?.ok && (nowPlaying?.title || nowPlaying?.artist);
-  const npTitle = hasLiveMeta ? nowPlaying.title : (settings?.now_playing || "El Show de la Tarde");
-  const npArtist = hasLiveMeta ? nowPlaying.artist : "";
-  const npImage = hasLiveMeta ? nowPlaying.image : "";
+  // "Real song" = has both title AND artist from streaming provider
+  const realSong = !!(nowPlaying?.title && nowPlaying?.artist);
+  const npTitle = realSong ? nowPlaying.title : (settings?.now_playing || "El Show de la Tarde");
+  const npArtist = realSong ? nowPlaying.artist : "";
+  // When real song → use provider artwork. Otherwise → admin's custom default.
+  const npImage = realSong
+    ? nowPlaying.image
+    : (settings?.default_artwork ? bannerUrl(settings.default_artwork) : "");
   return (
     <section
       className="relative overflow-hidden text-white py-20 md:py-28"

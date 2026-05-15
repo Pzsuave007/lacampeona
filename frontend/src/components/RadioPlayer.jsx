@@ -141,16 +141,24 @@ export default function RadioPlayer() {
   const streamUrl = settings?.stream_url || "";
 
   // Use live metadata if available, otherwise fallback to manual setting
-  // "Real song" = both title AND artist from streaming provider.
-  // When fake (show name etc), prefer admin's custom default_artwork.
-  const realSong = !!(nowPlaying.title && nowPlaying.artist);
+  // Detect station-info masquerading as a song (Streaming Pulse returns artist="KWIP", title="AM 880" etc)
+  const looksLikeStation = (s = "") => {
+    const up = String(s).toUpperCase();
+    return /\bKWIP\b|\bAM\s*8?80\b|\bFM\s*10?3\.?9\b|\b103\.9\b|LA\s+CAMPEONA/.test(up);
+  };
+  const realSong = !!(
+    nowPlaying.title &&
+    nowPlaying.artist &&
+    !looksLikeStation(nowPlaying.title) &&
+    !looksLikeStation(nowPlaying.artist)
+  );
   const customArtwork = settings?.default_artwork ? bannerUrl(settings.default_artwork) : "";
   const effectiveArtwork = realSong ? nowPlaying.image : (customArtwork || nowPlaying.image);
 
-  // Use live metadata if available, otherwise fallback to manual setting
-  const hasLiveMeta = nowPlaying.ok && (nowPlaying.title || nowPlaying.artist);
-  const showArtwork = hasLiveMeta && effectiveArtwork && !artworkBroken;
-  const primaryLine = hasLiveMeta
+  // Only show the live "title • artist" line when it's a REAL song
+  const showArtwork = (realSong && effectiveArtwork && !artworkBroken)
+    || (!realSong && customArtwork && !artworkBroken);
+  const primaryLine = realSong
     ? [nowPlaying.title, nowPlaying.artist].filter(Boolean).join(" • ")
     : fallbackNowPlaying;
   const secondaryLine = hasLiveMeta ? stationName : stationName;

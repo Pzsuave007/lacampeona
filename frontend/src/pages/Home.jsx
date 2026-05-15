@@ -638,11 +638,19 @@ function EventsTeaser({ events, lang }) {
 
 /* --------------------- Vibe section --------------------- */
 function VibeSection({ settings, lang, nowPlaying }) {
-  // "Real song" = has both title AND artist from streaming provider
-  const realSong = !!(nowPlaying?.title && nowPlaying?.artist);
+  // Detect if it's a real song vs station/show info (e.g. artist="KWIP", title="AM 880 FM 103.9")
+  const looksLikeStation = (s = "") => {
+    const up = String(s).toUpperCase();
+    return /\bKWIP\b|\bAM\s*8?80\b|\bFM\s*10?3\.?9\b|\b103\.9\b|LA\s+CAMPEONA/.test(up);
+  };
+  const realSong = !!(
+    nowPlaying?.title &&
+    nowPlaying?.artist &&
+    !looksLikeStation(nowPlaying.title) &&
+    !looksLikeStation(nowPlaying.artist)
+  );
   const npTitle = realSong ? nowPlaying.title : (settings?.now_playing || "El Show de la Tarde");
   const npArtist = realSong ? nowPlaying.artist : "";
-  // When real song → use provider artwork. Otherwise → admin's custom default.
   const npImage = realSong
     ? nowPlaying.image
     : (settings?.default_artwork ? bannerUrl(settings.default_artwork) : "");

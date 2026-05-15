@@ -197,7 +197,7 @@ export default function Home() {
 
 /* --------------------- Default Hero --------------------- */
 function DefaultHero({ t, stationName, tagline, stationWa, lang, heroBg }) {
-  const bgUrl = heroBg || HERO_BG;
+  const bgUrl = heroBg ? bannerUrl(heroBg) : HERO_BG;
   return (
     <section
       data-testid="home-hero"

@@ -993,7 +993,7 @@ function HeroBgField({ value, onChange }) {
         {value && (
           <div className="relative w-32 h-20 rounded-xl overflow-hidden border-2 border-slate-200 shrink-0">
             <img
-              src={value}
+              src={bannerUrl(value)}
               alt="Hero background preview"
               className="w-full h-full object-cover"
             />

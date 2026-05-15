@@ -63,6 +63,81 @@ export default function RadioPlayer() {
     };
   }, []);
 
+  // ---- MOBILE FIX #1: auto-reconnect when the stream stalls/errors ----
+  // Mobile networks (WiFi <-> 4G handoff, weak signal) cause brief drops
+  // that kill the stream forever unless we re-load() and play() again.
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    let retryCount = 0;
+    let retryTimer = null;
+
+    const reconnect = () => {
+      if (!playing) return;
+      retryCount += 1;
+      if (retryCount > 6) return; // give up after ~30s of retries
+      const delay = Math.min(5000, 500 * retryCount);
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => {
+        try {
+          el.load();
+          el.play().catch(() => {});
+        } catch {}
+      }, delay);
+    };
+
+    const onStall = () => reconnect();
+    const onError = () => reconnect();
+    const onEnded = () => reconnect();
+    const onPlaying = () => {
+      retryCount = 0;
+      clearTimeout(retryTimer);
+    };
+
+    el.addEventListener("stalled", onStall);
+    el.addEventListener("error", onError);
+    el.addEventListener("ended", onEnded);
+    el.addEventListener("playing", onPlaying);
+    return () => {
+      el.removeEventListener("stalled", onStall);
+      el.removeEventListener("error", onError);
+      el.removeEventListener("ended", onEnded);
+      el.removeEventListener("playing", onPlaying);
+      clearTimeout(retryTimer);
+    };
+  }, [playing]);
+
+  // ---- MOBILE FIX #2: Media Session API (lock screen + background) ----
+  // Tells iOS/Android "I'm playing media" so the OS doesn't kill the audio
+  // when the screen locks. Also shows nice lock-screen controls.
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    const stationName = settings?.station_name || "KWIP La Campeona";
+    const artworkUrl = np.image || FALLBACK_LOGO;
+    try {
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: np.title || stationName,
+        artist: np.artist || stationName,
+        album: stationName,
+        artwork: [
+          { src: artworkUrl, sizes: "256x256", type: "image/jpeg" },
+          { src: artworkUrl, sizes: "512x512", type: "image/jpeg" },
+        ],
+      });
+      navigator.mediaSession.setActionHandler("play", () => {
+        audioRef.current?.play().catch(() => {});
+        setPlaying(true);
+      });
+      navigator.mediaSession.setActionHandler("pause", () => {
+        audioRef.current?.pause();
+        setPlaying(false);
+      });
+      navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+    } catch {
+      /* ignore — older browsers */
+    }
+  }, [np.title, np.artist, np.image, playing, settings?.station_name]);
+
   const toggle = async () => {
     if (!audioRef.current) return;
     try {
@@ -199,7 +274,7 @@ export default function RadioPlayer() {
           ref={audioRef}
           src={streamUrl}
           preload="none"
-          crossOrigin="anonymous"
+          playsInline
           style={{ display: "none" }}
         />
       </div>

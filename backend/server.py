@@ -1259,6 +1259,40 @@ CONTENT_TEMPLATES: dict = {
         ],
         "instruction": "Crea un post útil y respetuoso para trabajadores del campo y sus familias sobre: {topic}. Mensaje clave: {key_message}. Recurso/contacto: {resource}. Tono solidario y práctico, NUNCA condescendiente. Reconoce el valor del trabajo agrícola. Termina invitando a llamar a la radio si tienen preguntas.",
     },
+    # ----- Plantillas DEPORTIVAS (Sprint A.2 - Feb 2026) -----
+    "mexican_soccer": {
+        "label": "Fútbol Mexicano",
+        "emoji": "⚽",
+        "description": "Liga MX, Selección Nacional, equipos y jugadores mexicanos.",
+        "fields": [
+            {"key": "team_or_player", "label": "Equipo o jugador", "placeholder": "América, Chivas, Selección Mexicana, Santi Giménez…", "required": True},
+            {"key": "situation", "label": "Situación", "placeholder": "Ganó el clásico, anotó hat-trick, regresa a la Selección, lesión…", "required": True},
+            {"key": "angle", "label": "Ángulo o opinión (opcional)", "placeholder": "Por fin levantó el equipo, era hora, polémica con el técnico…", "required": False},
+        ],
+        "instruction": "Crea un post sobre fútbol mexicano: {team_or_player} — {situation}. Ángulo del DJ: {angle}. Tono apasionado y futbolero (la audiencia VIVE para Liga MX y la Selección). Si es Liga MX, usa el nombre cariñoso del equipo (Águilas, Rebaño, Tuzos, Rayados, etc.). Cierra preguntando con qué equipo va la audiencia o invitando a opinar.",
+    },
+    "world_cup_2026": {
+        "label": "Mundial 2026",
+        "emoji": "🏆",
+        "description": "Mundial 2026 (México + EE.UU. + Canadá). Selección, partidos, sedes, fan zones.",
+        "fields": [
+            {"key": "topic", "label": "Tema", "placeholder": "Partido de México, sede, jugador convocado, fan fest, calendario…", "required": True},
+            {"key": "detail", "label": "Detalle / dato concreto", "placeholder": "México vs Argentina en el Estadio Azteca, sede de Seattle, etc.", "required": True},
+            {"key": "angle", "label": "Ángulo (opcional)", "placeholder": "Orgullo nacional, expectativas, recuerdo de Mundiales pasados…", "required": False},
+        ],
+        "instruction": "Crea un post sobre el MUNDIAL 2026 (organizado por México, EE.UU. y Canadá). Tema: {topic}. Detalle: {detail}. Ángulo: {angle}. Tono lleno de orgullo nacional. Reconoce que es histórico que México sea sede otra vez después de 1986. Si es sobre la Selección, evoca los recuerdos de Hugo Sánchez, Jorge Campos, los Mundiales pasados. Invita a sintonizar para los previos del partido o a compartir con quién verán el partido.",
+    },
+    "latinos_abroad": {
+        "label": "Latinos en el Mundo",
+        "emoji": "🌎",
+        "description": "Jugadores latinoamericanos destacando en ligas extranjeras (Europa, MLS).",
+        "fields": [
+            {"key": "player", "label": "Jugador", "placeholder": "Santi Giménez, Edson Álvarez, Luis Díaz, Hirving Lozano…", "required": True},
+            {"key": "club_country", "label": "Club / país", "placeholder": "Milan (Italia), West Ham (Inglaterra), Liverpool (Inglaterra)…", "required": True},
+            {"key": "achievement", "label": "Hazaña o noticia", "placeholder": "Anotó doblete, asistencia clave, capitán del equipo, transferencia…", "required": True},
+        ],
+        "instruction": "Crea un post celebrando al jugador latinoamericano {player} ({club_country}) por: {achievement}. Tono de ORGULLO LATINO — la audiencia se identifica fuertísimo con que 'uno de los nuestros' brille en el extranjero. Si es mexicano, usa expresiones como 'Mi México', 'paisano', 'el orgullo verde'. Cierra invitando a compartir el éxito con la familia y a sintonizar la radio para más noticias del deporte latino.",
+    },
 }
 
 
@@ -1291,7 +1325,16 @@ AUDIENCE_PROFILE = (
     "- Cariñoso, respetuoso, con mucha calidez familiar. 'Comadre', 'mi gente', 'señoras y señores', 'paisanos'.\n"
     "- Valora el trabajo duro, la familia, la fe, el sacrificio, las raíces.\n"
     "- Nostalgia bien usada (recuerdos del pueblo, de cuando llegaron a EE.UU., de sus padres/abuelos).\n"
-    "- Emojis SÍ, pero con moderación y los apropiados: ❤️ 🙏 🌹 🇲🇽 🎵 ☕ 🌽 ✨ (NO 💀 🔥 demasiado, 😈, etc.).\n"
+    "- Emojis SÍ, pero con moderación y los apropiados: ❤️ 🙏 🌹 🇲🇽 🎵 ☕ 🌽 ✨ ⚽ 🏆 (NO 💀 🔥 demasiado, 😈, etc.).\n\n"
+    "INTERESES DEPORTIVOS (muy fuertes en esta audiencia):\n"
+    "- FÚTBOL es religión. Liga MX especialmente: América (Águilas), Chivas (Rebaño), Cruz Azul, Pumas, "
+    "Monterrey (Rayados), Tigres, Toluca, Pachuca (Tuzos). El clásico América-Chivas mueve familias enteras.\n"
+    "- SELECCIÓN MEXICANA (El Tri) — partidos en Fechas FIFA y especialmente el Mundial 2026 (México + EE.UU. + Canadá).\n"
+    "- JUGADORES LATINOS EN EUROPA — Santi Giménez (Milan), Edson Álvarez, Hirving Lozano, también Luis Díaz, "
+    "Vinícius Jr, Messi (Inter Miami), Julián Álvarez. La audiencia se ENORGULLECE de que 'uno de los nuestros' brille.\n"
+    "- BOXEO también pega: Canelo Álvarez, legado de Julio César Chávez, etc.\n"
+    "- NO usar terminología técnica solo en inglés. Usa términos en español: portero (no 'goalkeeper'), "
+    "delantero, hat-trick está bien, gol, asistencia, mediocampista.\n"
 )
 
 
@@ -1396,6 +1439,10 @@ SUGGESTION_PROMPTS: dict = {
     "abuela_recipe": "Dame 10 RECETAS TRADICIONALES MEXICANAS y centroamericanas de toda la vida — las que las señoras de 40+ saben de memoria: pozole rojo, mole, tamales de elote/dulce/rajas, atole de avena/champurrado, sopes, gorditas, chiles en nogada, capirotada, arroz con leche, frijoles charros, caldo de res, birria, asado de boda, cochinita pibil, enchiladas suizas. Para cada uno indica el platillo, una región o país de origen y un secreto familiar concreto (la abuela siempre le ponía X, lo dejaba reposar Y, etc.).",
     "saints_calendar": "Hoy es {today}. Dame 10 DÍAS RELIGIOSOS, SANTOS o EFEMÉRIDES católicas relevantes para la comunidad mexicana/centroamericana en los próximos 90 días (audiencia 40+ con fe muy presente): Virgen de Guadalupe (12 dic), San Judas Tadeo (28 cada mes y 28 oct), Virgen de San Juan de los Lagos, Sagrado Corazón, Posadas (16-24 dic), Semana Santa, Día de Muertos, Inmaculada Concepción (8 dic), Día de la Candelaria (2 feb), Virgen del Carmen (16 jul), Domingo de Ramos, Asunción de la Virgen (15 ago). Para cada uno indica la fecha y una tradición concreta mexicana.",
     "farm_voice": "Dame 10 TEMAS ÚTILES para trabajadores agrícolas y de construcción hispanos del Pacífico Noroeste de EE.UU. (recolección de manzana, pera, blueberry, viñedo, cherry; obra negra/acabados): derechos laborales, golpe de calor, salario justo (overtime en Oregon), organizaciones (PCUN 503-981-2722, CAUSA Oregon), exposición a pesticidas, clínicas de salud comunitaria gratuitas/Salud Familiar, ITIN/tax ID para taxes, recursos para hijos de trabajadores, refugios de invierno, seguro de auto y de trabajo. Para cada uno propón un mensaje clave concreto y un recurso real si lo conoces.",
+    # ----- Sugerencias deportivas -----
+    "mexican_soccer": "Dame 10 IDEAS de posts sobre fútbol mexicano relevantes ahora mismo (Liga MX y Selección Nacional). Equipos clásicos: América, Chivas, Cruz Azul, Pumas, Monterrey/Rayados, Tigres, Toluca, Pachuca. Temas: clásicos del fin de semana (especialmente América vs Chivas), liguilla, regreso de la Selección a una Fecha FIFA, debate sobre el técnico, lesión importante, jugador goleador del momento, refuerzo nuevo, fichajes, polémicas arbitrales clásicas. Para cada idea inventa un escenario verosímil con equipo/jugador y situación concreta. NUNCA inventes resultados específicos de partidos que no han sucedido.",
+    "world_cup_2026": "Dame 10 IDEAS de posts sobre el MUNDIAL 2026 (México, EE.UU. y Canadá). Temas: México como sede (Azteca, Estadio Akron, Estadio BBVA), partidos clave del Grupo de México, jugadores de la Selección Mexicana convocados (Santi Giménez, Edson Álvarez, Hirving Lozano, etc.), nostalgia de México 1986 (Diego Maradona, Hugo Sánchez), expectativas, sedes en EE.UU. cercanas a Oregon (Seattle, Los Angeles, San Francisco/Santa Clara), cómo ver los partidos en familia, cantos clásicos. Para cada idea da un tema concreto, un detalle factual y un ángulo emocional.",
+    "latinos_abroad": "Dame 10 IDEAS de posts sobre JUGADORES LATINOAMERICANOS destacados en ligas extranjeras (Europa, MLS, Arabia). Jugadores referencia: Santi Giménez (Milan), Edson Álvarez (Fenerbahçe/West Ham), Hirving Lozano, Luis Díaz (Bayern), Lautaro Martínez (Inter), Lionel Messi (Inter Miami), Julián Álvarez (Atlético), Vinícius Jr (Real Madrid), Rodrygo, Darwin Núñez, Luis Suárez, Jhon Durán, James Rodríguez. Para cada idea inventa una hazaña concreta verosímil (gol importante, asistencia, capitanía, milestone, transferencia rumoreada) y di con qué emoción debe contarse.",
 }
 
 

@@ -81,12 +81,14 @@ export default function Home() {
       {/* Mundial 2026 teaser */}
       <MundialTeaser lang={lang} />
 
-      {/* Upcoming events teaser */}
-      {events && events.length > 0 && <EventsTeaser events={events} lang={lang} />}
+      {/* Featured Show (national exclusive program) — HIGH visibility */}
+      <FeaturedShow />
 
       {/* Vibe / "what's the show" section with photos */}
-      <FeaturedShow />
       <VibeSection settings={settings} lang={lang} nowPlaying={nowPlaying} />
+
+      {/* Upcoming events teaser (moved down for better flow) */}
+      {events && events.length > 0 && <EventsTeaser events={events} lang={lang} />}
 
       {/* Featured advertisers */}
       <section

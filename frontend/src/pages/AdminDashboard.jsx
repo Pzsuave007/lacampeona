@@ -432,9 +432,9 @@ export default function AdminDashboard() {
                   </label>
                   <SettingField
                     wide
-                    label="Mensaje pre-cargado en WhatsApp"
+                    label="Mensaje pre-cargado en WhatsApp (déjalo vacío para ocultar el botón)"
                     value={adminSettings.featured_show_whatsapp_text || ""}
-                    placeholder="Saludos al show del Genio Lucas"
+                    placeholder="Vacío = no muestra botón de WhatsApp"
                     onChange={(v) =>
                       setAdminSettings({
                         ...adminSettings,

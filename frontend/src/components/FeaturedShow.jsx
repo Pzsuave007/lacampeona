@@ -25,12 +25,10 @@ export default function FeaturedShow() {
     : null;
 
   const waNumber = settings.station_whatsapp || "";
-  const waPrefill =
-    settings.featured_show_whatsapp_text ||
-    (lang === "es"
-      ? `Saludos al show "${title}"`
-      : `Hello from a "${title}" listener`);
-  const wa = waLink(waNumber, waPrefill);
+  // Only show WhatsApp button when admin explicitly sets a prefill message
+  // (some shows don't accept listener messages, so leave blank to hide the button)
+  const waPrefill = settings.featured_show_whatsapp_text || "";
+  const wa = waPrefill ? waLink(waNumber, waPrefill) : null;
 
   return (
     <section

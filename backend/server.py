@@ -1801,12 +1801,23 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
 # ============================================================
 @api.get("/posts/recent")
 async def posts_recent(limit: int = 6):
-    """Recent published posts. Used both by 'related posts' sidebars and the
-    public /blog listing page (with larger limit)."""
+    """Recent posts visible on the public blog. A post is visible if it has a
+    slug AND is not scheduled for a future date. Drafts with a slug show too,
+    so DJs don't have to remember to mark each one as 'published'."""
     capped = min(max(limit, 1), 100)
+    now = now_iso()
+    # Hide posts whose status is "scheduled" with a future scheduled_at.
+    query = {
+        "slug": {"$exists": True, "$ne": ""},
+        "$or": [
+            {"status": {"$ne": "scheduled"}},
+            {"scheduled_at": {"$lte": now}},
+            {"scheduled_at": ""},
+        ],
+    }
     cursor = (
         db.content_drafts.find(
-            {"status": "published", "slug": {"$exists": True, "$ne": ""}},
+            query,
             {"_id": 0, "text": 1, "title": 1, "slug": 1, "cover_image": 1, "created_at": 1, "host_slug": 1, "template_type": 1, "views_count": 1},
         )
         .sort("created_at", -1)

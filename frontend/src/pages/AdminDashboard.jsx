@@ -130,6 +130,15 @@ export default function AdminDashboard() {
       sales_person_photo: adminSettings.sales_person_photo,
       // Branding
       station_logo: adminSettings.station_logo,
+      // Featured Show
+      featured_show_enabled: !!adminSettings.featured_show_enabled,
+      featured_show_badge: adminSettings.featured_show_badge,
+      featured_show_title: adminSettings.featured_show_title,
+      featured_show_host: adminSettings.featured_show_host,
+      featured_show_description: adminSettings.featured_show_description,
+      featured_show_schedule: adminSettings.featured_show_schedule,
+      featured_show_photo: adminSettings.featured_show_photo,
+      featured_show_whatsapp_text: adminSettings.featured_show_whatsapp_text,
     };
     const { data } = await api.put("/admin/settings", payload);
     setAdminSettings(data);
@@ -343,6 +352,109 @@ export default function AdminDashboard() {
                   value={adminSettings.station_logo || ""}
                   onChange={(v) => setAdminSettings({ ...adminSettings, station_logo: v })}
                 />
+              </div>
+
+              {/* ====================================================== */}
+              {/* Show Destacado (Featured Show)                          */}
+              {/* ====================================================== */}
+              <div className="mt-8 pt-8 border-t-2 border-dashed border-amber-300">
+                <h3 className="text-2xl font-black text-slate-900 mb-1 flex items-center gap-2">
+                  🔥 Show Destacado
+                </h3>
+                <p className="text-sm text-slate-500 mb-6">
+                  Aparece como sección especial en el Home, justo después del Hero. Úsalo para promocionar programas exclusivos o nacionales (ej: "El Show del Genio Lucas").
+                </p>
+
+                <label className="flex items-center gap-3 mb-5 cursor-pointer bg-amber-50 border-2 border-amber-200 rounded-xl px-4 py-3 hover:border-amber-400 transition">
+                  <input
+                    type="checkbox"
+                    checked={!!adminSettings.featured_show_enabled}
+                    onChange={(e) =>
+                      setAdminSettings({
+                        ...adminSettings,
+                        featured_show_enabled: e.target.checked,
+                      })
+                    }
+                    data-testid="set-featured-show-enabled"
+                    className="w-5 h-5 accent-orange-600"
+                  />
+                  <span className="font-bold text-slate-900">
+                    Mostrar sección de show destacado en el Home
+                  </span>
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <SettingField
+                    label="Badge superior"
+                    value={adminSettings.featured_show_badge || ""}
+                    placeholder="EXCLUSIVO EN LA CAMPEONA"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, featured_show_badge: v })}
+                    testid="set-fs-badge"
+                  />
+                  <SettingField
+                    label="Título del show"
+                    value={adminSettings.featured_show_title || ""}
+                    placeholder="El Show del Genio Lucas"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, featured_show_title: v })}
+                    testid="set-fs-title"
+                  />
+                  <SettingField
+                    label="Nombre del host"
+                    value={adminSettings.featured_show_host || ""}
+                    placeholder="Genio Lucas"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, featured_show_host: v })}
+                    testid="set-fs-host"
+                  />
+                  <SettingField
+                    label="Horario"
+                    value={adminSettings.featured_show_schedule || ""}
+                    placeholder="Lun-Vie · 8AM - 10AM"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, featured_show_schedule: v })}
+                    testid="set-fs-schedule"
+                  />
+                  <label className="block sm:col-span-2">
+                    <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
+                      Descripción
+                    </span>
+                    <textarea
+                      value={adminSettings.featured_show_description || ""}
+                      placeholder="1-3 oraciones que enganchen. Ej: 'Programa nacional con humor, noticias y la mejor música regional. Solo en La Campeona, todos los días.'"
+                      onChange={(e) =>
+                        setAdminSettings({
+                          ...adminSettings,
+                          featured_show_description: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      data-testid="set-fs-description"
+                      className="mt-2 w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition resize-none"
+                    />
+                  </label>
+                  <SettingField
+                    wide
+                    label="Mensaje pre-cargado en WhatsApp"
+                    value={adminSettings.featured_show_whatsapp_text || ""}
+                    placeholder="Saludos al show del Genio Lucas"
+                    onChange={(v) =>
+                      setAdminSettings({
+                        ...adminSettings,
+                        featured_show_whatsapp_text: v,
+                      })
+                    }
+                    testid="set-fs-wa-text"
+                  />
+
+                  {/* Foto del show */}
+                  <HeroBgField
+                    testid="fs-photo"
+                    iconLabel="Foto del show (cuadrada, alta calidad)"
+                    helpText="Recomendado: foto cuadrada 800×800 px o más. Puede ser foto del host, logo del programa, o arte promocional."
+                    value={adminSettings.featured_show_photo || ""}
+                    onChange={(v) =>
+                      setAdminSettings({ ...adminSettings, featured_show_photo: v })
+                    }
+                  />
+                </div>
               </div>
 
               {/* ====================================================== */}

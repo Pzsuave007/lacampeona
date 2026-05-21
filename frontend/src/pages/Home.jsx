@@ -18,6 +18,7 @@ import { useAdvertisers } from "../hooks/useAdvertisers";
 import { bannerUrl, telLink, waLink, mapsLink } from "../lib/api";
 import MarqueeStrip from "../components/MarqueeStrip";
 import HostHero from "../components/HostHero";
+import FeaturedShow from "../components/FeaturedShow";
 import { useEvents } from "../hooks/useEvents";
 
 const HERO_BG = "https://images.pexels.com/photos/32213239/pexels-photo-32213239.jpeg";
@@ -84,6 +85,7 @@ export default function Home() {
       {events && events.length > 0 && <EventsTeaser events={events} lang={lang} />}
 
       {/* Vibe / "what's the show" section with photos */}
+      <FeaturedShow />
       <VibeSection settings={settings} lang={lang} nowPlaying={nowPlaying} />
 
       {/* Featured advertisers */}

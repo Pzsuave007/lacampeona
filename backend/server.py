@@ -242,6 +242,16 @@ class SettingsIn(BaseModel):
     # ----- Branding -----
     station_logo: Optional[str] = None  # path or external URL for nav/footer logo
 
+    # ----- Featured Show (national exclusive program) -----
+    featured_show_enabled: Optional[bool] = None        # show/hide the section
+    featured_show_badge: Optional[str] = None           # e.g. "EXCLUSIVO EN LA CAMPEONA"
+    featured_show_title: Optional[str] = None           # e.g. "El Show del Genio Lucas"
+    featured_show_host: Optional[str] = None            # e.g. "Genio Lucas"
+    featured_show_description: Optional[str] = None     # 1-3 sentences
+    featured_show_schedule: Optional[str] = None        # e.g. "Lun-Vie · 8AM - 10AM"
+    featured_show_photo: Optional[str] = None           # uploaded path or URL
+    featured_show_whatsapp_text: Optional[str] = None   # WhatsApp prefill, e.g. "Saludos al Genio Lucas"
+
 
 class HostScheduleSlot(BaseModel):
     day_of_week: int = Field(..., ge=0, le=6)

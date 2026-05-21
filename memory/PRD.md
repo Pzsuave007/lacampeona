@@ -116,6 +116,22 @@ Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanis
 ## Test Credentials
 See `/app/memory/test_credentials.md` (admin@radiolatina.fm / admin123).
 
+## Changelog — Feb 22, 2026
+
+### DJ Studio — 5 plantillas locales nuevas (Sprint A)
+Total ahora: 13 plantillas (8 originales + 5 locales).
+- 🎂 `birthday_shoutout` — Cumpleaños / Saludo (nombre, ocasión, de parte de, ciudad)
+- 🛒 `local_business` — Negocio del Día (nombre, qué hacen, ciudad, historia)
+- 🍳 `abuela_recipe` — Receta de la Abuela (platillo, región, secreto)
+- 🙏 `saints_calendar` — Día Santo / Efeméride (día, tradición, mensaje)
+- 🌽 `farm_voice` — La Voz del Campo (tema, mensaje clave, recurso)
+
+Cada plantilla incluye su `SUGGESTION_PROMPT` ajustado al Pacífico NW (Dallas/Salem/Woodburn) y comunidad agrícola.
+- ✅ `/api/dj/templates` ahora devuelve 13 entries — verificado.
+- ✅ Probado generación real con Claude (birthday_shoutout) — texto en español con Las Mañanitas, geo local correcto.
+- ✅ Probado sugerencias (local_business) — 10 ideas concretas (taquerías Woodburn, carnicerías Salem, etc.).
+- Frontend lee plantillas dinámicamente de `/api/dj/templates` — cero cambios en React.
+
 ## Changelog — Feb 21, 2026
 
 ### DJ Studio Image Generation — OpenAI gpt-image-1

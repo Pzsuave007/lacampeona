@@ -1159,6 +1159,64 @@ CONTENT_TEMPLATES: dict = {
         ],
         "instruction": "Recomienda: {song_artist}. Razón del DJ: {why}. Da 2-3 datos curiosos del artista o canción y cierra invitando a pedirla en vivo.",
     },
+    # ----- Plantillas LOCALES (Sprint A - Feb 2026) -----
+    "birthday_shoutout": {
+        "label": "Cumpleaños / Saludo",
+        "emoji": "🎂",
+        "description": "Saludo cálido para un oyente (cumpleaños, aniversario, dedicatoria).",
+        "fields": [
+            {"key": "name", "label": "Nombre de la persona", "placeholder": "Doña Lupita, Carlos, los esposos García…", "required": True},
+            {"key": "occasion", "label": "Ocasión", "placeholder": "Cumpleaños 50, aniversario, día de la madre…", "required": True},
+            {"key": "from_who", "label": "De parte de (opcional)", "placeholder": "Su familia, su esposo, sus hijos…", "required": False},
+            {"key": "city", "label": "Ciudad (opcional)", "placeholder": "Dallas, Salem, Woodburn…", "required": False},
+        ],
+        "instruction": "Genera un saludo cálido y emotivo para {name} con motivo de: {occasion}. De parte de: {from_who}. Ciudad: {city}. Tono cariñoso, latino, como si lo dijera el DJ al aire. Sugiere una canción para dedicarle. Termina invitando a la audiencia a sumarse en los comentarios.",
+    },
+    "local_business": {
+        "label": "Negocio del Día",
+        "emoji": "🛒",
+        "description": "Destaca un negocio local hispano con su historia y servicio.",
+        "fields": [
+            {"key": "business_name", "label": "Nombre del negocio", "placeholder": "Taquería La Esquina, Carnicería Don José…", "required": True},
+            {"key": "what_they_do", "label": "Qué hacen / venden", "placeholder": "Tacos al pastor, cortes mexicanos, plomería…", "required": True},
+            {"key": "city", "label": "Ciudad", "placeholder": "Dallas Oregon, Salem, Woodburn…", "required": True},
+            {"key": "story", "label": "Historia o detalle especial (opcional)", "placeholder": "Familiar desde 2005, recetas de la abuela…", "required": False},
+        ],
+        "instruction": "Crea un post destacando el negocio local {business_name} en {city} que ofrece {what_they_do}. Historia: {story}. Tono cercano y orgulloso del trabajo latino. Resalta cómo apoyar a la comunidad. Invita a la audiencia a visitarlos y compartir su experiencia.",
+    },
+    "abuela_recipe": {
+        "label": "Receta de la Abuela",
+        "emoji": "🍳",
+        "description": "Receta tradicional con storytelling familiar.",
+        "fields": [
+            {"key": "dish", "label": "Platillo", "placeholder": "Pozole, mole rojo, tamales de elote…", "required": True},
+            {"key": "region", "label": "Región / origen (opcional)", "placeholder": "Jalisco, Oaxaca, Guatemala…", "required": False},
+            {"key": "special_tip", "label": "Tip o secreto (opcional)", "placeholder": "La abuela siempre le ponía un chile guajillo extra…", "required": False},
+        ],
+        "instruction": "Crea un post sobre la receta de {dish}. Región: {region}. Secreto familiar: {special_tip}. Comparte 4-6 ingredientes clave y 1-2 pasos rápidos (no la receta completa — pícales la curiosidad). Termina pidiendo a los oyentes que compartan cómo la hace SU abuela en los comentarios. Tono nostálgico y cálido.",
+    },
+    "saints_calendar": {
+        "label": "Día Santo / Efeméride",
+        "emoji": "🙏",
+        "description": "Celebración religiosa o efeméride importante para la comunidad latina.",
+        "fields": [
+            {"key": "day_name", "label": "Nombre del día", "placeholder": "Día de la Virgen de Guadalupe, San Judas, Posadas…", "required": True},
+            {"key": "tradition", "label": "Tradición o ritual (opcional)", "placeholder": "Mañanitas, rosario, procesión, posada con piñata…", "required": False},
+            {"key": "personal_angle", "label": "Mensaje personal (opcional)", "placeholder": "Recuerdo de la infancia, gratitud, esperanza…", "required": False},
+        ],
+        "instruction": "Crea un post celebrando: {day_name}. Tradición asociada: {tradition}. Mensaje personal: {personal_angle}. Tono respetuoso y emotivo, conectando con la fe y tradiciones de la comunidad latina en EE.UU. Invita a compartir cómo lo celebran en familia.",
+    },
+    "farm_voice": {
+        "label": "La Voz del Campo",
+        "emoji": "🌽",
+        "description": "Contenido útil para trabajadores agrícolas y sus familias.",
+        "fields": [
+            {"key": "topic", "label": "Tema", "placeholder": "Clima de la semana, derechos laborales, temporada de manzana…", "required": True},
+            {"key": "key_message", "label": "Mensaje clave", "placeholder": "Reportar abusos al salario es seguro y confidencial…", "required": True},
+            {"key": "resource", "label": "Recurso / contacto (opcional)", "placeholder": "PCUN: 503-981-XXXX, clínica gratuita…", "required": False},
+        ],
+        "instruction": "Crea un post útil y respetuoso para trabajadores del campo y sus familias sobre: {topic}. Mensaje clave: {key_message}. Recurso/contacto: {resource}. Tono solidario y práctico, NUNCA condescendiente. Reconoce el valor del trabajo agrícola. Termina invitando a llamar a la radio si tienen preguntas.",
+    },
 }
 
 
@@ -1256,6 +1314,12 @@ SUGGESTION_PROMPTS: dict = {
     "important_day": "Hoy es {today}. Dame 10 DÍAS IMPORTANTES o efemérides relevantes para la comunidad LATINA en EE.UU. en los próximos 60 días. Días patrios latinoamericanos, días culturales, Hispanic Heritage Month, etc. Indica la fecha en el título.",
     "inspirational_quote": "Dame 10 IDEAS DE TEMAS para frases inspiradoras dirigidas a la comunidad latina trabajadora en EE.UU. (perseverancia, familia, raíces, sueños, segunda generación). Solo el TEMA, no copies frases famosas.",
     "musical_recommendation": "Dame 10 CANCIONES LATINAS recientes (2024-2026) para recomendar al aire. Mezcla géneros y popularidad. Para cada una incluye una razón corta.",
+    # ----- Sugerencias para plantillas locales -----
+    "birthday_shoutout": "Dame 10 ideas REALISTAS de saludos/dedicatorias que la radio latina recibe: cumpleaños, aniversarios, día de la madre/padre, abuelitos, recién nacidos, dedicatorias entre parejas, padrinos. Para cada idea inventa un nombre latino verosímil y una ocasión concreta.",
+    "local_business": "Dame 10 IDEAS de tipos de NEGOCIOS LATINOS típicos en el Pacífico Noroeste de EE.UU. (Dallas, Salem, Woodburn, Independence, Oregon) que vale la pena destacar al aire: taquerías, carnicerías, mecánicos, salones de belleza, panaderías, plomeros, abogados de inmigración, etc. Para cada uno inventa un nombre realista (estilo 'Carnicería Don José') y una historia corta.",
+    "abuela_recipe": "Dame 10 RECETAS TRADICIONALES de la cocina latina (México, Centroamérica, Caribe) ideales para post en radio: platillos de fiesta, comfort food, postres, antojitos. Para cada uno indica el platillo, una región o país de origen y un tip o secreto familiar concreto.",
+    "saints_calendar": "Hoy es {today}. Dame 10 DÍAS RELIGIOSOS, SANTOS o EFEMÉRIDES espirituales relevantes para la comunidad latina católica en los próximos 90 días (Virgen de Guadalupe, San Judas Tadeo, Sagrado Corazón, Posadas, Semana Santa, Día de Muertos, etc.). Para cada uno indica la fecha aproximada y una tradición concreta.",
+    "farm_voice": "Dame 10 TEMAS ÚTILES para trabajadores agrícolas hispanos del Pacífico Noroeste de EE.UU. (recolección de manzana, pera, blueberry, viñedo): derechos laborales, golpe de calor, salario justo, organizaciones (PCUN, CAUSA), pesticidas, clínicas, tax ID/ITIN, educación de hijos, refugios de invierno. Para cada uno propón un mensaje clave concreto y un recurso real si lo conoces.",
 }
 
 

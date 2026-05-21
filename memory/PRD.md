@@ -116,6 +116,15 @@ Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanis
 ## Test Credentials
 See `/app/memory/test_credentials.md` (admin@radiolatina.fm / admin123).
 
+## Changelog — Feb 21, 2026
+
+### DJ Studio Image Generation — OpenAI gpt-image-1
+- Swapped Gemini Nano Banana → OpenAI `gpt-image-1` via `emergentintegrations` `OpenAIImageGeneration` (uses `EMERGENT_LLM_KEY`).
+- Endpoint: `POST /api/dj/generate-image` { draft_id?, prompt?, aspect: wide|square }.
+- Returns valid PNG (~1.9MB), stored in Emergent Object Storage at `radio-latina/banners/<uuid>.png`, draft auto-updated with `cover_image`.
+- ✅ Tested end-to-end (~15s): login → generate → verify file fetchable → draft updated.
+- `build-for-prod.sh` ran successfully, frontend bundle ready for VPS deploy.
+
 ## Changelog — Apr 30, 2026
 
 ### Seed data export (prod migration)

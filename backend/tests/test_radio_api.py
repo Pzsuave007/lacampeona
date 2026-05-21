@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://la-campeona-live.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://radio-engagement.preview.emergentagent.com").rstrip("/")
 ADMIN_EMAIL = "admin@radiolatina.fm"
 ADMIN_PASSWORD = "admin123"
 

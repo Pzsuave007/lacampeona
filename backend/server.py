@@ -1190,6 +1190,8 @@ class ContentDraftIn(BaseModel):
     title: Optional[str] = ""
     status: str = "draft"  # draft | scheduled | published
     scheduled_at: Optional[str] = ""  # ISO date "YYYY-MM-DD" or full ISO datetime
+    fb_post_url: Optional[str] = ""  # original FB post URL for comment embed
+    cover_image: Optional[str] = ""  # optional image URL for the public page
 
 
 class ContentDraftPatch(BaseModel):
@@ -1198,6 +1200,23 @@ class ContentDraftPatch(BaseModel):
     title: Optional[str] = None
     status: Optional[str] = None
     scheduled_at: Optional[str] = None
+    fb_post_url: Optional[str] = None
+    cover_image: Optional[str] = None
+
+
+# ---------- Slugify helper ----------
+def slugify(text: str, max_len: int = 60) -> str:
+    """Convert text to URL-friendly slug. Strips accents, lowercases, replaces spaces with dashes."""
+    import unicodedata, re as _re
+    if not text:
+        return ""
+    # Strip accents
+    nkfd = unicodedata.normalize("NFKD", text)
+    no_accents = "".join(c for c in nkfd if not unicodedata.combining(c))
+    # Lowercase, replace non-alphanumeric with dashes
+    s = no_accents.lower()
+    s = _re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s[:max_len].rstrip("-")
 
 
 # Per-template ideation prompt used by /api/dj/suggest. Returns 10 ready-to-use
@@ -1370,6 +1389,13 @@ async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
 
     if payload.save:
         now = now_iso()
+        # Generate unique slug from text
+        base_slug = slugify(text[:80]) or "post"
+        slug_candidate = base_slug
+        n = 0
+        while await db.content_drafts.find_one({"slug": slug_candidate}, {"_id": 0}):
+            n += 1
+            slug_candidate = f"{base_slug}-{n}"
         doc = {
             "id": str(uuid.uuid4()),
             "host_slug": slug,
@@ -1381,6 +1407,10 @@ async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
             "title": "",
             "status": "draft",
             "scheduled_at": "",
+            "slug": slug_candidate,
+            "views_count": 0,
+            "fb_post_url": "",
+            "cover_image": "",
             "created_at": now,
             "updated_at": now,
         }
@@ -1405,11 +1435,24 @@ async def dj_create_draft(payload: ContentDraftIn, user: dict = Depends(get_dj))
     if payload.template_type not in CONTENT_TEMPLATES:
         raise HTTPException(status_code=400, detail="Plantilla inválida")
     now = now_iso()
+
+    # Auto-generate unique URL slug from title or first sentence of text
+    base = payload.title or (payload.text[:80] if payload.text else "post")
+    base_slug = slugify(base) or "post"
+    # Ensure uniqueness: append short suffix if needed
+    slug_candidate = base_slug
+    n = 0
+    while await db.content_drafts.find_one({"slug": slug_candidate}, {"_id": 0}):
+        n += 1
+        slug_candidate = f"{base_slug}-{n}"
+
     doc = {
         "id": str(uuid.uuid4()),
         "host_slug": dj_host_slug(user),
         "user_id": user["id"],
         **payload.model_dump(),
+        "slug": slug_candidate,
+        "views_count": 0,
         "created_at": now,
         "updated_at": now,
     }
@@ -1440,6 +1483,59 @@ async def dj_delete_draft(draft_id: str, user: dict = Depends(get_dj)):
         raise HTTPException(status_code=403, detail="No es tu borrador")
     await db.content_drafts.delete_one({"id": draft_id})
     return {"ok": True}
+
+
+# ============================================================
+#  PUBLIC POSTS — landing pages for social media traffic
+# ============================================================
+@api.get("/posts/recent")
+async def posts_recent(limit: int = 6):
+    """Recent published posts for 'related posts' sidebar/footer."""
+    cursor = (
+        db.content_drafts.find(
+            {"status": "published", "slug": {"$exists": True, "$ne": ""}},
+            {"_id": 0, "text": 1, "title": 1, "slug": 1, "cover_image": 1, "created_at": 1, "host_slug": 1, "template_type": 1, "views_count": 1},
+        )
+        .sort("created_at", -1)
+        .limit(min(limit, 24))
+    )
+    return await cursor.to_list(limit)
+
+
+@api.get("/posts/{slug}")
+async def posts_by_slug(slug: str):
+    """Public read of a single post by its URL slug. Increments view counter."""
+    doc = await db.content_drafts.find_one({"slug": slug}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Post no encontrado")
+    # Fire-and-forget view increment
+    try:
+        await db.content_drafts.update_one({"slug": slug}, {"$inc": {"views_count": 1}})
+    except Exception:
+        pass
+
+    # Pick a random active advertiser (so each visit shows a different sponsor)
+    advertiser = None
+    try:
+        active_ads = await db.advertisers.find(
+            {"active": True}, {"_id": 0}
+        ).to_list(100)
+        if active_ads:
+            import random as _random
+            advertiser = _random.choice(active_ads)
+    except Exception:
+        pass
+
+    # Host info (for byline)
+    host = None
+    if doc.get("host_slug"):
+        host = await db.hosts.find_one({"slug": doc["host_slug"]}, {"_id": 0})
+
+    return {
+        "post": doc,
+        "advertiser": advertiser,
+        "host": host,
+    }
 
 
 # ---------------------- Super Admin ---------------------- #

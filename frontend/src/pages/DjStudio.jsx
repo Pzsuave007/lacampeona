@@ -199,6 +199,34 @@ function DraftsList({ drafts, templates, onEdit, onDelete, onCopy, onSetStatus }
             </div>
           </div>
           <pre className="whitespace-pre-wrap font-sans text-sm text-slate-700 bg-slate-50 rounded-xl p-3 border border-slate-100">{d.text}</pre>
+
+          {/* Public landing link (drives social → web traffic) */}
+          {d.slug && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap text-xs bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl px-3 py-2">
+              <span className="font-bold text-amber-700 uppercase tracking-wider">🔗 Link público:</span>
+              <code className="text-slate-700 break-all">{window.location.origin}/p/{d.slug}</code>
+              <button
+                data-testid={`dj-draft-copylink-${d.id}`}
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/p/${d.slug}`);
+                  toast.success("Link copiado — pégalo en tu post de redes sociales");
+                }}
+                className="ml-auto inline-flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold rounded-full px-2.5 py-1 transition"
+              >
+                <Copy className="w-3 h-3" /> Copiar
+              </button>
+              <a
+                href={`/p/${d.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid={`dj-draft-preview-${d.id}`}
+                className="inline-flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold rounded-full px-2.5 py-1 transition"
+              >
+                👁 Ver
+              </a>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {Object.keys(STATUS_LABEL).map((s) => (
               <button

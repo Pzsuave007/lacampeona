@@ -22,6 +22,7 @@ import EventoLanding from "@/pages/EventoLanding";
 import ReportePublic from "@/pages/ReportePublic";
 import DjStudio from "@/pages/DjStudio";
 import SuperAdmin from "@/pages/SuperAdmin";
+import Post from "@/pages/Post";
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/dj" element={<DjStudio />} />
                   <Route path="/super" element={<SuperAdmin />} />
+                  <Route path="/p/:slug" element={<Post />} />
                 </Routes>
               </main>
               <Footer />

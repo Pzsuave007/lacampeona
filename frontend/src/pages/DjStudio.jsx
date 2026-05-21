@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
+import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
-import { api } from "../lib/api";
+import { api, bannerUrl } from "../lib/api";
 
 const PLATFORMS = [
   { key: "instagram", label: "Instagram" },
@@ -93,6 +93,20 @@ export default function DjStudio() {
     }
   };
 
+  const onGenerateImage = async (draft) => {
+    try {
+      toast.info("Generando imagen con IA...");
+      await api.post("/dj/generate-image", {
+        draft_id: draft.id,
+        aspect: "wide",
+      });
+      toast.success("✨ Imagen generada");
+      await loadDrafts();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Error al generar imagen");
+    }
+  };
+
   const onSetStatus = async (draft, status) => {
     await api.patch(`/dj/drafts/${draft.id}`, { status });
     loadAll();
@@ -145,6 +159,7 @@ export default function DjStudio() {
           onDelete={onDelete}
           onCopy={onCopy}
           onSetStatus={onSetStatus}
+          onGenerateImage={onGenerateImage}
         />
       ) : (
         <CalendarView drafts={drafts} onEdit={(d) => setComposer({ mode: "edit", draft: d })} />
@@ -166,7 +181,7 @@ export default function DjStudio() {
   );
 }
 
-function DraftsList({ drafts, templates, onEdit, onDelete, onCopy, onSetStatus }) {
+function DraftsList({ drafts, templates, onEdit, onDelete, onCopy, onSetStatus, onGenerateImage }) {
   if (!drafts.length) {
     return (
       <div data-testid="dj-empty-state" className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-orange-200">
@@ -199,6 +214,9 @@ function DraftsList({ drafts, templates, onEdit, onDelete, onCopy, onSetStatus }
             </div>
           </div>
           <pre className="whitespace-pre-wrap font-sans text-sm text-slate-700 bg-slate-50 rounded-xl p-3 border border-slate-100">{d.text}</pre>
+
+          {/* Cover image */}
+          <DraftCoverImage draft={d} onGenerateImage={onGenerateImage} />
 
           {/* Public landing link (drives social → web traffic) */}
           {d.slug && (
@@ -243,6 +261,60 @@ function DraftsList({ drafts, templates, onEdit, onDelete, onCopy, onSetStatus }
         </div>
       ))}
     </div>
+  );
+}
+
+function DraftCoverImage({ draft, onGenerateImage }) {
+  const [busy, setBusy] = useState(false);
+  const handleGen = async () => {
+    setBusy(true);
+    try {
+      await onGenerateImage(draft);
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (draft.cover_image) {
+    return (
+      <div className="mt-3 relative group">
+        <img
+          src={bannerUrl(draft.cover_image)}
+          alt="Cover"
+          className="w-full aspect-video object-cover rounded-xl border border-slate-200"
+          data-testid={`dj-draft-cover-${draft.id}`}
+        />
+        <button
+          onClick={handleGen}
+          disabled={busy}
+          data-testid={`dj-draft-regen-image-${draft.id}`}
+          className="absolute top-2 right-2 inline-flex items-center gap-1 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold rounded-full px-3 py-1.5 opacity-90 hover:opacity-100 transition disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+          {busy ? "Generando..." : "Regenerar"}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button
+      onClick={handleGen}
+      disabled={busy}
+      data-testid={`dj-draft-gen-image-${draft.id}`}
+      className="mt-3 w-full bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-dashed border-purple-300 hover:border-purple-500 rounded-xl py-6 flex flex-col items-center justify-center gap-2 transition disabled:opacity-60"
+    >
+      {busy ? (
+        <>
+          <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
+          <span className="text-sm font-bold text-purple-700">Generando imagen con IA...</span>
+        </>
+      ) : (
+        <>
+          <ImageIcon className="w-6 h-6 text-purple-600" />
+          <span className="text-sm font-bold text-purple-700">🎨 Generar imagen con IA</span>
+          <span className="text-[10px] text-slate-500">Gemini Nano Banana · 5-10 seg</span>
+        </>
+      )}
+    </button>
   );
 }
 

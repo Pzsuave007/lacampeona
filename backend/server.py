@@ -163,9 +163,18 @@ MIME = {
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
-def slugify(value: str) -> str:
-    s = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower())
-    return re.sub(r"^-|-$", "", s) or str(uuid.uuid4())[:8]
+def slugify(text: str, max_len: int = 60) -> str:
+    """Convert text to URL-friendly slug. Strips accents, lowercases, replaces spaces with dashes."""
+    import unicodedata
+    if not text:
+        return ""
+    # Strip accents
+    nkfd = unicodedata.normalize("NFKD", text)
+    no_accents = "".join(c for c in nkfd if not unicodedata.combining(c))
+    # Lowercase, replace non-alphanumeric with dashes
+    s = no_accents.lower()
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s[:max_len].rstrip("-") or str(uuid.uuid4())[:8]
 
 class LoginIn(BaseModel):
     email: EmailStr
@@ -1204,19 +1213,7 @@ class ContentDraftPatch(BaseModel):
     cover_image: Optional[str] = None
 
 
-# ---------- Slugify helper ----------
-def slugify(text: str, max_len: int = 60) -> str:
-    """Convert text to URL-friendly slug. Strips accents, lowercases, replaces spaces with dashes."""
-    import unicodedata, re as _re
-    if not text:
-        return ""
-    # Strip accents
-    nkfd = unicodedata.normalize("NFKD", text)
-    no_accents = "".join(c for c in nkfd if not unicodedata.combining(c))
-    # Lowercase, replace non-alphanumeric with dashes
-    s = no_accents.lower()
-    s = _re.sub(r"[^a-z0-9]+", "-", s).strip("-")
-    return s[:max_len].rstrip("-")
+# ---------- Slugify helper (defined earlier near LoginIn) ----------
 
 
 # Per-template ideation prompt used by /api/dj/suggest. Returns 10 ready-to-use
@@ -1483,6 +1480,101 @@ async def dj_delete_draft(draft_id: str, user: dict = Depends(get_dj)):
         raise HTTPException(status_code=403, detail="No es tu borrador")
     await db.content_drafts.delete_one({"id": draft_id})
     return {"ok": True}
+
+
+# -------- AI Image generation (Gemini Nano Banana) ----------
+class GenerateImageIn(BaseModel):
+    draft_id: Optional[str] = None  # if provided, image will be saved as draft.cover_image
+    prompt: Optional[str] = None    # custom prompt override
+    aspect: Optional[str] = "wide"  # "wide" (16:9 for FB share) or "square" (1:1 for IG)
+
+
+@api.post("/dj/generate-image")
+async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_dj)):
+    """Generates a unique cover image for a post using Gemini Nano Banana."""
+    import base64 as _b64
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+    # Resolve prompt: explicit, or derive from draft's text
+    prompt_text = (payload.prompt or "").strip()
+    draft = None
+    if payload.draft_id:
+        draft = await db.content_drafts.find_one({"id": payload.draft_id}, {"_id": 0})
+        if not draft:
+            raise HTTPException(status_code=404, detail="Draft no encontrado")
+        if user.get("role") == "dj" and draft.get("host_slug") != dj_host_slug(user):
+            raise HTTPException(status_code=403, detail="No es tu borrador")
+        if not prompt_text:
+            base_text = (draft.get("title") or draft.get("text") or "").strip()
+            prompt_text = base_text
+
+    if not prompt_text:
+        raise HTTPException(status_code=400, detail="Falta prompt o draft con texto")
+
+    aspect_hint = (
+        "wide cinematic 16:9 landscape composition, leave space at the top for a headline"
+        if payload.aspect != "square"
+        else "perfect 1:1 square composition centered"
+    )
+
+    full_prompt = (
+        f"Cover image for a Spanish-language radio station post by 'La Campeona 880 AM' "
+        f"(KWIP, Dallas Oregon). Topic: {prompt_text}\n\n"
+        f"Style: vibrant photo-illustration, latin culture friendly, warm red/orange/amber palette, "
+        f"high quality, editorial magazine style, ready for Facebook/Instagram sharing. "
+        f"{aspect_hint}. No text or letters in the image."
+    )
+
+    api_key = os.getenv("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no está configurada")
+
+    try:
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"img-{uuid.uuid4()}",
+            system_message="You generate eye-catching cover images for a Spanish-language radio station.",
+        )
+        chat.with_model("gemini", "gemini-3.1-flash-image-preview").with_params(
+            modalities=["image", "text"]
+        )
+        msg = UserMessage(text=full_prompt)
+        _, images = await chat.send_message_multimodal_response(msg)
+    except Exception as e:
+        logger.error("Gemini image generation failed: %s", e)
+        raise HTTPException(status_code=502, detail=f"Error al generar imagen: {str(e)[:120]}")
+
+    if not images:
+        raise HTTPException(status_code=502, detail="No se recibió imagen del modelo")
+
+    img = images[0]
+    image_bytes = _b64.b64decode(img["data"])
+    content_type = img.get("mime_type") or "image/png"
+    ext = "png" if "png" in content_type else "jpg"
+
+    # Store in Emergent Object Storage (same path scheme as /admin/upload)
+    storage_path = f"{APP_NAME}/banners/{uuid.uuid4()}.{ext}"
+    result = put_object(storage_path, image_bytes, content_type)
+    final_path = result["path"]
+
+    await db.files.insert_one({
+        "id": str(uuid.uuid4()),
+        "storage_path": final_path,
+        "content_type": content_type,
+        "size": result.get("size", len(image_bytes)),
+        "is_deleted": False,
+        "source": "ai_generated",
+        "created_at": now_iso(),
+    })
+
+    # If linked to a draft, persist as its cover_image
+    if draft:
+        await db.content_drafts.update_one(
+            {"id": draft["id"]},
+            {"$set": {"cover_image": final_path, "updated_at": now_iso()}},
+        )
+
+    return {"path": final_path, "url": f"/api/files/{final_path}"}
 
 
 # ============================================================

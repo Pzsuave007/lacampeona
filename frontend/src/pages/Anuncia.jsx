@@ -89,7 +89,7 @@ export default function Anuncia() {
                 className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#16A34A] text-white font-bold rounded-full px-7 py-4 shadow-[0_15px_40px_rgba(37,211,102,0.3)] transition hover:-translate-y-1 active:scale-95"
               >
                 <MessageCircle className="w-5 h-5" />
-                {lang === "es" ? "Habla con tu asesora" : "Talk to your rep"}
+                {lang === "es" ? "Habla con tu asesor" : "Talk to your rep"}
               </a>
             )}
             <a
@@ -173,7 +173,7 @@ export default function Anuncia() {
           </div>
           <div className="p-8 md:p-10 flex flex-col justify-center">
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-orange-600 mb-2">
-              {lang === "es" ? "Tu asesora de ventas" : "Your sales rep"}
+              {lang === "es" ? "Tu Asesor de ventas" : "Your sales rep"}
             </p>
             <h3 className="text-3xl font-black text-slate-900 tracking-tight" data-testid="sales-person-name">
               {sp.name}

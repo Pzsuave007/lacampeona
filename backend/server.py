@@ -176,6 +176,35 @@ def slugify(text: str, max_len: int = 60) -> str:
     s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
     return s[:max_len].rstrip("-") or str(uuid.uuid4())[:8]
 
+
+def strip_dj_labels(text: str) -> str:
+    """Remove internal AI section labels [CAPTION] / [HASHTAGS] / [CTA] from DJ post text.
+    Also drops trailing hashtag lines so the caption portion stays focused.
+    """
+    if not text:
+        return ""
+    # Drop the bracketed labels themselves (whole line if alone)
+    cleaned = re.sub(r"^\s*\[(CAPTION|HASHTAGS|CTA)\]\s*:?\s*$", "", text, flags=re.MULTILINE | re.IGNORECASE)
+    # Drop inline occurrences too
+    cleaned = re.sub(r"\[(CAPTION|HASHTAGS|CTA)\]\s*:?", "", cleaned, flags=re.IGNORECASE)
+    return cleaned.strip()
+
+
+def caption_only(text: str) -> str:
+    """Return just the [CAPTION] section of an AI-generated DJ post (no hashtags, no CTA)."""
+    if not text:
+        return ""
+    # Try to slice out the CAPTION block specifically
+    m = re.search(
+        r"\[CAPTION\]\s*(.+?)(?=\n\s*\[(?:HASHTAGS|CTA)\]|\Z)",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if m:
+        return m.group(1).strip()
+    # Fallback: strip any labels and return whatever's left
+    return strip_dj_labels(text)
+
 class LoginIn(BaseModel):
     email: EmailStr
     password: str
@@ -1386,8 +1415,9 @@ async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
 
     if payload.save:
         now = now_iso()
-        # Generate unique slug from text
-        base_slug = slugify(text[:80]) or "post"
+        # Generate unique slug from text (strip internal [CAPTION]/[HASHTAGS]/[CTA] labels first)
+        slug_source = caption_only(text)[:80] or "post"
+        base_slug = slugify(slug_source) or "post"
         slug_candidate = base_slug
         n = 0
         while await db.content_drafts.find_one({"slug": slug_candidate}, {"_id": 0}):
@@ -1434,8 +1464,9 @@ async def dj_create_draft(payload: ContentDraftIn, user: dict = Depends(get_dj))
     now = now_iso()
 
     # Auto-generate unique URL slug from title or first sentence of text
-    base = payload.title or (payload.text[:80] if payload.text else "post")
-    base_slug = slugify(base) or "post"
+    # (strip internal [CAPTION]/[HASHTAGS]/[CTA] labels first)
+    raw_base = payload.title or (caption_only(payload.text or "")[:80] if payload.text else "post")
+    base_slug = slugify(raw_base) or "post"
     # Ensure uniqueness: append short suffix if needed
     slug_candidate = base_slug
     n = 0
@@ -1600,15 +1631,14 @@ async def posts_by_slug(slug: str):
     except Exception:
         pass
 
-    # Pick a random active advertiser (so each visit shows a different sponsor)
+    # Pick a random advertiser (so each visit shows a different sponsor).
+    # Advertisers don't carry an explicit `active` flag — being in the collection means publishable.
     advertiser = None
     try:
-        active_ads = await db.advertisers.find(
-            {"active": True}, {"_id": 0}
-        ).to_list(100)
-        if active_ads:
+        ads = await db.advertisers.find({}, {"_id": 0}).to_list(100)
+        if ads:
             import random as _random
-            advertiser = _random.choice(active_ads)
+            advertiser = strip_private(_random.choice(ads))
     except Exception:
         pass
 

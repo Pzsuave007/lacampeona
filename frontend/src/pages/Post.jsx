@@ -33,7 +33,8 @@ export default function Post() {
           setData(data);
           // OpenGraph-ish: update title for share previews on apps that re-fetch
           if (data?.post?.title || data?.post?.text) {
-            document.title = `${data.post.title || data.post.text.slice(0, 60)} · La Campeona 880 AM`;
+            const cleanText = stripDjLabels(data.post.text || "");
+            document.title = `${data.post.title || cleanText.slice(0, 60)} · La Campeona 880 AM`;
           }
         }
       })
@@ -85,8 +86,11 @@ export default function Post() {
   }
 
   const { post, advertiser, host } = data || {};
-  const title = post?.title || post?.text?.split("\n")[0]?.slice(0, 120) || "Post";
-  const body = post?.text || "";
+  const parsed = parseDjText(post?.text || "");
+  const title =
+    post?.title ||
+    parsed.caption.split("\n")[0]?.slice(0, 120) ||
+    "Post";
   const cover = post?.cover_image ? bannerUrl(post.cover_image) : null;
   const publicUrl = typeof window !== "undefined" ? window.location.href : "";
 
@@ -150,8 +154,30 @@ export default function Post() {
         )}
 
         <article className="prose prose-lg max-w-none text-slate-800 leading-relaxed whitespace-pre-line" data-testid="post-body">
-          {body}
+          {parsed.caption}
         </article>
+
+        {parsed.cta && (
+          <div
+            data-testid="post-cta"
+            className="mt-6 bg-amber-50 border-l-4 border-amber-500 rounded-r-2xl px-5 py-4 text-slate-800 text-lg font-medium whitespace-pre-line"
+          >
+            {parsed.cta}
+          </div>
+        )}
+
+        {parsed.hashtags.length > 0 && (
+          <div className="mt-6 flex flex-wrap gap-2" data-testid="post-hashtags">
+            {parsed.hashtags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center bg-orange-100 text-orange-700 text-sm font-bold rounded-full px-3 py-1"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Listen-live nudge */}
         <div className="mt-10 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-2xl p-6 sm:p-8 shadow-xl">
@@ -318,7 +344,7 @@ function RelatedPosts({ currentSlug }) {
             data-testid={`related-post-${p.slug}`}
             className="block bg-white rounded-2xl border border-slate-200 hover:border-orange-400 hover:shadow-md transition p-4"
           >
-            <p className="text-sm font-bold text-slate-900 line-clamp-3">{p.title || (p.text || "").slice(0, 100)}</p>
+            <p className="text-sm font-bold text-slate-900 line-clamp-3">{p.title || stripDjLabels(p.text || "").slice(0, 100)}</p>
             <p className="text-xs text-slate-500 mt-2 inline-flex items-center gap-1">
               <Eye className="w-3 h-3" /> {(p.views_count || 0).toLocaleString()}
             </p>
@@ -327,4 +353,65 @@ function RelatedPosts({ currentSlug }) {
       </div>
     </section>
   );
+}
+
+// --- AI text parsing helpers ---
+// The DJ Studio AI returns posts shaped as:
+//   [CAPTION]
+//   <body>
+//
+//   [HASHTAGS]
+//   #foo #bar
+//
+//   [CTA]
+//   <call to action>
+// These section labels are an internal contract — they MUST NOT appear in the
+// public view. We split the text into three pieces for friendly rendering.
+function stripDjLabels(text) {
+  return (text || "")
+    .replace(/^\s*\[(CAPTION|HASHTAGS|CTA)\]\s*:?\s*$/gim, "")
+    .replace(/\[(CAPTION|HASHTAGS|CTA)\]\s*:?/gi, "")
+    .trim();
+}
+
+function parseDjText(text) {
+  const empty = { caption: "", hashtags: [], cta: "" };
+  if (!text) return empty;
+
+  const section = (label) => {
+    const re = new RegExp(
+      `\\[${label}\\]\\s*([\\s\\S]*?)(?=\\n\\s*\\[(?:CAPTION|HASHTAGS|CTA)\\]|$)`,
+      "i",
+    );
+    const m = text.match(re);
+    return m ? m[1].trim() : "";
+  };
+
+  const captionRaw = section("CAPTION");
+  const hashtagsRaw = section("HASHTAGS");
+  const ctaRaw = section("CTA");
+
+  // If no labels at all, treat the whole thing as caption (and try to lift any
+  // trailing # line into hashtags).
+  if (!captionRaw && !hashtagsRaw && !ctaRaw) {
+    const lines = text.trim().split(/\n/);
+    const tagLineIdx = lines.findIndex((l) => /^\s*#\S+/.test(l));
+    if (tagLineIdx > 0) {
+      return {
+        caption: lines.slice(0, tagLineIdx).join("\n").trim(),
+        hashtags: lines
+          .slice(tagLineIdx)
+          .join(" ")
+          .match(/#[\p{L}0-9_]+/gu) || [],
+        cta: "",
+      };
+    }
+    return { caption: text.trim(), hashtags: [], cta: "" };
+  }
+
+  return {
+    caption: captionRaw,
+    hashtags: hashtagsRaw.match(/#[\p{L}0-9_]+/gu) || [],
+    cta: ctaRaw,
+  };
 }

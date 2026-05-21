@@ -239,6 +239,9 @@ class SettingsIn(BaseModel):
     sales_person_quote: Optional[str] = None
     sales_person_photo: Optional[str] = None    # uploaded path OR external URL
 
+    # ----- Branding -----
+    station_logo: Optional[str] = None  # path or external URL for nav/footer logo
+
 
 class HostScheduleSlot(BaseModel):
     day_of_week: int = Field(..., ge=0, le=6)

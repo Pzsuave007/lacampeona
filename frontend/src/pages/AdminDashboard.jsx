@@ -128,6 +128,8 @@ export default function AdminDashboard() {
       sales_person_email: adminSettings.sales_person_email,
       sales_person_quote: adminSettings.sales_person_quote,
       sales_person_photo: adminSettings.sales_person_photo,
+      // Branding
+      station_logo: adminSettings.station_logo,
     };
     const { data } = await api.put("/admin/settings", payload);
     setAdminSettings(data);
@@ -331,6 +333,15 @@ export default function AdminDashboard() {
                   helpText="Aparece en el disco girando y en el player cuando no hay carátula real de la canción (ej: durante shows en vivo o anuncios). Recomendado: imagen cuadrada del logo o foto del estudio."
                   value={adminSettings.default_artwork || ""}
                   onChange={(v) => setAdminSettings({ ...adminSettings, default_artwork: v })}
+                />
+
+                {/* Station Logo */}
+                <HeroBgField
+                  testid="station-logo"
+                  iconLabel="Logo de la estación (navbar)"
+                  helpText="Aparece en la barra superior. Recomendado: PNG transparente, mínimo 1000×400 px para que se vea nítido en pantallas Retina. Si lo dejas vacío, se usa el logo por defecto."
+                  value={adminSettings.station_logo || ""}
+                  onChange={(v) => setAdminSettings({ ...adminSettings, station_logo: v })}
                 />
               </div>
 

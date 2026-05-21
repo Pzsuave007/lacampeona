@@ -4,6 +4,10 @@ import { Menu, X, Languages, LogOut, ShieldCheck, Crown } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useStation } from "../contexts/StationContext";
+import { bannerUrl } from "../lib/api";
+
+const DEFAULT_LOGO =
+  "https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png";
 
 export default function Navbar() {
   const { t, lang, toggle } = useLanguage();
@@ -11,6 +15,8 @@ export default function Navbar() {
   const { settings } = useStation();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+
+  const logoSrc = settings?.station_logo ? bannerUrl(settings.station_logo) : DEFAULT_LOGO;
 
   const linkClass = ({ isActive }) =>
     `px-3 py-2 rounded-full text-sm font-bold transition ${
@@ -31,14 +37,12 @@ export default function Navbar() {
           className="flex items-center gap-2 group"
         >
           <img
-            src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png"
+            src={logoSrc}
             alt="La Campeona 880 AM"
-            className="h-14 sm:h-16 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_4px_8px_rgba(0,0,0,0.12)]"
-          />
-          <img
-            src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/2nch7aix_LaCampeona-fuego-logot-big%20%281%29.png"
-            alt="Campeona Fuego 103.9 FM"
-            className="hidden sm:block h-11 w-auto object-contain opacity-90 group-hover:scale-105 transition drop-shadow-[0_4px_8px_rgba(0,0,0,0.12)]"
+            width="160"
+            height="64"
+            className="h-12 sm:h-14 w-auto object-contain group-hover:scale-105 transition drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
+            style={{ imageRendering: "auto" }}
           />
         </Link>
 

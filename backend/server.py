@@ -224,6 +224,21 @@ class SettingsIn(BaseModel):
     default_hero_bg: Optional[str] = None  # background image URL for Home Hero when no host is live
     default_artwork: Optional[str] = None  # fallback image for the spinning vinyl + player when no song artwork
 
+    # ----- Anúnciate page (advertising landing) -----
+    sales_hero_title: Optional[str] = None      # e.g. "Tu negocio"
+    sales_hero_subtitle: Optional[str] = None   # italic script line, e.g. "en boca de todos"
+    sales_tagline: Optional[str] = None         # paragraph under hero
+    sales_stat_listeners: Optional[str] = None  # e.g. "180,000+"
+    sales_stat_households: Optional[str] = None
+    sales_stat_counties: Optional[str] = None
+    sales_person_name: Optional[str] = None
+    sales_person_title: Optional[str] = None    # e.g. "Asesora de ventas..."
+    sales_person_phone: Optional[str] = None    # e.g. "+15036230244"
+    sales_person_whatsapp: Optional[str] = None # e.g. "15036230244" (no + or spaces)
+    sales_person_email: Optional[str] = None
+    sales_person_quote: Optional[str] = None
+    sales_person_photo: Optional[str] = None    # uploaded path OR external URL
+
 
 class HostScheduleSlot(BaseModel):
     day_of_week: int = Field(..., ge=0, le=6)

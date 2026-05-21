@@ -4,24 +4,49 @@ import {
   Phone,
   MessageCircle,
   Mail,
-  Check,
   Sparkles,
   ArrowRight,
   Trophy,
   TrendingUp,
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useStation } from "../contexts/StationContext";
 import { SALES_INFO } from "../data/staticContent";
-import { waLink, telLink } from "../lib/api";
+import { waLink, telLink, bannerUrl } from "../lib/api";
 
 export default function Anuncia() {
   const { lang } = useLanguage();
-  const sp = SALES_INFO.salesperson;
+  const { settings } = useStation();
+
+  // Merge admin settings with static defaults (settings wins, fallback to static)
+  const staticSp = SALES_INFO.salesperson;
+  const sp = {
+    name: settings?.sales_person_name || staticSp.name,
+    title: settings?.sales_person_title || staticSp.title,
+    phone: settings?.sales_person_phone || staticSp.phone,
+    whatsapp: settings?.sales_person_whatsapp || staticSp.whatsapp,
+    email: settings?.sales_person_email || staticSp.email,
+    quote: settings?.sales_person_quote || staticSp.quote,
+    photo: settings?.sales_person_photo
+      ? bannerUrl(settings.sales_person_photo)
+      : staticSp.photo,
+  };
+  const heroTitle = settings?.sales_hero_title || (lang === "es" ? "Tu negocio" : "Your business,");
+  const heroSubtitle =
+    settings?.sales_hero_subtitle ||
+    (lang === "es" ? "en boca de todos" : "everywhere");
+  const tagline = settings?.sales_tagline || SALES_INFO.tagline;
+  const reach = {
+    listeners: settings?.sales_stat_listeners || SALES_INFO.reach.listeners,
+    households: settings?.sales_stat_households || SALES_INFO.reach.households,
+    counties: settings?.sales_stat_counties || SALES_INFO.reach.counties,
+  };
+
   const wa = waLink(
     sp.whatsapp,
     lang === "es"
-      ? `Hola ${sp.name.split(" ")[0]}, quiero info de los paquetes de publicidad`
-      : `Hi ${sp.name.split(" ")[0]}, I'd like info about your ad packages`,
+      ? `Hola ${sp.name.split(" ")[0]}, quiero info de la publicidad en La Campeona`
+      : `Hi ${sp.name.split(" ")[0]}, I'd like info about advertising on La Campeona`,
   );
 
   return (
@@ -38,20 +63,20 @@ export default function Anuncia() {
             {lang === "es" ? "Anúnciate en La Campeona" : "Advertise on La Campeona"}
           </span>
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.92] drop-shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
-            {lang === "es" ? "Tu negocio" : "Your business,"}
+            {heroTitle}
             <br />
             <span className="font-script font-normal italic text-amber-300 text-7xl sm:text-8xl lg:text-9xl block -mt-2">
-              {lang === "es" ? "en boca de todos" : "everywhere"}
+              {heroSubtitle}
             </span>
           </h1>
           <p className="mt-5 text-lg sm:text-xl text-amber-100/95 leading-snug max-w-2xl font-semibold">
-            {SALES_INFO.tagline}
+            {tagline}
           </p>
 
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl">
-            <Stat label={lang === "es" ? "Oyentes/sem" : "Listeners/wk"} number={SALES_INFO.reach.listeners} />
-            <Stat label={lang === "es" ? "Hogares" : "Households"} number={SALES_INFO.reach.households} />
-            <Stat label={lang === "es" ? "Condados" : "Counties"} number={SALES_INFO.reach.counties} />
+            <Stat label={lang === "es" ? "Oyentes/sem" : "Listeners/wk"} number={reach.listeners} />
+            <Stat label={lang === "es" ? "Hogares" : "Households"} number={reach.households} />
+            <Stat label={lang === "es" ? "Condados" : "Counties"} number={reach.counties} />
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -68,11 +93,11 @@ export default function Anuncia() {
               </a>
             )}
             <a
-              href="#paquetes"
-              data-testid="anuncia-hero-packages"
+              href="#asesora"
+              data-testid="anuncia-hero-contact"
               className="inline-flex items-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-7 py-4 transition hover:-translate-y-1 active:scale-95"
             >
-              {lang === "es" ? "Ver paquetes" : "See packages"}
+              {lang === "es" ? "Contactar ventas" : "Contact sales"}
               <ArrowRight className="w-5 h-5" />
             </a>
           </div>
@@ -106,92 +131,6 @@ export default function Anuncia() {
         </div>
       </section>
 
-      {/* Pricing packages */}
-      <section id="paquetes" className="bg-orange-50/60 py-14 md:py-20 border-y border-orange-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-orange-600 mb-2">
-              {lang === "es" ? "Paquetes" : "Packages"}
-            </p>
-            <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter">
-              {lang === "es" ? "Elige tu " : "Choose your "}
-              <span className="font-script font-normal italic text-orange-600">
-                {lang === "es" ? "paquete perfecto" : "perfect plan"}
-              </span>
-            </h2>
-            <p className="text-slate-600 mt-3 max-w-xl mx-auto">
-              {lang === "es"
-                ? "Todo incluido. Sin contratos a largo plazo. Resultados desde la primera semana."
-                : "All-inclusive. No long-term contracts. Results from week one."}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            {SALES_INFO.packages.map((p) => (
-              <div
-                key={p.id}
-                data-testid={`pkg-${p.id}`}
-                className={`relative rounded-3xl overflow-hidden bg-white border-2 transition hover:-translate-y-2 hover:shadow-2xl shadow-lg ${
-                  p.featured ? "border-orange-500 md:scale-105 z-10" : "border-slate-200"
-                }`}
-              >
-                {p.featured && (
-                  <div className="absolute top-0 inset-x-0 bg-orange-600 text-white text-[10px] uppercase tracking-[0.3em] font-black text-center py-1.5">
-                    ★ {lang === "es" ? "Más popular" : "Most popular"}
-                  </div>
-                )}
-                <div className={`p-7 ${p.featured ? "pt-12" : ""}`}>
-                  <p
-                    className="text-[10px] uppercase tracking-[0.3em] font-extrabold mb-1"
-                    style={{ color: p.color }}
-                  >
-                    {p.tagline}
-                  </p>
-                  <h3 className="text-3xl font-black text-slate-900">{p.name}</h3>
-                  <p className="mt-4 flex items-baseline gap-1">
-                    <span className="text-5xl font-black tracking-tighter text-slate-900">
-                      {p.price}
-                    </span>
-                    <span className="text-sm font-bold text-slate-500">{p.period}</span>
-                  </p>
-                  <ul className="mt-6 space-y-2.5">
-                    {p.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                        <Check
-                          className="w-4 h-4 mt-0.5 shrink-0"
-                          style={{ color: p.color }}
-                        />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <a
-                    href={wa}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    data-testid={`pkg-cta-${p.id}`}
-                    className={`mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-black transition active:scale-95 ${
-                      p.featured
-                        ? "bg-orange-600 hover:bg-orange-700 text-white shadow-lg"
-                        : "bg-slate-900 hover:bg-slate-800 text-white"
-                    }`}
-                  >
-                    {lang === "es" ? "Quiero este" : "Get this plan"}
-                    <ArrowRight className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-center text-xs text-slate-500 mt-8">
-            {lang === "es"
-              ? "* Precios en USD. Producción de spots incluida en planes Pro y Patrocinador."
-              : "* Prices in USD. Spot production included in Pro and Sponsor plans."}
-          </p>
-        </div>
-      </section>
-
       {/* Mundial cross-sell */}
       <section className="bg-[#0F2A1A] text-white py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
@@ -221,13 +160,14 @@ export default function Anuncia() {
       </section>
 
       {/* Sales person */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20">
+      <section id="asesora" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20">
         <div className="bg-white rounded-3xl border-2 border-orange-200 overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-xl">
           <div className="relative h-72 md:h-auto bg-slate-100">
             <img
               src={sp.photo}
               alt={sp.name}
               className="w-full h-full object-cover"
+              data-testid="sales-person-photo"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-orange-900/20 to-transparent" />
           </div>
@@ -235,7 +175,9 @@ export default function Anuncia() {
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-orange-600 mb-2">
               {lang === "es" ? "Tu asesora de ventas" : "Your sales rep"}
             </p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tight">{sp.name}</h3>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tight" data-testid="sales-person-name">
+              {sp.name}
+            </h3>
             <p className="text-slate-500 text-sm mt-1">{sp.title}</p>
             <p className="font-script text-2xl text-orange-600 mt-4 -rotate-1">"{sp.quote}"</p>
 

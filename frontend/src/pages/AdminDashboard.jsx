@@ -114,6 +114,20 @@ export default function AdminDashboard() {
       cta_pause_seconds: Number(adminSettings.cta_pause_seconds ?? 60),
       default_hero_bg: adminSettings.default_hero_bg,
       default_artwork: adminSettings.default_artwork,
+      // Anúnciate page
+      sales_hero_title: adminSettings.sales_hero_title,
+      sales_hero_subtitle: adminSettings.sales_hero_subtitle,
+      sales_tagline: adminSettings.sales_tagline,
+      sales_stat_listeners: adminSettings.sales_stat_listeners,
+      sales_stat_households: adminSettings.sales_stat_households,
+      sales_stat_counties: adminSettings.sales_stat_counties,
+      sales_person_name: adminSettings.sales_person_name,
+      sales_person_title: adminSettings.sales_person_title,
+      sales_person_phone: adminSettings.sales_person_phone,
+      sales_person_whatsapp: adminSettings.sales_person_whatsapp,
+      sales_person_email: adminSettings.sales_person_email,
+      sales_person_quote: adminSettings.sales_person_quote,
+      sales_person_photo: adminSettings.sales_person_photo,
     };
     const { data } = await api.put("/admin/settings", payload);
     setAdminSettings(data);
@@ -318,6 +332,140 @@ export default function AdminDashboard() {
                   value={adminSettings.default_artwork || ""}
                   onChange={(v) => setAdminSettings({ ...adminSettings, default_artwork: v })}
                 />
+              </div>
+
+              {/* ====================================================== */}
+              {/* Sección Anúnciate                                        */}
+              {/* ====================================================== */}
+              <div className="mt-8 pt-8 border-t-2 border-dashed border-orange-200">
+                <h3 className="text-2xl font-black text-slate-900 mb-1">Página Anúnciate</h3>
+                <p className="text-sm text-slate-500 mb-6">
+                  Edita el contenido de la página <code className="bg-slate-100 px-1.5 py-0.5 rounded">/anuncia</code> donde tus prospectos te contactan.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <SettingField
+                    label="Título principal (Hero)"
+                    value={adminSettings.sales_hero_title || ""}
+                    placeholder="Tu negocio"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_hero_title: v })}
+                    testid="set-sales-hero-title"
+                  />
+                  <SettingField
+                    label="Subtítulo cursiva (Hero)"
+                    value={adminSettings.sales_hero_subtitle || ""}
+                    placeholder="en boca de todos"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_hero_subtitle: v })}
+                    testid="set-sales-hero-subtitle"
+                  />
+                  <label className="block sm:col-span-2">
+                    <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
+                      Tagline (debajo del título)
+                    </span>
+                    <textarea
+                      value={adminSettings.sales_tagline || ""}
+                      placeholder="Tu negocio se escucha en toda la Willamette Valley"
+                      onChange={(e) =>
+                        setAdminSettings({ ...adminSettings, sales_tagline: e.target.value })
+                      }
+                      rows={2}
+                      data-testid="set-sales-tagline"
+                      className="mt-2 w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition resize-none"
+                    />
+                  </label>
+
+                  {/* Stats */}
+                  <SettingField
+                    label="Estadística — Oyentes/sem"
+                    value={adminSettings.sales_stat_listeners || ""}
+                    placeholder="180,000+"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_stat_listeners: v })}
+                    testid="set-stat-listeners"
+                  />
+                  <SettingField
+                    label="Estadística — Hogares"
+                    value={adminSettings.sales_stat_households || ""}
+                    placeholder="65,000+"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_stat_households: v })}
+                    testid="set-stat-households"
+                  />
+                  <SettingField
+                    label="Estadística — Condados"
+                    value={adminSettings.sales_stat_counties || ""}
+                    placeholder="8"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_stat_counties: v })}
+                    testid="set-stat-counties"
+                  />
+                </div>
+
+                {/* ----- Asesora de ventas ----- */}
+                <h4 className="mt-8 text-lg font-black text-slate-900">Asesora de ventas</h4>
+                <p className="text-xs text-slate-500 mb-4">
+                  Datos de contacto que aparecen en la sección de la asesora.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <SettingField
+                    label="Nombre"
+                    value={adminSettings.sales_person_name || ""}
+                    placeholder="María Hernández"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_person_name: v })}
+                    testid="set-sp-name"
+                  />
+                  <SettingField
+                    label="Cargo / Título"
+                    value={adminSettings.sales_person_title || ""}
+                    placeholder="Asesora de ventas — La Campeona 880 AM"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_person_title: v })}
+                    testid="set-sp-title"
+                  />
+                  <SettingField
+                    label="Teléfono (formato +1...)"
+                    value={adminSettings.sales_person_phone || ""}
+                    placeholder="+15036230244"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_person_phone: v })}
+                    testid="set-sp-phone"
+                  />
+                  <SettingField
+                    label="WhatsApp (solo dígitos, ej. 15036230244)"
+                    value={adminSettings.sales_person_whatsapp || ""}
+                    placeholder="15036230244"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_person_whatsapp: v })}
+                    testid="set-sp-wa"
+                  />
+                  <SettingField
+                    label="Email"
+                    value={adminSettings.sales_person_email || ""}
+                    placeholder="ventas@lacampeona.com"
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_person_email: v })}
+                    testid="set-sp-email"
+                  />
+                  <label className="block">
+                    <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">
+                      Frase/Quote (en cursiva en la página)
+                    </span>
+                    <textarea
+                      value={adminSettings.sales_person_quote || ""}
+                      placeholder="Cuéntame de tu negocio en 5 minutos y te diseño el paquete que te conviene."
+                      onChange={(e) =>
+                        setAdminSettings({
+                          ...adminSettings,
+                          sales_person_quote: e.target.value,
+                        })
+                      }
+                      rows={2}
+                      data-testid="set-sp-quote"
+                      className="mt-2 w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-orange-500 focus:outline-none transition resize-none"
+                    />
+                  </label>
+
+                  {/* Photo upload */}
+                  <HeroBgField
+                    testid="sp-photo"
+                    iconLabel="Foto de la asesora"
+                    helpText="Recomendado: 800×800 px o más grande. Cuadrada o vertical. Puedes pegar una URL o subir desde tu computadora."
+                    value={adminSettings.sales_person_photo || ""}
+                    onChange={(v) => setAdminSettings({ ...adminSettings, sales_person_photo: v })}
+                  />
+                </div>
               </div>
               <button
                 data-testid="settings-save-btn"

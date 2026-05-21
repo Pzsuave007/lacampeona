@@ -272,50 +272,90 @@ export default function Post() {
 }
 
 function FeaturedAdvertiser({ advertiser, lang }) {
-  const logoSrc = advertiser.logo_path ? bannerUrl(advertiser.logo_path) : null;
+  const name = advertiser.name || advertiser.business_name || "";
+  const banner = advertiser.banner_path || advertiser.logo_path || "";
+  // banner_path can be a full URL (external CDN) or a relative storage path
+  const bannerSrc = banner
+    ? (/^https?:\/\//i.test(banner) ? banner : bannerUrl(banner))
+    : null;
+  const mapsHref = advertiser.maps_url
+    || (advertiser.address ? `https://maps.google.com/?q=${encodeURIComponent(advertiser.address)}` : null);
+  const waHref = advertiser.whatsapp
+    ? `https://wa.me/${advertiser.whatsapp.replace(/[^0-9]/g, "")}`
+    : null;
+
   return (
     <div
       data-testid="post-advertiser"
-      className="mt-10 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border-2 border-amber-200 rounded-2xl p-5 sm:p-6"
+      className="mt-10 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border-2 border-amber-200 rounded-2xl overflow-hidden"
     >
-      <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-600 mb-3">
-        ⭐ {lang === "es" ? "Patrocinador destacado" : "Featured sponsor"}
-      </p>
-      <div className="flex gap-4 items-start">
-        {logoSrc && (
+      {bannerSrc && (
+        <a
+          href={advertiser.slug ? `/a/${advertiser.slug}` : "#"}
+          className="block bg-white"
+          data-testid="post-advertiser-banner"
+        >
           <img
-            src={logoSrc}
-            alt={advertiser.business_name}
-            className="w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-xl bg-white p-2 shadow-md shrink-0"
+            src={bannerSrc}
+            alt={name}
+            className="w-full max-h-64 object-contain bg-white"
           />
+        </a>
+      )}
+      <div className="p-5 sm:p-6">
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-600 mb-3">
+          ⭐ {lang === "es" ? "Patrocinador destacado" : "Featured sponsor"}
+        </p>
+        <h4 className="text-xl sm:text-2xl font-black text-slate-900">
+          {name}
+        </h4>
+        {advertiser.tagline && (
+          <p className="text-slate-600 mt-1">{advertiser.tagline}</p>
         )}
-        <div className="min-w-0 flex-1">
-          <h4 className="text-xl sm:text-2xl font-black text-slate-900">
-            {advertiser.business_name}
-          </h4>
-          {advertiser.tagline && (
-            <p className="text-slate-600 mt-1">{advertiser.tagline}</p>
+        {advertiser.special_offer && (
+          <p className="mt-2 inline-block bg-rose-100 text-rose-700 text-sm font-bold rounded-full px-3 py-1">
+            🎁 {advertiser.special_offer}
+          </p>
+        )}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {advertiser.phone && (
+            <a
+              href={`tel:${advertiser.phone}`}
+              className="inline-flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold rounded-full px-4 py-2 transition active:scale-95"
+            >
+              📞 {advertiser.phone}
+            </a>
           )}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {advertiser.phone && (
-              <a
-                href={`tel:${advertiser.phone}`}
-                className="inline-flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold rounded-full px-4 py-2 transition active:scale-95"
-              >
-                📞 {advertiser.phone}
-              </a>
-            )}
-            {advertiser.address && (
-              <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(advertiser.address)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-full px-4 py-2 transition active:scale-95"
-              >
-                📍 Direcciones
-              </a>
-            )}
-          </div>
+          {waHref && (
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 bg-[#25D366] hover:bg-[#16A34A] text-white text-sm font-bold rounded-full px-4 py-2 transition active:scale-95"
+            >
+              💬 WhatsApp
+            </a>
+          )}
+          {mapsHref && (
+            <a
+              href={mapsHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-full px-4 py-2 transition active:scale-95"
+            >
+              📍 {lang === "es" ? "Direcciones" : "Directions"}
+            </a>
+          )}
+          {advertiser.website_url && (
+            <a
+              href={advertiser.website_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-full px-4 py-2 transition active:scale-95"
+            >
+              🔗 {lang === "es" ? "Sitio web" : "Website"}
+            </a>
+          )}
         </div>
       </div>
     </div>

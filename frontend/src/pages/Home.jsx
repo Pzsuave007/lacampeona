@@ -87,9 +87,6 @@ export default function Home() {
       {/* Vibe / "what's the show" section with photos */}
       <VibeSection settings={settings} lang={lang} nowPlaying={nowPlaying} />
 
-      {/* Upcoming events teaser (moved down for better flow) */}
-      {events && events.length > 0 && <EventsTeaser events={events} lang={lang} />}
-
       {/* Featured advertisers */}
       <section
         id="advertisers"
@@ -187,6 +184,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Upcoming events teaser */}
+      {events && events.length > 0 && <EventsTeaser events={events} lang={lang} />}
 
       {/* Community CTA */}
       <CommunitySection

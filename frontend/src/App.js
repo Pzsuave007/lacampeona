@@ -21,6 +21,7 @@ import Eventos from "@/pages/Eventos";
 import EventoLanding from "@/pages/EventoLanding";
 import ReportePublic from "@/pages/ReportePublic";
 import DjStudio from "@/pages/DjStudio";
+import DjComposerPage from "@/pages/DjComposerPage";
 import SuperAdmin from "@/pages/SuperAdmin";
 import Post from "@/pages/Post";
 
@@ -45,6 +46,8 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/dj" element={<DjStudio />} />
+                  <Route path="/dj/nuevo" element={<DjComposerPage mode="new" />} />
+                  <Route path="/dj/editar/:id" element={<DjComposerPage mode="edit" />} />
                   <Route path="/super" element={<SuperAdmin />} />
                   <Route path="/p/:slug" element={<Post />} />
                 </Routes>

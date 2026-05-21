@@ -46,7 +46,6 @@ export default function DjStudio() {
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("list"); // list | calendar
-  const [composer, setComposer] = useState(null); // { mode: 'new'|'edit', draft? }
 
   useEffect(() => {
     if (user === null) navigate("/login");
@@ -151,7 +150,7 @@ export default function DjStudio() {
           </button>
           <button
             data-testid="dj-new-draft-btn"
-            onClick={() => setComposer({ mode: "new" })}
+            onClick={() => navigate("/dj/nuevo")}
             className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-5 py-2.5 transition active:scale-95 shadow-[0_8px_30px_rgba(234,88,12,0.3)]"
           >
             <Plus className="w-4 h-4" /> Nuevo post
@@ -165,27 +164,14 @@ export default function DjStudio() {
         <DraftsList
           drafts={drafts}
           templates={templates}
-          onEdit={(d) => setComposer({ mode: "edit", draft: d })}
+          onEdit={(d) => navigate(`/dj/editar/${d.id}`)}
           onDelete={onDelete}
           onCopy={onCopy}
           onSetStatus={onSetStatus}
           onGenerateImage={onGenerateImage}
         />
       ) : (
-        <CalendarView drafts={drafts} onEdit={(d) => setComposer({ mode: "edit", draft: d })} />
-      )}
-
-      {composer && (
-        <Composer
-          mode={composer.mode}
-          initial={composer.draft}
-          templates={templates}
-          onClose={() => setComposer(null)}
-          onSaved={() => {
-            setComposer(null);
-            loadAll();
-          }}
-        />
+        <CalendarView drafts={drafts} onEdit={(d) => navigate(`/dj/editar/${d.id}`)} />
       )}
     </div>
   );
@@ -397,7 +383,7 @@ function CalendarView({ drafts, onEdit }) {
   );
 }
 
-function Composer({ mode, initial, templates, onClose, onSaved }) {
+export function Composer({ mode, initial, templates, onClose, onSaved }) {
   const editing = mode === "edit" && initial;
   const [step, setStep] = useState(editing ? "edit" : "pick"); // pick | inputs | edit
   const [tmpl, setTmpl] = useState(() => {
@@ -493,14 +479,15 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto" data-testid="dj-composer">
-      <div className="w-full max-w-2xl bg-white sm:rounded-3xl shadow-2xl border border-slate-200 max-h-[95vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-slate-100 px-5 py-4 flex items-center justify-between">
-          <h2 className="font-black text-lg text-slate-900">
-            {editing ? "Editar borrador" : step === "pick" ? "Elige plantilla" : step === "inputs" ? `${tmpl?.emoji} ${tmpl?.label}` : "Vista previa"}
-          </h2>
-          <button data-testid="dj-composer-close" onClick={onClose} className="p-2 rounded-full hover:bg-slate-100"><X className="w-5 h-5" /></button>
-        </div>
+    <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden" data-testid="dj-composer">
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+        <h2 className="font-black text-lg text-slate-900">
+          {editing ? "Editar borrador" : step === "pick" ? "Elige plantilla" : step === "inputs" ? `${tmpl?.emoji} ${tmpl?.label}` : "Vista previa"}
+        </h2>
+        <button data-testid="dj-composer-close" onClick={onClose} className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-full hover:bg-slate-100">
+          <X className="w-4 h-4" /> Cancelar
+        </button>
+      </div>
 
         {step === "pick" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-5" data-testid="dj-templates">
@@ -691,7 +678,6 @@ function Composer({ mode, initial, templates, onClose, onSaved }) {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

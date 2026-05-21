@@ -131,7 +131,7 @@ export default function DjStudio() {
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight" data-testid="dj-studio-title">
             Hola{me?.host?.show_name ? `, ${me.host.show_name}` : me?.name ? `, ${me.name}` : ""} 👋
           </h1>
-          <p className="text-slate-500 mt-1">Genera contenido para redes sin caer en copyright. 8 plantillas transformativas con Claude.</p>
+          <p className="text-slate-500 mt-1">Contenido pensado para tu audiencia: mujeres 40+, regional mexicano y romántico clásico. Sin reggaetón moderno.</p>
         </div>
         <div className="flex items-center gap-2">
           <button

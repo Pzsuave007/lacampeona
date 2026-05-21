@@ -1262,12 +1262,46 @@ CONTENT_TEMPLATES: dict = {
 }
 
 
+## ----- AUDIENCE PROFILE (KWIP La Campeona) -----
+# Injected into every AI prompt (generation + suggestions) so Claude always
+# tailors content to the REAL audience instead of generic young-Latino assumptions.
+AUDIENCE_PROFILE = (
+    "PERFIL DE LA AUDIENCIA (CRÍTICO — RESPETAR EN TODO):\n"
+    "- Adultos de 40 años para ARRIBA. La mayoría son MUJERES (mamás, abuelitas, esposas, jefas de familia).\n"
+    "- Los hombres suelen ser trabajadores del CAMPO, CONSTRUCCIÓN y SERVICIOS (jardinería, restaurantes, "
+    "limpieza, mecánica). Personas trabajadoras, de manos rudas, mucha vida vivida.\n"
+    "- Inmigrantes mayormente mexicanos y centroamericanos en Oregon (Dallas, Salem, Woodburn, Independence). "
+    "Muchos años en EE.UU., raíces fuertes en su pueblo. Catolicismo presente.\n\n"
+    "MÚSICA QUE LA RADIO TOCA (úsala como referencia, NUNCA recomiendes nada fuera de esto):\n"
+    "- REGIONAL MEXICANO clásico: ranchera, banda, norteño, mariachi, grupero, cumbia clásica, sonidero.\n"
+    "- BALADA ROMÁNTICA y bolero (en español).\n"
+    "- DÉCADAS principalmente: 80s, 90s, 2000s. Algo de 70s y principios de 2010s si aplica.\n"
+    "- Artistas modelo (cita libremente cuando convenga): Vicente Fernández, Joan Sebastian, Marco Antonio Solís, "
+    "Los Tigres del Norte, Ana Gabriel, Rocío Dúrcal, Juan Gabriel, Selena, Pedro Infante, Jenni Rivera, "
+    "Pepe Aguilar, Antonio Aguilar, Los Bukis, Bronco, Los Temerarios, Los Ángeles Azules, Banda El Recodo, "
+    "Banda MS (temas clásicos), José José, Camilo Sesto, Rocío Jurado, Pandora, Yuri, Lucero, Alejandro Fernández, "
+    "Espinoza Paz (baladas), Pablo Montero, Lupita D'Alessio, Pepe Aguilar, Conjunto Primavera.\n\n"
+    "PROHIBIDO ESTRICTO:\n"
+    "- NO menciones ni recomiendes reggaetón moderno (Bad Bunny, Karol G, Anuel, Rauw Alejandro, Feid, etc.). "
+    "Esa música NO encaja con esta audiencia y los hace sentir excluidos.\n"
+    "- NO uses jerga juvenil tipo 'que perreo', 'flow', 'gata', 'tigueraje', 'demure', 'periodt', etc.\n"
+    "- NO trates al lector como joven de TikTok. Esta gente NO está en TikTok — están en Facebook y WhatsApp.\n"
+    "- NO uses anglicismos innecesarios ('mood', 'vibe', 'cringe'). Habla español natural y respetuoso.\n\n"
+    "TONO CORRECTO:\n"
+    "- Cariñoso, respetuoso, con mucha calidez familiar. 'Comadre', 'mi gente', 'señoras y señores', 'paisanos'.\n"
+    "- Valora el trabajo duro, la familia, la fe, el sacrificio, las raíces.\n"
+    "- Nostalgia bien usada (recuerdos del pueblo, de cuando llegaron a EE.UU., de sus padres/abuelos).\n"
+    "- Emojis SÍ, pero con moderación y los apropiados: ❤️ 🙏 🌹 🇲🇽 🎵 ☕ 🌽 ✨ (NO 💀 🔥 demasiado, 😈, etc.).\n"
+)
+
+
 def build_dj_system_message(platform: str, station_name: str, host_name: str, variant_tone: str = "") -> str:
     base = (
         f"Eres un copywriter experto en redes sociales para una estación de radio latina "
         f"({station_name}) en Estados Unidos. Hablas como el DJ {host_name}. "
         f"Tu trabajo es generar contenido en ESPAÑOL, pegadizo, breve, con tono coloquial latino, "
         f"optimizado para {platform}. Evita reposts literales — todo debe ser TRANSFORMATIVO y original.\n\n"
+        f"{AUDIENCE_PROFILE}\n"
         f"DEVUELVE EXACTAMENTE este formato (sin explicaciones extra):\n"
         f"[CAPTION]\n<texto del post, 2-5 líneas, máximo 280 caracteres si es Twitter/X, "
         f"hasta 2200 si es Instagram/Facebook>\n\n"
@@ -1276,10 +1310,10 @@ def build_dj_system_message(platform: str, station_name: str, host_name: str, va
         f"comentar o compartir>"
     )
     tone_extras = {
-        "casual": "\n\nTONO ESPECIAL: muy casual y juvenil, como si estuvieras hablando con tus mejores amigos en el grupo de WhatsApp. Usa expresiones cotidianas latinas, tutea, suelta una broma si encaja.",
-        "motivational": "\n\nTONO ESPECIAL: motivacional e inspirador. Conecta con sueños, perseverancia, orgullo latino. Que el lector termine sintiendo que puede con el día.",
-        "shorter": "\n\nTONO ESPECIAL: ultra-corto y punchy. CAPTION máximo 200 caracteres, ideal para X/Twitter. Una frase que pegue duro, sin relleno.",
-        "emotional": "\n\nTONO ESPECIAL: muy emocional, familiar, cercano. Habla de la familia, los recuerdos, la patria. Que provoque guardar el post y compartirlo con un ser querido.",
+        "casual": "\n\nTONO ESPECIAL: casual pero RESPETUOSO con la audiencia adulta — como platicando con una comadre en la tienda, no con un adolescente. Usa expresiones cotidianas mexicanas/latinas, NO jerga juvenil.",
+        "motivational": "\n\nTONO ESPECIAL: motivacional e inspirador. Conecta con sueños, perseverancia, orgullo latino, el sacrificio del trabajador inmigrante. Que el lector termine sintiendo que sí se puede.",
+        "shorter": "\n\nTONO ESPECIAL: ultra-corto y punchy. CAPTION máximo 200 caracteres. Una frase que pegue duro, sin relleno.",
+        "emotional": "\n\nTONO ESPECIAL: muy emocional, familiar, cercano. Habla de la familia, los recuerdos del pueblo, la patria, la fe. Que provoque guardar el post y compartirlo con un ser querido.",
     }
     if variant_tone in tone_extras:
         base += tone_extras[variant_tone]
@@ -1348,20 +1382,20 @@ class ContentDraftPatch(BaseModel):
 # Per-template ideation prompt used by /api/dj/suggest. Returns 10 ready-to-use
 # ideas with prefilled inputs that match the template's fields schema.
 SUGGESTION_PROMPTS: dict = {
-    "today_in_history": "Hoy es {today}. Dame 10 eventos memorables de la MÚSICA O CULTURA LATINA que pasaron exactamente esta fecha (mismo mes y día) en distintos años. Estrenos de canciones, nacimientos de artistas, premios, hitos. Mezcla salsa, regional mexicano, reggaetón, balada, pop latino.",
-    "hot_take": "Dame 10 opiniones picantes pero respetuosas para debatir en redes sobre la música latina ACTUAL. Cada una sobre un tema/artista/género distinto. Para cada idea propón también una postura concreta.",
-    "throwback": "Dame 10 canciones LATINAS icónicas perfectas para un Throwback Thursday. Mezcla décadas (80s-2010s) y géneros. Para cada una incluye el año.",
-    "poll": "Dame 10 ideas de ENCUESTAS musicales latinas para Instagram/Facebook. Cada idea es una pregunta concreta con 3-4 opciones cortas separadas por coma.",
-    "behind_scenes": "Dame 10 momentos AUTÉNTICOS de detrás de cámaras que un DJ de radio latina puede compartir (preparación del show, anécdotas, técnica del estudio, momento gracioso). Concretos, no genéricos.",
-    "important_day": "Hoy es {today}. Dame 10 DÍAS IMPORTANTES o efemérides relevantes para la comunidad LATINA en EE.UU. en los próximos 60 días. Días patrios latinoamericanos, días culturales, Hispanic Heritage Month, etc. Indica la fecha en el título.",
-    "inspirational_quote": "Dame 10 IDEAS DE TEMAS para frases inspiradoras dirigidas a la comunidad latina trabajadora en EE.UU. (perseverancia, familia, raíces, sueños, segunda generación). Solo el TEMA, no copies frases famosas.",
-    "musical_recommendation": "Dame 10 CANCIONES LATINAS recientes (2024-2026) para recomendar al aire. Mezcla géneros y popularidad. Para cada una incluye una razón corta.",
+    "today_in_history": "Hoy es {today}. Dame 10 eventos memorables de la MÚSICA REGIONAL MEXICANA, BALADA ROMÁNTICA o cultura latina clásica (80s-2000s) que pasaron exactamente esta fecha en distintos años. Estrenos de canciones rancheras/banda/norteño/balada, nacimientos de Vicente Fernández, Juan Gabriel, Joan Sebastian, Ana Gabriel, Selena, Pedro Infante, etc., premios Lo Nuestro o Grammy Latino antiguos, fallecimientos memorables. NUNCA reggaetón moderno ni artistas urbanos jóvenes.",
+    "hot_take": "Dame 10 opiniones picantes pero RESPETUOSAS para debatir en Facebook (audiencia mujeres 40+ y hombres trabajadores). Temas que les muevan: las novelas modernas vs las clásicas, si los hijos respetan a los padres como antes, ranchera vs banda, Vicente vs Joan Sebastian, José José vs Camilo Sesto, si la música nueva ya no es como antes, recetas que se han perdido, modas que no entienden. NUNCA opiniones sobre reggaetón actual ni temas de jóvenes.",
+    "throwback": "Dame 10 canciones LATINAS icónicas perfectas para un Throwback que conecte con adultos 40+ (mujeres en su mayoría). SOLO de las décadas 70s, 80s, 90s y 2000s. Géneros: ranchera, banda, norteño, balada romántica, bolero, grupero, cumbia clásica. Ejemplos del tipo: 'Hermoso Cariño - Vicente Fernández', 'Tatuajes - Joan Sebastian', 'Costumbres - Rocío Dúrcal', 'Amor Eterno - Juan Gabriel', 'Si Una Vez - Selena', 'Te Quiero Mucho - Los Bukis'. Para cada una incluye el año. NUNCA Bad Bunny, Karol G, ni nada urbano moderno.",
+    "poll": "Dame 10 ideas de ENCUESTAS para Facebook (audiencia adulta 40+, mujeres + trabajadores). Temas que les apasionan: '¿Vicente o Joan Sebastian?', '¿Cuál es la mejor canción para llorar?', '¿Mole rojo o verde?', '¿Cuál novela clásica te marcó?', '¿Vacaciones en México o quedarse aquí?', '¿La cumbia se baila pegado o suelto?'. Cada idea es una pregunta concreta con 3-4 opciones cortas. NUNCA temas de música urbana moderna.",
+    "behind_scenes": "Dame 10 momentos AUTÉNTICOS de detrás de cámaras que un DJ de radio regional mexicana puede compartir (preparación del show, anécdotas con oyentes que llaman, dedicatorias graciosas, momento en que se le quebró la voz al poner una de Vicente, el reto de elegir la canción de cierre, cuando la abuelita llama a pedir 'Las Mañanitas'). Concretos, cálidos.",
+    "important_day": "Hoy es {today}. Dame 10 DÍAS IMPORTANTES o efemérides relevantes para la comunidad LATINA INMIGRANTE en EE.UU. en los próximos 60 días: días patrios mexicanos/centroamericanos, Día de las Madres mexicano (10 mayo), Día del Padre, Día del Niño, Día del Maestro, fiestas patronales, Día de Muertos, Día de la Virgen, aniversarios de artistas regionales fallecidos (Vicente Fernández, Juan Gabriel, Selena, Joan Sebastian, Jenni Rivera), Hispanic Heritage Month. Indica la fecha.",
+    "inspirational_quote": "Dame 10 IDEAS DE TEMAS para frases inspiradoras dirigidas a la comunidad latina trabajadora 40+ en EE.UU.: el sacrificio de los padres, las manos del trabajador del campo, las mamás que crían lejos de su pueblo, la fe en tiempos difíciles, llegar con nada y salir adelante, valores que enseñaron los abuelos, agradecer a Dios por el día. Solo el TEMA, no copies frases famosas.",
+    "musical_recommendation": "Dame 10 CANCIONES LATINAS CLÁSICAS (años 80s, 90s y 2000s) para recomendar al aire en una radio regional mexicana/romántica para audiencia 40+. Géneros: ranchera, banda, norteño, grupero, balada romántica, bolero, cumbia. Ejemplos del tipo: 'El Rey - Vicente Fernández', 'Tu Cárcel - Los Bukis', 'Costumbres - Rocío Dúrcal', 'Como Tú - Joan Sebastian', 'No Me Sé Rajar - Banda El Recodo', 'Mi Razón de Ser - Banda MS'. Para cada una incluye una razón corta de por qué pega con la audiencia. NUNCA recomiendes música urbana moderna (Bad Bunny, Karol G, etc.).",
     # ----- Sugerencias para plantillas locales -----
-    "birthday_shoutout": "Dame 10 ideas REALISTAS de saludos/dedicatorias que la radio latina recibe: cumpleaños, aniversarios, día de la madre/padre, abuelitos, recién nacidos, dedicatorias entre parejas, padrinos. Para cada idea inventa un nombre latino verosímil y una ocasión concreta.",
-    "local_business": "Dame 10 IDEAS de tipos de NEGOCIOS LATINOS típicos en el Pacífico Noroeste de EE.UU. (Dallas, Salem, Woodburn, Independence, Oregon) que vale la pena destacar al aire: taquerías, carnicerías, mecánicos, salones de belleza, panaderías, plomeros, abogados de inmigración, etc. Para cada uno inventa un nombre realista (estilo 'Carnicería Don José') y una historia corta.",
-    "abuela_recipe": "Dame 10 RECETAS TRADICIONALES de la cocina latina (México, Centroamérica, Caribe) ideales para post en radio: platillos de fiesta, comfort food, postres, antojitos. Para cada uno indica el platillo, una región o país de origen y un tip o secreto familiar concreto.",
-    "saints_calendar": "Hoy es {today}. Dame 10 DÍAS RELIGIOSOS, SANTOS o EFEMÉRIDES espirituales relevantes para la comunidad latina católica en los próximos 90 días (Virgen de Guadalupe, San Judas Tadeo, Sagrado Corazón, Posadas, Semana Santa, Día de Muertos, etc.). Para cada uno indica la fecha aproximada y una tradición concreta.",
-    "farm_voice": "Dame 10 TEMAS ÚTILES para trabajadores agrícolas hispanos del Pacífico Noroeste de EE.UU. (recolección de manzana, pera, blueberry, viñedo): derechos laborales, golpe de calor, salario justo, organizaciones (PCUN, CAUSA), pesticidas, clínicas, tax ID/ITIN, educación de hijos, refugios de invierno. Para cada uno propón un mensaje clave concreto y un recurso real si lo conoces.",
+    "birthday_shoutout": "Dame 10 ideas REALISTAS de saludos/dedicatorias que recibe una radio regional mexicana en Oregon (audiencia 40+): cumpleaños de Doña/Don, aniversarios de bodas de plata/oro, Día de la Madre, abuelitos cumpliendo años, dedicatorias del esposo a la esposa, padrinos de boda, mamá del cumpleañero pidiendo Mañanitas. Para cada idea inventa nombres latinos verosímiles (Doña Lupita, Don José, Doña Rosa) y una ocasión concreta.",
+    "local_business": "Dame 10 IDEAS de tipos de NEGOCIOS LATINOS familiares típicos en Oregon (Dallas, Salem, Woodburn, Independence) que la audiencia 40+ frecuenta: taquerías de toda la vida, carnicerías estilo mexicano, panaderías de pan dulce, tiendas de productos mexicanos, paleterías/neverías, salones de belleza para señoras, mecánicos honestos, abogados de inmigración, plomeros, joyerías de oro 14k, despachos de envíos a México. Para cada uno inventa un nombre realista (estilo 'Carnicería Don José') y una historia corta.",
+    "abuela_recipe": "Dame 10 RECETAS TRADICIONALES MEXICANAS y centroamericanas de toda la vida — las que las señoras de 40+ saben de memoria: pozole rojo, mole, tamales de elote/dulce/rajas, atole de avena/champurrado, sopes, gorditas, chiles en nogada, capirotada, arroz con leche, frijoles charros, caldo de res, birria, asado de boda, cochinita pibil, enchiladas suizas. Para cada uno indica el platillo, una región o país de origen y un secreto familiar concreto (la abuela siempre le ponía X, lo dejaba reposar Y, etc.).",
+    "saints_calendar": "Hoy es {today}. Dame 10 DÍAS RELIGIOSOS, SANTOS o EFEMÉRIDES católicas relevantes para la comunidad mexicana/centroamericana en los próximos 90 días (audiencia 40+ con fe muy presente): Virgen de Guadalupe (12 dic), San Judas Tadeo (28 cada mes y 28 oct), Virgen de San Juan de los Lagos, Sagrado Corazón, Posadas (16-24 dic), Semana Santa, Día de Muertos, Inmaculada Concepción (8 dic), Día de la Candelaria (2 feb), Virgen del Carmen (16 jul), Domingo de Ramos, Asunción de la Virgen (15 ago). Para cada uno indica la fecha y una tradición concreta mexicana.",
+    "farm_voice": "Dame 10 TEMAS ÚTILES para trabajadores agrícolas y de construcción hispanos del Pacífico Noroeste de EE.UU. (recolección de manzana, pera, blueberry, viñedo, cherry; obra negra/acabados): derechos laborales, golpe de calor, salario justo (overtime en Oregon), organizaciones (PCUN 503-981-2722, CAUSA Oregon), exposición a pesticidas, clínicas de salud comunitaria gratuitas/Salud Familiar, ITIN/tax ID para taxes, recursos para hijos de trabajadores, refugios de invierno, seguro de auto y de trabajo. Para cada uno propón un mensaje clave concreto y un recurso real si lo conoces.",
 }
 
 
@@ -1393,15 +1427,16 @@ async def dj_suggest(payload: SuggestIn, user: dict = Depends(get_dj)):
     ).format(today=today)
 
     system_msg = (
-        f"Eres asistente de contenido para la radio latina {station_name} (EE.UU., audiencia hispana). "
+        f"Eres asistente de contenido para la radio regional mexicana {station_name} (Oregon, EE.UU.). "
         f"Genera EXACTAMENTE 10 ideas para la plantilla '{tmpl['label']}'. "
         f"Cada idea debe completar estos campos: {fields_desc}.\n\n"
+        f"{AUDIENCE_PROFILE}\n"
         f"REGLAS DE SALIDA — IMPORTANTÍSIMO:\n"
         f"- Devuelve SOLAMENTE un JSON válido (un array de 10 objetos).\n"
         f"- NO uses bloques markdown, NO escribas texto antes ni después.\n"
         f"- Cada objeto tiene esta forma exacta:\n"
         f'  {{"title": "título descriptivo corto (max 90 chars)", "inputs": {{ {schema_example} }}}}\n'
-        f"- Valores en español. Las ideas deben ser CONCRETAS, no genéricas."
+        f"- Valores en español. Las ideas deben ser CONCRETAS, no genéricas, y ALINEADAS al perfil arriba."
     )
 
     try:

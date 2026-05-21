@@ -96,12 +96,22 @@ export default function DjStudio() {
   const onGenerateImage = async (draft) => {
     try {
       toast.info("Generando imagen con IA...");
-      await api.post("/dj/generate-image", {
+      const { data } = await api.post("/dj/generate-image", {
         draft_id: draft.id,
         aspect: "wide",
       });
+      // Optimistically update the draft in local state so the new image
+      // shows up immediately without waiting for another network round-trip.
+      if (data?.path) {
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id === draft.id ? { ...d, cover_image: data.path } : d,
+          ),
+        );
+      }
       toast.success("✨ Imagen generada");
-      await loadDrafts();
+      // Refetch in the background to sync any other fields (updated_at, etc.).
+      loadAll();
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Error al generar imagen");
     }

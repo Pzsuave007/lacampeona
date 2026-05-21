@@ -1522,8 +1522,9 @@ class GenerateImageIn(BaseModel):
 
 @api.post("/dj/generate-image")
 async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_dj)):
-    """Generates a unique cover image for a post using OpenAI gpt-image-1."""
-    from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+    """Generates a unique cover image for a post using Gemini Nano Banana."""
+    import base64 as _b64
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
 
     # Resolve prompt: explicit, or derive from draft's text
     prompt_text = (payload.prompt or "").strip()
@@ -1542,9 +1543,9 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
         raise HTTPException(status_code=400, detail="Falta prompt o draft con texto")
 
     aspect_hint = (
-        "wide cinematic 16:9 landscape composition with the main subject centered"
+        "wide cinematic 16:9 landscape composition, leave space at the top for a headline"
         if payload.aspect != "square"
-        else "perfect 1:1 square composition, main subject centered"
+        else "perfect 1:1 square composition centered"
     )
 
     full_prompt = (
@@ -1552,7 +1553,7 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
         f"(KWIP, Dallas Oregon). Topic: {prompt_text}\n\n"
         f"Style: vibrant photo-illustration, latin culture friendly, warm red/orange/amber palette, "
         f"high quality, editorial magazine style, ready for Facebook/Instagram sharing. "
-        f"{aspect_hint}. NO text or letters in the image."
+        f"{aspect_hint}. No text or letters in the image."
     )
 
     api_key = os.getenv("EMERGENT_LLM_KEY")
@@ -1560,22 +1561,27 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
         raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no está configurada")
 
     try:
-        image_gen = OpenAIImageGeneration(api_key=api_key)
-        images = await image_gen.generate_images(
-            prompt=full_prompt,
-            model="gpt-image-1",
-            number_of_images=1,
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"img-{uuid.uuid4()}",
+            system_message="You generate eye-catching cover images for a Spanish-language radio station.",
         )
+        chat.with_model("gemini", "gemini-3.1-flash-image-preview").with_params(
+            modalities=["image", "text"]
+        )
+        msg = UserMessage(text=full_prompt)
+        _, images = await chat.send_message_multimodal_response(msg)
     except Exception as e:
-        logger.error("OpenAI image generation failed: %s", e)
-        raise HTTPException(status_code=502, detail=f"Error al generar imagen: {str(e)[:160]}")
+        logger.error("Gemini image generation failed: %s", e)
+        raise HTTPException(status_code=502, detail=f"Error al generar imagen: {str(e)[:120]}")
 
     if not images:
         raise HTTPException(status_code=502, detail="No se recibió imagen del modelo")
 
-    image_bytes = images[0]
-    content_type = "image/png"
-    ext = "png"
+    img = images[0]
+    image_bytes = _b64.b64decode(img["data"])
+    content_type = img.get("mime_type") or "image/png"
+    ext = "png" if "png" in content_type else "jpg"
 
     # Store in Emergent Object Storage (same path scheme as /admin/upload)
     storage_path = f"{APP_NAME}/banners/{uuid.uuid4()}.{ext}"
@@ -1588,7 +1594,7 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
         "content_type": content_type,
         "size": result.get("size", len(image_bytes)),
         "is_deleted": False,
-        "source": "ai_generated_openai",
+        "source": "ai_generated",
         "created_at": now_iso(),
     })
 

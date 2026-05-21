@@ -1754,16 +1754,18 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
 # ============================================================
 @api.get("/posts/recent")
 async def posts_recent(limit: int = 6):
-    """Recent published posts for 'related posts' sidebar/footer."""
+    """Recent published posts. Used both by 'related posts' sidebars and the
+    public /blog listing page (with larger limit)."""
+    capped = min(max(limit, 1), 100)
     cursor = (
         db.content_drafts.find(
             {"status": "published", "slug": {"$exists": True, "$ne": ""}},
             {"_id": 0, "text": 1, "title": 1, "slug": 1, "cover_image": 1, "created_at": 1, "host_slug": 1, "template_type": 1, "views_count": 1},
         )
         .sort("created_at", -1)
-        .limit(min(limit, 24))
+        .limit(capped)
     )
-    return await cursor.to_list(limit)
+    return await cursor.to_list(capped)
 
 
 @api.get("/posts/{slug}")

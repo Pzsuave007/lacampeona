@@ -56,6 +56,9 @@ export default function Navbar() {
           <NavLink to="/eventos" className={linkClass} data-testid="nav-eventos-link">
             <span className="inline-flex items-center gap-1">📅 {lang === "es" ? "Eventos" : "Events"}</span>
           </NavLink>
+          <NavLink to="/blog" className={linkClass} data-testid="nav-blog-link">
+            <span className="inline-flex items-center gap-1">📰 Blog</span>
+          </NavLink>
           <NavLink to="/advertisers" className={linkClass} data-testid="nav-advertisers-link">
             {t.nav.advertisers}
           </NavLink>
@@ -135,6 +138,9 @@ export default function Navbar() {
             </NavLink>
             <NavLink to="/eventos" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-eventos">
               📅 {lang === "es" ? "Eventos" : "Events"}
+            </NavLink>
+            <NavLink to="/blog" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-blog">
+              📰 Blog
             </NavLink>
             <NavLink to="/advertisers" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-advertisers">
               {t.nav.advertisers}

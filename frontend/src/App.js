@@ -22,6 +22,7 @@ import EventoLanding from "@/pages/EventoLanding";
 import ReportePublic from "@/pages/ReportePublic";
 import DjStudio from "@/pages/DjStudio";
 import DjComposerPage from "@/pages/DjComposerPage";
+import Blog from "@/pages/Blog";
 import SuperAdmin from "@/pages/SuperAdmin";
 import Post from "@/pages/Post";
 
@@ -39,6 +40,7 @@ function App() {
                   <Route path="/mundial" element={<Mundial />} />
                   <Route path="/anuncia" element={<Anuncia />} />
                   <Route path="/eventos" element={<Eventos />} />
+                  <Route path="/blog" element={<Blog />} />
                   <Route path="/eventos/:slug" element={<EventoLanding />} />
                   <Route path="/reporte/:token" element={<ReportePublic />} />
                   <Route path="/advertisers" element={<AdvertisersList />} />

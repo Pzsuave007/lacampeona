@@ -177,6 +177,48 @@ def slugify(text: str, max_len: int = 60) -> str:
     return s[:max_len].rstrip("-") or str(uuid.uuid4())[:8]
 
 
+# Spanish + English stop words to drop from generated post slugs so URLs stay short.
+SLUG_STOPWORDS = {
+    # Spanish
+    "a", "al", "ante", "aqui", "asi", "bajo", "cada", "como", "con", "contra",
+    "cual", "cuando", "de", "del", "desde", "donde", "dos", "el", "ella", "ellas",
+    "ellos", "en", "entre", "era", "eres", "es", "esa", "esas", "ese", "eso",
+    "esos", "esta", "estaba", "estamos", "estan", "estar", "estas", "este",
+    "esto", "estos", "fue", "ha", "haber", "habia", "han", "hasta", "hay",
+    "la", "las", "le", "les", "lo", "los", "mas", "me", "mi", "muy", "ni",
+    "no", "nos", "o", "para", "pero", "poco", "por", "porque", "que", "quien",
+    "quienes", "se", "sea", "ser", "si", "sin", "sobre", "solo", "son", "soy",
+    "su", "sus", "tan", "te", "ti", "todo", "todos", "tu", "tus", "un", "una",
+    "unas", "uno", "unos", "y", "ya", "yo",
+    # English
+    "the", "a", "an", "and", "or", "but", "of", "in", "on", "at", "to", "for",
+    "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+    "do", "does", "did", "will", "would", "could", "should", "this", "that",
+    "these", "those", "my", "your", "his", "her", "its", "our", "their",
+}
+
+
+def slugify_short(text: str, max_len: int = 35) -> str:
+    """Generate a compact slug by dropping stop words and capping length.
+    Keeps the slug human-readable but URL-friendly (~3-5 meaningful words max).
+    """
+    if not text:
+        return ""
+    raw = slugify(text, max_len=200)  # accent-stripped, lowercase, dash-joined
+    if not raw:
+        return ""
+    parts = [p for p in raw.split("-") if p and p not in SLUG_STOPWORDS]
+    out: list[str] = []
+    length = 0
+    for p in parts:
+        add = (1 if out else 0) + len(p)  # account for the joining dash
+        if length + add > max_len:
+            break
+        out.append(p)
+        length += add
+    return "-".join(out) or raw[:max_len].rstrip("-")
+
+
 def strip_dj_labels(text: str) -> str:
     """Remove internal AI section labels [CAPTION] / [HASHTAGS] / [CTA] from DJ post text.
     Also drops trailing hashtag lines so the caption portion stays focused.
@@ -1481,7 +1523,7 @@ async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
         now = now_iso()
         # Generate unique slug from text (strip internal [CAPTION]/[HASHTAGS]/[CTA] labels first)
         slug_source = caption_only(text)[:80] or "post"
-        base_slug = slugify(slug_source) or "post"
+        base_slug = slugify_short(slug_source) or "post"
         slug_candidate = base_slug
         n = 0
         while await db.content_drafts.find_one({"slug": slug_candidate}, {"_id": 0}):
@@ -1528,9 +1570,9 @@ async def dj_create_draft(payload: ContentDraftIn, user: dict = Depends(get_dj))
     now = now_iso()
 
     # Auto-generate unique URL slug from title or first sentence of text
-    # (strip internal [CAPTION]/[HASHTAGS]/[CTA] labels first)
+    # (strip internal [CAPTION]/[HASHTAGS]/[CTA] labels first, then drop stop words)
     raw_base = payload.title or (caption_only(payload.text or "")[:80] if payload.text else "post")
-    base_slug = slugify(raw_base) or "post"
+    base_slug = slugify_short(raw_base) or "post"
     # Ensure uniqueness: append short suffix if needed
     slug_candidate = base_slug
     n = 0

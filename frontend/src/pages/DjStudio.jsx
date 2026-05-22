@@ -395,6 +395,7 @@ export function Composer({ mode, initial, templates, onClose, onSaved }) {
   const [text, setText] = useState(editing?.text || "");
   const [status, setStatus] = useState(editing?.status || "draft");
   const [scheduledAt, setScheduledAt] = useState((editing?.scheduled_at || "").slice(0, 10));
+  const [fbPostUrl, setFbPostUrl] = useState(editing?.fb_post_url || "");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [variantTone, setVariantTone] = useState("");
@@ -458,7 +459,13 @@ export function Composer({ mode, initial, templates, onClose, onSaved }) {
     setSaving(true);
     try {
       if (editing) {
-        await api.patch(`/dj/drafts/${initial.id}`, { text, platform, status, scheduled_at: scheduledAt || "" });
+        await api.patch(`/dj/drafts/${initial.id}`, {
+          text,
+          platform,
+          status,
+          scheduled_at: scheduledAt || "",
+          fb_post_url: fbPostUrl.trim(),
+        });
       } else {
         await api.post("/dj/drafts", {
           template_type: tmpl.key,
@@ -467,6 +474,7 @@ export function Composer({ mode, initial, templates, onClose, onSaved }) {
           platform,
           status,
           scheduled_at: scheduledAt || "",
+          fb_post_url: fbPostUrl.trim(),
         });
       }
       toast.success("Guardado");
@@ -656,6 +664,25 @@ export function Composer({ mode, initial, templates, onClose, onSaved }) {
                 <label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Programar (opcional)</label>
                 <input data-testid="dj-scheduled-at" type="date" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-slate-200" />
               </div>
+            </div>
+
+            {/* Facebook post URL — to embed the FB post + comments on the public page */}
+            <div className="rounded-2xl border-2 border-[#1877F2]/30 bg-blue-50/50 p-4">
+              <label className="text-xs font-bold uppercase tracking-[0.2em] text-[#1877F2] flex items-center gap-2">
+                <span>📘</span> Link del post de Facebook (opcional)
+              </label>
+              <input
+                data-testid="dj-fb-post-url"
+                type="url"
+                value={fbPostUrl}
+                onChange={(e) => setFbPostUrl(e.target.value)}
+                placeholder="https://www.facebook.com/photo/?fbid=... o https://www.facebook.com/lacampeona/posts/..."
+                className="mt-2 w-full px-3 py-2 rounded-xl border-2 border-blue-200 focus:border-[#1877F2] focus:outline-none text-sm font-mono"
+              />
+              <p className="text-[11px] text-slate-600 mt-1.5">
+                Después de publicar en Facebook, copia el link del post y pégalo aquí. El post aparecerá embebido en la página
+                con sus comentarios reales de Facebook.
+              </p>
             </div>
             <div className="flex items-center gap-2 pt-2">
               {!editing && (

@@ -244,23 +244,38 @@ export default function Post() {
           <FeaturedAdvertiser advertiser={advertiser} lang={lang} />
         )}
 
-        {/* Facebook comments embed */}
+        {/* Embedded Facebook post + its real comments */}
         {post?.fb_post_url && (
-          <section className="mt-10">
+          <section className="mt-10" data-testid="fb-post-section">
             <h3 className="text-lg font-black text-slate-900 mb-3 inline-flex items-center gap-2">
               <Facebook className="w-5 h-5 text-[#1877F2]" />
-              {lang === "es" ? "Comentarios" : "Comments"}
+              {lang === "es" ? "Ver en Facebook" : "See on Facebook"}
             </h3>
             <div id="fb-root" />
-            <div
-              ref={fbRef}
-              className="fb-comments bg-white rounded-2xl p-4 border border-slate-200"
-              data-href={post.fb_post_url}
-              data-width="100%"
-              data-numposts="10"
-              data-order-by="reverse_time"
-              data-testid="fb-comments-embed"
-            />
+            <div className="fb-post-wrap flex justify-center bg-slate-100 rounded-2xl p-3 border border-slate-200 overflow-hidden">
+              <div
+                ref={fbRef}
+                className="fb-post"
+                data-href={post.fb_post_url}
+                data-width="500"
+                data-show-text="true"
+                data-testid="fb-post-embed"
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-2 text-center">
+              {lang === "es"
+                ? "Si no carga, abre el post directo en Facebook"
+                : "If it doesn't load, open the post directly on Facebook"}{" "}
+              <a
+                href={post.fb_post_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-[#1877F2] hover:underline"
+              >
+                {lang === "es" ? "aquí" : "here"}
+              </a>
+              .
+            </p>
           </section>
         )}
 

@@ -2035,6 +2035,357 @@ async def super_rotate_token(entity_type: str, entity_id: str, _: dict = Depends
     return {"ok": True, "report_token": new_token}
 
 
+# ---------------------- World Cup 2026 Bracket / Quiniela ---------------------- #
+# A public engagement contest: users submit predictions (Quick Pick or Pro mode),
+# admin sets the official results as games unfold, and scores are recalculated on
+# every read. Driven by /api/bracket/* endpoints and /quiniela frontend routes.
+#
+# Scoring (Quick Pick, max 100 pts):
+#   - Champion correct                  -> 25 pts
+#   - Runner-up correct                 -> 15 pts
+#   - Each other semifinalist correct   -> 10 pts (any order)
+#   - Top scorer (Pichichi) correct     -> 15 pts
+#   - Final score EXACT (home + away)   -> 20 pts (or 5 pts for correct winner)
+#   - Mexico advances to quarters Y/N   ->  5 pts
+#
+# Pro mode adds: bonus +1 per correct group winner (12 groups -> max +12),
+# +2 per correct Round of 16 advancer (16 picks -> max +32), +3 per correct
+# quarter-finalist (8 picks -> max +24). Pro max is 100 + 68 = 168.
+
+WORLD_CUP_2026_TEAMS = [
+    # Hosts (auto-qualified)
+    "México", "Estados Unidos", "Canadá",
+    # Most traditional powers / likely qualifiers (alphabetical for the dropdown)
+    "Alemania", "Arabia Saudita", "Argelia", "Argentina", "Australia",
+    "Austria", "Bélgica", "Bolivia", "Brasil", "Camerún", "Catar",
+    "Chile", "Colombia", "Corea del Sur", "Costa de Marfil", "Costa Rica",
+    "Croacia", "Dinamarca", "Ecuador", "Egipto", "El Salvador",
+    "Escocia", "Eslovaquia", "España", "Francia", "Gales", "Ghana",
+    "Grecia", "Guatemala", "Honduras", "Hungría", "Inglaterra",
+    "Irak", "Irán", "Irlanda", "Israel", "Italia", "Jamaica", "Japón",
+    "Marruecos", "Nigeria", "Noruega", "Países Bajos", "Panamá",
+    "Paraguay", "Perú", "Polonia", "Portugal", "República Checa",
+    "República Dominicana", "Senegal", "Serbia", "Sudáfrica", "Suecia",
+    "Suiza", "Trinidad y Tobago", "Túnez", "Turquía", "Ucrania",
+    "Uruguay", "Uzbekistán", "Venezuela",
+]
+
+# Popular forwards likely to be Pichichi candidates in 2026.
+WORLD_CUP_2026_PICHICHI_CANDIDATES = [
+    "Lionel Messi (Argentina)",
+    "Kylian Mbappé (Francia)",
+    "Erling Haaland (Noruega) — si clasifica",
+    "Harry Kane (Inglaterra)",
+    "Cristiano Ronaldo (Portugal)",
+    "Vinícius Júnior (Brasil)",
+    "Rodrygo (Brasil)",
+    "Lautaro Martínez (Argentina)",
+    "Julián Álvarez (Argentina)",
+    "Santiago Giménez (México)",
+    "Raúl Jiménez (México)",
+    "Hirving Lozano (México)",
+    "Luis Suárez (Uruguay)",
+    "Darwin Núñez (Uruguay)",
+    "Jhon Durán (Colombia)",
+    "Luis Díaz (Colombia)",
+    "James Rodríguez (Colombia)",
+    "Otro (escribe en comentario)",
+]
+
+
+class BracketQuickPicks(BaseModel):
+    champion: str = ""
+    runner_up: str = ""
+    semi_final_3: str = ""  # other semifinalist (any order)
+    semi_final_4: str = ""
+    top_scorer: str = ""
+    final_score_home: Optional[int] = None
+    final_score_away: Optional[int] = None
+    mexico_to_quarters: Optional[bool] = None
+    favorite_mx_player: str = ""
+
+
+class BracketProPicks(BaseModel):
+    # 12 group winners (one team per group A..L)
+    group_winners: dict = {}      # {"A": "México", "B": "Argentina", ...}
+    round_of_16: List[str] = []   # 16 teams advancing from R32 to R16
+    quarter_finalists: List[str] = []  # 8 teams in QF
+    third_place: str = ""         # winner of 3rd place match
+
+
+class BracketSubmitIn(BaseModel):
+    mode: str = "quick"  # "quick" | "pro"
+    name: str
+    city: str
+    email: EmailStr
+    whatsapp: Optional[str] = ""
+    picks_quick: BracketQuickPicks
+    picks_pro: Optional[BracketProPicks] = None
+    accept_rules: bool = False
+
+
+class BracketOfficialResults(BaseModel):
+    champion: str = ""
+    runner_up: str = ""
+    semi_finalists: List[str] = []  # the 2 other semifinalists (NOT champion/runner-up)
+    top_scorer: str = ""
+    final_score_home: Optional[int] = None
+    final_score_away: Optional[int] = None
+    mexico_to_quarters: Optional[bool] = None
+    # Pro mode
+    group_winners: dict = {}
+    round_of_16: List[str] = []
+    quarter_finalists: List[str] = []
+    third_place: str = ""
+
+
+class BracketSettingsIn(BaseModel):
+    sponsor_advertiser_id: Optional[str] = ""
+    sponsor_name: Optional[str] = ""
+    prize_description: Optional[str] = ""
+    contest_status: Optional[str] = "open"  # open | locked | closed
+    winner_prediction_id: Optional[str] = ""
+
+
+def _norm(s: str) -> str:
+    """Normalize string for comparison (lowercase, strip accents)."""
+    import unicodedata
+    if not s:
+        return ""
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", s.lower().strip())
+        if not unicodedata.combining(c)
+    )
+
+
+def _score_prediction(pred: dict, results: dict) -> int:
+    """Compute total score for one prediction given the official results dict.
+    Both `pred` and `results` are plain dicts as stored in Mongo."""
+    score = 0
+    pq = (pred.get("picks_quick") or {})
+    rq = results or {}
+
+    # ----- Quick Pick scoring -----
+    if pq.get("champion") and _norm(pq["champion"]) == _norm(rq.get("champion")):
+        score += 25
+    if pq.get("runner_up") and _norm(pq["runner_up"]) == _norm(rq.get("runner_up")):
+        score += 15
+
+    # other 2 semifinalists (any order, ignoring champ + runner up if accidentally listed there)
+    real_semis = {_norm(x) for x in (rq.get("semi_finalists") or []) if x}
+    my_semis = {_norm(x) for x in [pq.get("semi_final_3"), pq.get("semi_final_4")] if x}
+    score += 10 * len(real_semis & my_semis)
+
+    if pq.get("top_scorer") and _norm(pq["top_scorer"]) == _norm(rq.get("top_scorer")):
+        score += 15
+
+    # Final score
+    rs_h, rs_a = rq.get("final_score_home"), rq.get("final_score_away")
+    ps_h, ps_a = pq.get("final_score_home"), pq.get("final_score_away")
+    if rs_h is not None and rs_a is not None and ps_h is not None and ps_a is not None:
+        if rs_h == ps_h and rs_a == ps_a:
+            score += 20
+        else:
+            # Correct winner side (without exact score)
+            rs_winner = "home" if rs_h > rs_a else "away" if rs_a > rs_h else "draw"
+            ps_winner = "home" if ps_h > ps_a else "away" if ps_a > ps_h else "draw"
+            if rs_winner == ps_winner:
+                score += 5
+
+    # México to quarters
+    if pq.get("mexico_to_quarters") is not None and rq.get("mexico_to_quarters") is not None:
+        if bool(pq["mexico_to_quarters"]) == bool(rq["mexico_to_quarters"]):
+            score += 5
+
+    # ----- Pro mode bonus -----
+    if pred.get("mode") == "pro":
+        pp = (pred.get("picks_pro") or {})
+        # group winners (+1 each, max 12)
+        for gid, pick_team in (pp.get("group_winners") or {}).items():
+            real = (rq.get("group_winners") or {}).get(gid)
+            if real and _norm(real) == _norm(pick_team):
+                score += 1
+        # round of 16 (+2 each, max 32)
+        real_r16 = {_norm(x) for x in (rq.get("round_of_16") or []) if x}
+        my_r16 = {_norm(x) for x in (pp.get("round_of_16") or []) if x}
+        score += 2 * len(real_r16 & my_r16)
+        # quarter-finalists (+3 each, max 24)
+        real_qf = {_norm(x) for x in (rq.get("quarter_finalists") or []) if x}
+        my_qf = {_norm(x) for x in (pp.get("quarter_finalists") or []) if x}
+        score += 3 * len(real_qf & my_qf)
+
+    return score
+
+
+async def _get_bracket_results() -> dict:
+    doc = await db.bracket_results.find_one({"id": "official_results"}, {"_id": 0})
+    return doc or {}
+
+
+async def _get_bracket_settings() -> dict:
+    doc = await db.bracket_settings.find_one({"id": "bracket_settings"}, {"_id": 0})
+    if not doc:
+        doc = {
+            "id": "bracket_settings",
+            "sponsor_advertiser_id": "",
+            "sponsor_name": "",
+            "prize_description": "Premio sorpresa cortesía de La Campeona 880 AM",
+            "contest_status": "open",
+            "winner_prediction_id": "",
+            "updated_at": now_iso(),
+        }
+        await db.bracket_settings.insert_one(doc.copy())
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+
+# ---- Public endpoints ----
+
+@api.get("/bracket/meta")
+async def bracket_meta():
+    """Returns the static reference data needed to build the public form."""
+    return {
+        "teams": WORLD_CUP_2026_TEAMS,
+        "pichichi_candidates": WORLD_CUP_2026_PICHICHI_CANDIDATES,
+        "group_ids": list("ABCDEFGHIJKL"),  # 12 groups in 2026
+    }
+
+
+@api.get("/bracket/settings")
+async def bracket_settings_public():
+    s = await _get_bracket_settings()
+    # Expose sponsor data even if linked to advertiser
+    if s.get("sponsor_advertiser_id"):
+        adv = await db.advertisers.find_one({"id": s["sponsor_advertiser_id"]}, {"_id": 0})
+        if adv:
+            s["sponsor"] = strip_private(adv)
+    return s
+
+
+@api.post("/bracket/submit")
+async def bracket_submit(payload: BracketSubmitIn, request: Request):
+    if not payload.accept_rules:
+        raise HTTPException(status_code=400, detail="Debes aceptar las reglas.")
+
+    settings = await _get_bracket_settings()
+    if settings.get("contest_status") != "open":
+        raise HTTPException(status_code=403, detail="La quiniela ya está cerrada.")
+
+    # Rate-limit: one prediction per email (overwrite if same email submits again).
+    email_norm = payload.email.lower().strip()
+    existing = await db.bracket_predictions.find_one({"email": email_norm}, {"_id": 0})
+
+    now = now_iso()
+    edit_token = uuid.uuid4().hex
+    ip_hash = ""
+    try:
+        ip = request.client.host if request.client else ""
+        import hashlib
+        ip_hash = hashlib.sha256(ip.encode()).hexdigest()[:16] if ip else ""
+    except Exception:
+        pass
+
+    doc = {
+        "id": existing["id"] if existing else str(uuid.uuid4()),
+        "mode": payload.mode if payload.mode in ("quick", "pro") else "quick",
+        "name": payload.name.strip()[:80],
+        "city": payload.city.strip()[:60],
+        "email": email_norm,
+        "whatsapp": (payload.whatsapp or "").strip()[:30],
+        "picks_quick": payload.picks_quick.model_dump(),
+        "picks_pro": payload.picks_pro.model_dump() if payload.picks_pro else None,
+        "score": 0,
+        "ip_hash": ip_hash,
+        "edit_token": existing.get("edit_token") if existing else edit_token,
+        "created_at": existing.get("created_at") if existing else now,
+        "updated_at": now,
+    }
+
+    # Re-score against current official results (likely 0 if not started)
+    results = await _get_bracket_results()
+    doc["score"] = _score_prediction(doc, results)
+
+    if existing:
+        await db.bracket_predictions.update_one({"id": existing["id"]}, {"$set": doc})
+    else:
+        await db.bracket_predictions.insert_one(doc.copy())
+
+    return {
+        "id": doc["id"],
+        "edit_token": doc["edit_token"],
+        "mode": doc["mode"],
+        "score": doc["score"],
+    }
+
+
+@api.get("/bracket/leaderboard")
+async def bracket_leaderboard(limit: int = 100):
+    cap = min(max(limit, 1), 500)
+    # Sort by score desc, then created_at asc (first-come tiebreaker)
+    cursor = db.bracket_predictions.find(
+        {},
+        {"_id": 0, "id": 1, "name": 1, "city": 1, "mode": 1, "score": 1, "created_at": 1},
+    ).sort([("score", -1), ("created_at", 1)]).limit(cap)
+    rows = await cursor.to_list(cap)
+    return {"total": await db.bracket_predictions.count_documents({}), "rows": rows}
+
+
+@api.get("/bracket/me")
+async def bracket_me(token: str):
+    if not token:
+        raise HTTPException(status_code=400, detail="Token requerido")
+    doc = await db.bracket_predictions.find_one({"edit_token": token}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    return doc
+
+
+# ---- Admin endpoints ----
+
+@api.get("/bracket/admin/predictions")
+async def bracket_admin_list(user: dict = Depends(get_admin)):
+    cursor = db.bracket_predictions.find({}, {"_id": 0}).sort("score", -1)
+    rows = await cursor.to_list(2000)
+    return rows
+
+
+@api.get("/bracket/admin/results")
+async def bracket_admin_get_results(user: dict = Depends(get_admin)):
+    return await _get_bracket_results()
+
+
+@api.put("/bracket/admin/results")
+async def bracket_admin_set_results(payload: BracketOfficialResults, user: dict = Depends(get_admin)):
+    now = now_iso()
+    doc = payload.model_dump()
+    doc["id"] = "official_results"
+    doc["updated_at"] = now
+    await db.bracket_results.update_one({"id": "official_results"}, {"$set": doc}, upsert=True)
+    # Recalculate every prediction's score
+    await _recalculate_all_scores()
+    return {"ok": True, "results": doc}
+
+
+async def _recalculate_all_scores():
+    results = await _get_bracket_results()
+    async for pred in db.bracket_predictions.find({}, {"_id": 0}):
+        new_score = _score_prediction(pred, results)
+        if new_score != pred.get("score"):
+            await db.bracket_predictions.update_one(
+                {"id": pred["id"]}, {"$set": {"score": new_score}}
+            )
+
+
+@api.put("/bracket/admin/settings")
+async def bracket_admin_set_settings(payload: BracketSettingsIn, user: dict = Depends(get_admin)):
+    now = now_iso()
+    update = {k: v for k, v in payload.model_dump().items() if v is not None}
+    update["updated_at"] = now
+    await db.bracket_settings.update_one(
+        {"id": "bracket_settings"}, {"$set": update}, upsert=True
+    )
+    return await _get_bracket_settings()
+
+
 # ---------------------- Seeding ---------------------- #
 async def seed_admin():
     email = os.environ.get("ADMIN_EMAIL", "admin@radiolatina.fm").lower()

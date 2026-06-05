@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Plus, Pencil, Trash2, Power, Save, Settings, Sparkles, Music, Mic2, Calendar, CalendarDays, BarChart3, Copy, Eye, MousePointerClick, TrendingUp, Image as ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
@@ -198,6 +198,17 @@ export default function AdminDashboard() {
           {t.admin.title}
         </h1>
         <p className="text-slate-600 mt-2">{t.admin.subtitle}</p>
+
+        {/* Quick admin shortcuts */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            to="/admin/bracket"
+            data-testid="admin-bracket-link"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold rounded-full px-4 py-2 text-sm transition active:scale-95 shadow-md"
+          >
+            🏆 Quiniela del Mundial 2026
+          </Link>
+        </div>
 
         {/* Tabs */}
         <div className="mt-8 flex flex-wrap gap-2 border-b border-slate-200">

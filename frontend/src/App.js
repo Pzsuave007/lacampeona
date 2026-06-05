@@ -23,6 +23,9 @@ import ReportePublic from "@/pages/ReportePublic";
 import DjStudio from "@/pages/DjStudio";
 import DjComposerPage from "@/pages/DjComposerPage";
 import Blog from "@/pages/Blog";
+import Quiniela from "@/pages/Quiniela";
+import QuinielaLeaderboard from "@/pages/QuinielaLeaderboard";
+import AdminBracket from "@/pages/AdminBracket";
 import SuperAdmin from "@/pages/SuperAdmin";
 import Post from "@/pages/Post";
 
@@ -41,6 +44,9 @@ function App() {
                   <Route path="/anuncia" element={<Anuncia />} />
                   <Route path="/eventos" element={<Eventos />} />
                   <Route path="/blog" element={<Blog />} />
+                  <Route path="/quiniela" element={<Quiniela />} />
+                  <Route path="/quiniela/leaderboard" element={<QuinielaLeaderboard />} />
+                  <Route path="/admin/bracket" element={<AdminBracket />} />
                   <Route path="/eventos/:slug" element={<EventoLanding />} />
                   <Route path="/reporte/:token" element={<ReportePublic />} />
                   <Route path="/advertisers" element={<AdvertisersList />} />

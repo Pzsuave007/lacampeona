@@ -59,6 +59,9 @@ export default function Navbar() {
           <NavLink to="/blog" className={linkClass} data-testid="nav-blog-link">
             <span className="inline-flex items-center gap-1">📰 Blog</span>
           </NavLink>
+          <NavLink to="/quiniela" className={linkClass} data-testid="nav-quiniela-link">
+            <span className="inline-flex items-center gap-1">🏆 Quiniela</span>
+          </NavLink>
           <NavLink to="/advertisers" className={linkClass} data-testid="nav-advertisers-link">
             {t.nav.advertisers}
           </NavLink>
@@ -141,6 +144,9 @@ export default function Navbar() {
             </NavLink>
             <NavLink to="/blog" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-blog">
               📰 Blog
+            </NavLink>
+            <NavLink to="/quiniela" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-quiniela">
+              🏆 Quiniela
             </NavLink>
             <NavLink to="/advertisers" onClick={() => setOpen(false)} className={linkClass} data-testid="nav-mobile-advertisers">
               {t.nav.advertisers}

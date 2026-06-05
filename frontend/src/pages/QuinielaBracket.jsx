@@ -94,15 +94,21 @@ function matchThirdsToSlots(thirds, slots) {
 // group standings and chosen best-thirds.
 function buildR32Matchups(groupPositions, bestThirds) {
   const groupOfThird = {};
+  const validThirds = new Set();
   for (const [g, teams] of Object.entries(groupPositions)) {
-    if (teams && teams[2]) groupOfThird[teams[2]] = g;
+    if (teams && teams[2]) { groupOfThird[teams[2]] = g; validThirds.add(teams[2]); }
   }
   const thirdSlots = [];
   R32_SLOTS.forEach(([home, away], i) => {
     if (home.t === "t") thirdSlots.push({ i, side: 0, groups: home.groups });
     if (away.t === "t") thirdSlots.push({ i, side: 1, groups: away.groups });
   });
-  const thirds = bestThirds.filter(Boolean).map((team) => ({ team, g: groupOfThird[team] }));
+  // Only use teams that are CURRENTLY a 3rd-place team of their group. This
+  // prevents a stale pick (e.g. a team later moved to 1st/2nd) from showing up
+  // twice in the bracket.
+  const thirds = bestThirds
+    .filter((t) => t && validThirds.has(t))
+    .map((team) => ({ team, g: groupOfThird[team] }));
   const assigned = matchThirdsToSlots(thirds, thirdSlots);
   const resolve = (spec, key) => {
     if (spec.t === "w") return (groupPositions[spec.g] || [])[0];
@@ -194,6 +200,17 @@ export default function QuinielaBracket() {
     }
     return out;
   }, [groupPositions]);
+
+  // Keep selected best-thirds in sync with the current standings: if a group is
+  // reordered so a previously-chosen 3rd is no longer a 3rd place team, drop it
+  // (prevents a team appearing twice in the bracket and keeps the 8/8 count real).
+  useEffect(() => {
+    const valid = new Set(thirdPlaceTeams);
+    setBestThirds((arr) => {
+      const filtered = arr.filter((t) => valid.has(t));
+      return filtered.length === arr.length ? arr : filtered;
+    });
+  }, [thirdPlaceTeams]);
 
   // 16 Round-of-32 matchups (pairs of team names) following the official
   // FIFA 2026 bracket structure (group winners / runners-up / best thirds).

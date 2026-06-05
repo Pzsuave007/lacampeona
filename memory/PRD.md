@@ -153,3 +153,13 @@ Cada plantilla incluye su `SUGGESTION_PROMPT` ajustado al Pacífico NW (Dallas/S
 - New `/app/frontend/src/components/Footer.jsx` (bilingual ES/EN) with copyright + link to https://uni2mkt.com ("Uni2 Marketing Group").
 - Wired into `App.js` — visible on all routes above the sticky RadioPlayer.
 - Built for prod via `bash build-for-prod.sh` (fixed `grep -oc` bug in the verification step).
+
+### World Cup Bracket — Visual Tournament Tree (Jun 2026)
+- Refactored `/quiniela/bracket` (`QuinielaBracket.jsx`) from a step-by-step knockout wizard into a single interactive **visual tournament tree**.
+- Flow: `Tus datos → Grupos → Mejores 3os → Bracket (árbol) → Compartir`.
+- **Desktop (≥1024px)**: two-sided bracket converging to a central Final (recursive `renderHalf`, "]" connectors). **Mobile**: rounds stacked vertically (32avos→Final). A single layout is rendered per viewport via a `useIsDesktop()` matchMedia hook (no duplicate DOM/testids).
+- Tap a team in any match to advance it; `pickWinner` + `sanitize` auto-populate the next round and cascade-clear downstream picks when an earlier pick changes. Champion banner updates live.
+- Backend payload unchanged (`/api/bracket/submit`, mode `pro`, picks_quick + picks_pro).
+- Fixed a build blocker: the `emergentbase-visual-edits` babel plugin stack-overflowed on a self-referencing recursive JSX component — solved by converting it to a plain recursive function (`renderHalf`).
+- Validated end-to-end by testing agent (iteration_7); rebuilt prod bundle via `bash build-for-prod.sh`.
+

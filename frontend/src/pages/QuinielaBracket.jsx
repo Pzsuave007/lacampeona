@@ -27,6 +27,22 @@ const PREV_ROUND = { sf: "qf", qf: "r16", r16: "r32" };
 const ROUND_LABEL = { r32: "32avos", r16: "Octavos", qf: "Cuartos", sf: "Semis", final: "Final" };
 const ROUND_MATCHES = { r32: 16, r16: 8, qf: 4, sf: 2 };
 
+// Render only one bracket layout (desktop tree OR mobile stack) instead of
+// mounting both and CSS-hiding one — avoids duplicated DOM + duplicated testids.
+function useIsDesktop() {
+  const query = "(min-width: 1024px)";
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
+
 export default function QuinielaBracket() {
   const navigate = useNavigate();
   const [meta, setMeta] = useState(null);
@@ -406,6 +422,7 @@ function renderHalf(round, idx, mirror, mc) {
 
 function StepBracket({ getParts, getWinner, pickWinner, finalPicks, setFinalPicks, qf, sf, pichi }) {
   const mc = { getParts, getWinner, pickWinner };
+  const isDesktop = useIsDesktop();
   return (
     <div data-testid="step-bracket-content">
       <h2 className="text-2xl font-black text-slate-900 mb-1">El Bracket — Eliminatorias</h2>
@@ -418,43 +435,45 @@ function StepBracket({ getParts, getWinner, pickWinner, finalPicks, setFinalPick
         <span className="text-xl font-black">{finalPicks.champion || "?"}</span>
       </div>
 
-      {/* DESKTOP: two-sided converging bracket */}
-      <div className="hidden lg:block overflow-x-auto pb-4">
-        <div className="flex items-stretch justify-center gap-2 min-w-max">
-          {/* left half feeds SF #0 */}
-          {renderHalf("sf", 0, false, mc)}
-          {/* center: Final */}
-          <div className="flex flex-col items-center justify-center px-2" style={{ minWidth: 170 }}>
-            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-600 mb-2">Final</div>
+      {isDesktop ? (
+        /* DESKTOP: two-sided converging bracket */
+        <div className="overflow-x-auto pb-4">
+          <div className="flex items-stretch justify-center gap-2 min-w-max">
+            {/* left half feeds SF #0 */}
+            {renderHalf("sf", 0, false, mc)}
+            {/* center: Final */}
+            <div className="flex flex-col items-center justify-center px-2" style={{ minWidth: 170 }}>
+              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-600 mb-2">Final</div>
+              <MatchCard round="final" idx={0} gold {...mc} />
+            </div>
+            {/* right half feeds SF #1 (mirrored) */}
+            {renderHalf("sf", 1, true, mc)}
+          </div>
+        </div>
+      ) : (
+        /* MOBILE: rounds stacked vertically */
+        <div className="space-y-6">
+          {["r32", "r16", "qf", "sf"].map((round) => (
+            <div key={round}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-700">{ROUND_LABEL[round]}</span>
+                <span className="text-xs text-slate-400">({ROUND_MATCHES[round]} partidos)</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {Array.from({ length: ROUND_MATCHES[round] }).map((_, i) => (
+                  <MatchCard key={i} round={round} idx={i} {...mc} />
+                ))}
+              </div>
+            </div>
+          ))}
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.2em] text-amber-600 mb-2 flex items-center gap-1.5">
+              <Trophy className="w-4 h-4" /> Final
+            </div>
             <MatchCard round="final" idx={0} gold {...mc} />
           </div>
-          {/* right half feeds SF #1 (mirrored) */}
-          {renderHalf("sf", 1, true, mc)}
         </div>
-      </div>
-
-      {/* MOBILE: rounds stacked vertically */}
-      <div className="lg:hidden space-y-6">
-        {["r32", "r16", "qf", "sf"].map((round) => (
-          <div key={round}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-700">{ROUND_LABEL[round]}</span>
-              <span className="text-xs text-slate-400">({ROUND_MATCHES[round]} partidos)</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {Array.from({ length: ROUND_MATCHES[round] }).map((_, i) => (
-                <MatchCard key={i} round={round} idx={i} {...mc} />
-              ))}
-            </div>
-          </div>
-        ))}
-        <div>
-          <div className="text-xs font-black uppercase tracking-[0.2em] text-amber-600 mb-2 flex items-center gap-1.5">
-            <Trophy className="w-4 h-4" /> Final
-          </div>
-          <MatchCard round="final" idx={0} gold {...mc} />
-        </div>
-      </div>
+      )}
 
       {/* Final extras */}
       <FinalDetails finalPicks={finalPicks} setFinalPicks={setFinalPicks} qf={qf} sf={sf} pichi={pichi} />

@@ -84,7 +84,11 @@ export default function QuinielaBracket() {
         if (saved.qf) setQf(saved.qf);
         if (saved.sf) setSf(saved.sf);
         if (saved.finalPicks) setFinalPicks(saved.finalPicks);
-        if (saved.stepIdx !== undefined) setStepIdx(saved.stepIdx);
+        // Clamp restored step: old V1 wizard saved larger stepIdx values that
+        // would point past the new STEPS array and blank the page.
+        if (saved.stepIdx !== undefined) {
+          setStepIdx(Math.min(Math.max(0, saved.stepIdx | 0), STEPS.length - 1));
+        }
       }
     } catch { /* ignore */ }
   }, []);
@@ -189,7 +193,7 @@ export default function QuinielaBracket() {
   };
 
   const canGoNext = () => {
-    const s = STEPS[stepIdx];
+    const s = STEPS[stepIdx] || STEPS[0];
     if (s.id === "info")    return info.name && info.city && info.email;
     if (s.id === "groups")  return true;
     if (s.id === "thirds")  return bestThirds.length === 8;
@@ -248,7 +252,7 @@ export default function QuinielaBracket() {
     );
   }
 
-  const step = STEPS[stepIdx];
+  const step = STEPS[stepIdx] || STEPS[0];
   const wide = step.id === "bracket";
 
   return (

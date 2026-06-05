@@ -116,6 +116,10 @@ else
     echo ">>> UPDATE"
     echo ""
     chown -R "$CPANEL_USER:$CPANEL_USER" "$REPO"
+    # /opt/lacampeona/backend must be writable by the cPanel user, otherwise
+    # fix.sh (which runs as that user) cannot write the deps stamp, copy the
+    # new server.py, or restart the backend — aborting the whole update.
+    chown -R "$CPANEL_USER:$CPANEL_USER" "$PROD" 2>/dev/null || true
     as_user "bash $REPO/deploy/fix.sh"
 fi
 

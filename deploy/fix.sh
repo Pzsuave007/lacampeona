@@ -39,7 +39,7 @@ else
         --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ \
         -r "$REQ"
     deactivate
-    echo "$NEW_HASH" > "$STAMP"
+    echo "$NEW_HASH" > "$STAMP" 2>/dev/null || true
     echo "    ✓ deps updated"
 fi
 

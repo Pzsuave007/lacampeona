@@ -112,6 +112,11 @@ cp -rf "$REPO/backend/routers/"*.py "$PROD/routers/" 2>/dev/null
 cp -rf "$REPO/backend/utils/"*.py   "$PROD/utils/"   2>/dev/null
 cp -rf "$REPO/backend/models/"*.py  "$PROD/models/"  2>/dev/null
 
+# Asegura que email-validator y pydantic estén al día (necesarios para EmailStr en la quiniela)
+source "$PROD/venv/bin/activate"
+pip install --quiet --upgrade "pydantic>=2.0" "email-validator>=2.0" 2>&1 | tail -3
+deactivate
+
 # Mata procesos viejos en el puerto (fuser por si pkill no los pesca)
 pkill -9 -f "uvicorn.*${PORT}" 2>/dev/null
 fuser -k "${PORT}/tcp" 2>/dev/null
@@ -139,7 +144,10 @@ if curl -sf "http://localhost:${PORT}/api/" >/dev/null 2>&1; then
     PASS=$((PASS+1))
 else
     echo "    ❌ Backend NO responde en localhost:${PORT}"
-    echo "       Revisa: tail -50 ${PROD}/backend.log"
+    echo "       Últimas 30 líneas del log de error:"
+    echo "       ────────────────────────────────────"
+    tail -30 "${PROD}/backend.log" 2>/dev/null | sed 's/^/       │ /'
+    echo "       ────────────────────────────────────"
     FAIL=$((FAIL+1))
 fi
 

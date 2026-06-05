@@ -2107,9 +2107,9 @@ class BracketQuickPicks(BaseModel):
 
 class BracketProPicks(BaseModel):
     # 12 group winners (one team per group A..L)
-    group_winners: dict = {}      # {"A": "México", "B": "Argentina", ...}
-    round_of_16: List[str] = []   # 16 teams advancing from R32 to R16
-    quarter_finalists: List[str] = []  # 8 teams in QF
+    group_winners: dict = Field(default_factory=dict)      # {"A": "México", "B": "Argentina", ...}
+    round_of_16: List[str] = Field(default_factory=list)   # 16 teams advancing from R32 to R16
+    quarter_finalists: List[str] = Field(default_factory=list)  # 8 teams in QF
     third_place: str = ""         # winner of 3rd place match
 
 
@@ -2127,15 +2127,15 @@ class BracketSubmitIn(BaseModel):
 class BracketOfficialResults(BaseModel):
     champion: str = ""
     runner_up: str = ""
-    semi_finalists: List[str] = []  # the 2 other semifinalists (NOT champion/runner-up)
+    semi_finalists: List[str] = Field(default_factory=list)  # the 2 other semifinalists (NOT champion/runner-up)
     top_scorer: str = ""
     final_score_home: Optional[int] = None
     final_score_away: Optional[int] = None
     mexico_to_quarters: Optional[bool] = None
     # Pro mode
-    group_winners: dict = {}
-    round_of_16: List[str] = []
-    quarter_finalists: List[str] = []
+    group_winners: dict = Field(default_factory=dict)
+    round_of_16: List[str] = Field(default_factory=list)
+    quarter_finalists: List[str] = Field(default_factory=list)
     third_place: str = ""
 
 

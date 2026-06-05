@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Trophy, Flame, Loader2, Sparkles, Award, Lock, ChevronRight, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api, bannerUrl } from "../lib/api";
@@ -7,7 +7,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 
 const MODE_LABELS = {
   quick: { label: "Quick Pick", emoji: "⚡", desc: "5-7 predicciones · ~2 min · perfecto si no te quieres complicar" },
-  pro: { label: "Pro Bracket", emoji: "🏆", desc: "Quick + ganadores de grupo + octavos + cuartos · ~10 min · más puntos posibles" },
+  pro: { label: "Pro Bracket", emoji: "🏆", desc: "Bracket COMPLETO paso a paso (grupos, octavos, cuartos, semis, final) + visual para compartir · ~10 min" },
 };
 
 const STORAGE_KEY = "lc_quiniela_token";
@@ -225,6 +225,7 @@ export default function Quiniela() {
 }
 
 function ModePicker({ mode, setMode, onStart }) {
+  const navigate = useNavigate();
   return (
     <div data-testid="quiniela-mode-picker">
       <h2 className="text-2xl font-black text-slate-900 mb-2">Elige cómo quieres jugar</h2>
@@ -246,14 +247,14 @@ function ModePicker({ mode, setMode, onStart }) {
             <div className="mt-2 font-black text-slate-900 text-xl">{MODE_LABELS[k].label}</div>
             <p className="text-sm text-slate-600 mt-1">{MODE_LABELS[k].desc}</p>
             <div className="mt-3 text-xs font-bold text-orange-600">
-              {k === "quick" ? "Hasta 100 puntos" : "Hasta 168 puntos"}
+              {k === "quick" ? "Hasta 100 puntos" : "Hasta 250+ puntos · visual para compartir"}
             </div>
           </button>
         ))}
       </div>
       <div className="mt-6 flex justify-end">
         <button
-          onClick={onStart}
+          onClick={() => mode === "pro" ? navigate("/quiniela/bracket") : onStart()}
           data-testid="quiniela-start"
           className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-6 py-3 transition active:scale-95 shadow-md"
         >

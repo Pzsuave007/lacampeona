@@ -2070,6 +2070,23 @@ WORLD_CUP_2026_TEAMS = [
     "Uruguay", "Uzbekistán", "Venezuela",
 ]
 
+# Placeholder group draw for World Cup 2026 (editable by admin later).
+# 12 groups of 4 teams. Reflects strong nations + the 3 hosts as #1 seeds.
+WORLD_CUP_2026_GROUPS = {
+    "A": ["México", "Polonia", "Arabia Saudita", "Ecuador"],
+    "B": ["Estados Unidos", "Países Bajos", "Australia", "Costa Rica"],
+    "C": ["Canadá", "Croacia", "Marruecos", "Bélgica"],
+    "D": ["Argentina", "Senegal", "Irlanda", "Honduras"],
+    "E": ["España", "Inglaterra", "Ghana", "Catar"],
+    "F": ["Francia", "Uruguay", "Camerún", "Trinidad y Tobago"],
+    "G": ["Brasil", "Suiza", "Serbia", "Panamá"],
+    "H": ["Portugal", "Corea del Sur", "Egipto", "Jamaica"],
+    "I": ["Alemania", "Japón", "Túnez", "Guatemala"],
+    "J": ["Italia", "Colombia", "Nigeria", "El Salvador"],
+    "K": ["Países Bajos" if False else "Dinamarca", "Perú", "Argelia", "Paraguay"],
+    "L": ["Chile", "Sudáfrica", "Irán", "Venezuela"],
+}
+
 # Popular forwards likely to be Pichichi candidates in 2026.
 WORLD_CUP_2026_PICHICHI_CANDIDATES = [
     "Lionel Messi (Argentina)",
@@ -2106,11 +2123,21 @@ class BracketQuickPicks(BaseModel):
 
 
 class BracketProPicks(BaseModel):
-    # 12 group winners (one team per group A..L)
-    group_winners: dict = Field(default_factory=dict)      # {"A": "México", "B": "Argentina", ...}
-    round_of_16: List[str] = Field(default_factory=list)   # 16 teams advancing from R32 to R16
-    quarter_finalists: List[str] = Field(default_factory=list)  # 8 teams in QF
-    third_place: str = ""         # winner of 3rd place match
+    # Group positions: {"A": ["Mexico", "USA", "Canada", "Italy"], ...} ordered 1st→4th
+    group_positions: dict = Field(default_factory=dict)
+    # The 8 best 3rd-place teams user thinks will advance to R32
+    best_thirds: List[str] = Field(default_factory=list)
+    # Winners advancing from each round
+    r32_winners: List[str] = Field(default_factory=list)  # 16 teams
+    r16_winners: List[str] = Field(default_factory=list)  # 8 teams
+    qf_winners: List[str] = Field(default_factory=list)   # 4 teams (= semifinalists)
+    sf_winners: List[str] = Field(default_factory=list)   # 2 teams (= finalists)
+    third_place_winner: str = ""                          # winner of 3rd-place match
+    # Legacy/simplified fields (kept for backwards compat with simpler form)
+    group_winners: dict = Field(default_factory=dict)
+    round_of_16: List[str] = Field(default_factory=list)
+    quarter_finalists: List[str] = Field(default_factory=list)
+    third_place: str = ""
 
 
 class BracketSubmitIn(BaseModel):
@@ -2127,12 +2154,20 @@ class BracketSubmitIn(BaseModel):
 class BracketOfficialResults(BaseModel):
     champion: str = ""
     runner_up: str = ""
-    semi_finalists: List[str] = Field(default_factory=list)  # the 2 other semifinalists (NOT champion/runner-up)
+    semi_finalists: List[str] = Field(default_factory=list)
     top_scorer: str = ""
     final_score_home: Optional[int] = None
     final_score_away: Optional[int] = None
     mexico_to_quarters: Optional[bool] = None
-    # Pro mode
+    # Pro mode — full bracket
+    group_positions: dict = Field(default_factory=dict)
+    best_thirds: List[str] = Field(default_factory=list)
+    r32_winners: List[str] = Field(default_factory=list)
+    r16_winners: List[str] = Field(default_factory=list)
+    qf_winners: List[str] = Field(default_factory=list)
+    sf_winners: List[str] = Field(default_factory=list)
+    third_place_winner: str = ""
+    # Legacy fields
     group_winners: dict = Field(default_factory=dict)
     round_of_16: List[str] = Field(default_factory=list)
     quarter_finalists: List[str] = Field(default_factory=list)
@@ -2200,19 +2235,62 @@ def _score_prediction(pred: dict, results: dict) -> int:
     # ----- Pro mode bonus -----
     if pred.get("mode") == "pro":
         pp = (pred.get("picks_pro") or {})
-        # group winners (+1 each, max 12)
+
+        # Group positions: +2 for 1st, +1 for 2nd, +1 for 3rd in each group
+        for gid, my_positions in (pp.get("group_positions") or {}).items():
+            real_positions = (rq.get("group_positions") or {}).get(gid, [])
+            if real_positions and my_positions:
+                if len(my_positions) > 0 and len(real_positions) > 0:
+                    if _norm(my_positions[0]) == _norm(real_positions[0]):
+                        score += 2
+                if len(my_positions) > 1 and len(real_positions) > 1:
+                    if _norm(my_positions[1]) == _norm(real_positions[1]):
+                        score += 1
+                if len(my_positions) > 2 and len(real_positions) > 2:
+                    if _norm(my_positions[2]) == _norm(real_positions[2]):
+                        score += 1
+
+        # Best 8 thirds: +2 each correct
+        real_thirds = {_norm(x) for x in (rq.get("best_thirds") or []) if x}
+        my_thirds = {_norm(x) for x in (pp.get("best_thirds") or []) if x}
+        score += 2 * len(real_thirds & my_thirds)
+
+        # R32 winners: +2 each
+        real_r32 = {_norm(x) for x in (rq.get("r32_winners") or []) if x}
+        my_r32 = {_norm(x) for x in (pp.get("r32_winners") or []) if x}
+        score += 2 * len(real_r32 & my_r32)
+
+        # R16 winners: +3 each
+        real_r16 = {_norm(x) for x in (rq.get("r16_winners") or []) if x}
+        my_r16 = {_norm(x) for x in (pp.get("r16_winners") or []) if x}
+        score += 3 * len(real_r16 & my_r16)
+
+        # QF winners (semifinalists): +5 each
+        real_qf = {_norm(x) for x in (rq.get("qf_winners") or []) if x}
+        my_qf = {_norm(x) for x in (pp.get("qf_winners") or []) if x}
+        score += 5 * len(real_qf & my_qf)
+
+        # SF winners (finalists): +8 each
+        real_sf = {_norm(x) for x in (rq.get("sf_winners") or []) if x}
+        my_sf = {_norm(x) for x in (pp.get("sf_winners") or []) if x}
+        score += 8 * len(real_sf & my_sf)
+
+        # 3rd place match winner: +5
+        if pp.get("third_place_winner") and rq.get("third_place_winner"):
+            if _norm(pp["third_place_winner"]) == _norm(rq["third_place_winner"]):
+                score += 5
+
+        # Legacy fields backward-compat
         for gid, pick_team in (pp.get("group_winners") or {}).items():
             real = (rq.get("group_winners") or {}).get(gid)
             if real and _norm(real) == _norm(pick_team):
                 score += 1
-        # round of 16 (+2 each, max 32)
-        real_r16 = {_norm(x) for x in (rq.get("round_of_16") or []) if x}
-        my_r16 = {_norm(x) for x in (pp.get("round_of_16") or []) if x}
-        score += 2 * len(real_r16 & my_r16)
-        # quarter-finalists (+3 each, max 24)
-        real_qf = {_norm(x) for x in (rq.get("quarter_finalists") or []) if x}
-        my_qf = {_norm(x) for x in (pp.get("quarter_finalists") or []) if x}
-        score += 3 * len(real_qf & my_qf)
+        real_l_r16 = {_norm(x) for x in (rq.get("round_of_16") or []) if x}
+        my_l_r16 = {_norm(x) for x in (pp.get("round_of_16") or []) if x}
+        score += 2 * len(real_l_r16 & my_l_r16)
+        real_l_qf = {_norm(x) for x in (rq.get("quarter_finalists") or []) if x}
+        my_l_qf = {_norm(x) for x in (pp.get("quarter_finalists") or []) if x}
+        score += 3 * len(real_l_qf & my_l_qf)
 
     return score
 
@@ -2243,10 +2321,14 @@ async def _get_bracket_settings() -> dict:
 @api.get("/bracket/meta")
 async def bracket_meta():
     """Returns the static reference data needed to build the public form."""
+    # Allow admin to override the group config via bracket_settings
+    settings = await _get_bracket_settings()
+    groups = settings.get("groups_override") or WORLD_CUP_2026_GROUPS
     return {
         "teams": WORLD_CUP_2026_TEAMS,
         "pichichi_candidates": WORLD_CUP_2026_PICHICHI_CANDIDATES,
-        "group_ids": list("ABCDEFGHIJKL"),  # 12 groups in 2026
+        "group_ids": list("ABCDEFGHIJKL"),
+        "groups": groups,
     }
 
 
@@ -2336,6 +2418,18 @@ async def bracket_me(token: str):
     doc = await db.bracket_predictions.find_one({"edit_token": token}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="No encontrado")
+    return doc
+
+
+@api.get("/bracket/view/{prediction_id}")
+async def bracket_view_public(prediction_id: str):
+    """Public read-only view of a prediction (for sharing on social media).
+    Strips private fields (email, whatsapp, edit_token)."""
+    doc = await db.bracket_predictions.find_one({"id": prediction_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for private in ("email", "whatsapp", "edit_token", "ip_hash"):
+        doc.pop(private, None)
     return doc
 
 

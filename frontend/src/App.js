@@ -25,6 +25,8 @@ import DjComposerPage from "@/pages/DjComposerPage";
 import Blog from "@/pages/Blog";
 import Quiniela from "@/pages/Quiniela";
 import QuinielaLeaderboard from "@/pages/QuinielaLeaderboard";
+import QuinielaBracket from "@/pages/QuinielaBracket";
+import QuinielaView from "@/pages/QuinielaView";
 import AdminBracket from "@/pages/AdminBracket";
 import SuperAdmin from "@/pages/SuperAdmin";
 import Post from "@/pages/Post";
@@ -45,6 +47,8 @@ function App() {
                   <Route path="/eventos" element={<Eventos />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/quiniela" element={<Quiniela />} />
+                  <Route path="/quiniela/bracket" element={<QuinielaBracket />} />
+                  <Route path="/quiniela/ver/:id" element={<QuinielaView />} />
                   <Route path="/quiniela/leaderboard" element={<QuinielaLeaderboard />} />
                   <Route path="/admin/bracket" element={<AdminBracket />} />
                   <Route path="/eventos/:slug" element={<EventoLanding />} />

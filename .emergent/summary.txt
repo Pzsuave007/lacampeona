@@ -1,107 +1,99 @@
-<analysis>**original_problem_statement**: Create a modern, mobile-first web app for a Spanish radio station (KWIP La Campeona 880 AM / 103.9 FM) focused on engagement and monetization. Core features include a sticky live radio player, dynamic advertiser system, host/DJ scheduling, World Cup 2026 scheduling page, and a sales landing page. PRODUCT REQUIREMENTS: High engagement, social media traffic generation, advertiser ROI tracking.
+<analysis>**original_problem_statement**: Create a modern, mobile-first web app for a Spanish radio station (KWIP La Campeona 880 AM / 103.9 FM) focused on engagement and monetization. Core features include a sticky live radio player, dynamic advertiser system, host/DJ scheduling, World Cup 2026 scheduling/brackets, and a sales landing page. PRODUCT REQUIREMENTS: High engagement, social media traffic generation, advertiser ROI tracking.
 
 **User's preferred language**: Spanish
 **INSTRUCT NEXT AGENT**: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only. **RESPOND TO THE USER EN ESPAÑOL.**
 
-**what currently exists?**: A fully functional bilingual (ES/EN) React+FastAPI+MongoDB web application. Includes a live radio player (with current song metadata and auto-reconnect), dynamic DJ Hero section, Admin Dashboards, and a Content Studio (DJ Dashboard). New public post landing pages () auto-play the radio to drive social media traffic. Customized server deployment scripts are built-in.
+**what currently exists?**: A fully functional bilingual (ES/EN) React+FastAPI+MongoDB web application. Includes a live radio player (with current song metadata and auto-reconnect), dynamic DJ Hero section, Admin Dashboards, and a Content Studio (DJ Dashboard). Recent additions include a public  with category filtering, automated Facebook post embedding for  pages, 17 AI content templates (tailored strictly to a 40+ Regional Mexican audience profile), and the foundation of a World Cup 2026 Prediction Bracket (). Image generation is currently utilizing Gemini Nano Banana (reverted from OpenAI). Customized deployment scripts handle cPanel immutable file quirks.
 
 **Last working item**: 
-- Last item agent was working: Refactoring the DJ Studio AI Image Generation to use OpenAI's  instead of Gemini Nano Banana. The user's server threw an error when attempting to generate images with the previous provider, so the agent switched to  via  at the user's request.
-- Status: TESTING PENDING
-- Agent Testing Done: N (Code was just written, needs execution verification)
-- Which testing method agent to use?: backend testing agent or  (to test the  endpoint directly)
+- Last item agent was working: Refactoring the World Cup Pro Bracket frontend UI () to display a visual knockout tournament tree. The user rejected the step-by-step wizard approach for the knockout stages and uploaded a reference image of a traditional visual tournament bracket where users can click advancing teams directly on the tree.
+- Status: IN PROGRESS
+- Agent Testing Done: N
+- Which testing method agent to use?: screenshot tool (to visually verify the bracket layout), then testing agent for e2e.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-Issue 1: Test and verify OpenAI Image Generation
-  - Attempted fixes: Implemented  replacing Gemini in .
-  - Next debug checklist: 
-    - Check   method.
-    - Call the endpoint via curl to ensure  generates and saves the image to Emergent object storage without throwing the  that occurred previously.
-  - Why fix this issue and what will be achieved with the fix?: Allows DJs to generate high-quality cover images for their social media posts, increasing engagement by 3-5x.
-  - Status: TESTING PENDING
-  - Is recurring issue?: N
-  - Should Test frontend/backend/both after fix?: Both (Backend generation + Frontend UI display)
-  - Blocked on other issue: None
+*No pending bugs, only the active feature refactor below.*
 
 **In progress Task List**:
-*None active. (Only the Issue 1 above).*
+Task 1: World Cup Bracket Visual Tree UI (P0)
+  - Where to resume: Modify  to render a full visual tournament tree (Round of 32 down to the Final) instead of standard form inputs.
+  - What will be achieved with this?: Creates an engaging, highly visual, and shareable interface for users to submit their World Cup knockout predictions.
+  - Status: IN PROGRESS
+  - Should Test frontend/backend/both after fix?: Frontend (UI visual layout and state management for advancing teams).
+  - Blocked on something: None.
 
 **Upcoming and Future Tasks**
 Upcoming Tasks:
-- Facebook Page Publishing (P0) - *Blocked awaiting user to provide Meta App ID, App Secret, and Page URL.*
-- Add Rate Limiting to  and  to protect the Claude LLM budget (P1).
-- Content Studio Sprint 2: UGC Inbox (User Generated Content with permission flow), Gamified DJ missions (points/streaks) (P1).
-- Auto-fill  from AI Suggestions in DjStudio (P1).
-- Add Audit Log in  to track user creation/deletion (P2).
+- Add a Download Bracket Image button (P1) - Allow users to download their completed bracket as a PNG/JPEG (using ) for social media sharing.
+- Content Studio Phase 2: UGC (User Generated Content) Inbox (P1) - Photo of the day, Map of listeners (¿Dónde escuchas?), live shoutout wall, and testimonials. Includes an admin moderation inbox.
+- Viral Engagement Phase 3 (P1) - Weekly Polls and Local Hero of the Month community nominations.
 
 Future Tasks:
-- AI Digital DJ / Pre-recorded AI Spots using ElevenLabs API (P1) - *Discussed and planned with user, but user requested to defer.*
+- Add Rate Limiting to  and  to protect the Claude LLM budget (P2).
+- Facebook Page Publishing (P2) - Blocked awaiting user to provide Meta App ID, App Secret, and Page URL.
 - Refactor  to use separated FastAPI routers (P2).
 
 **Completed work in this session**
-- Exported dev seed data to . (DONE)
-- Footer branding (Uni2 Marketing) and Navbar cleanup (moved business links to footer). (DONE)
-- Fixed high CPU bug on VPS (replaced  with ) and created robust deploy scripts (, ). (DONE)
-- Radio Player Metadata Integration: Proxied Streaming Pulse API to display real-time song title and album artwork on both the footer player and the spinning vinyl disc (). (DONE)
-- Mobile Player Stability: Added Media Session API for lock-screen controls and auto-reconnect logic, removed strict CORS on audio element. (DONE)
-- Admin UI Upgrades: Editable Dynamic Hero background, editable fallback artwork, high-res Navbar logo upload, and editable Sales Rep info on . (DONE)
-- Homepage Reordering & Featured Show: Added editable El Show del Genio Lucas section and prioritized advertisers over events. (DONE)
-- World Cup 2026: Updated  with real group-stage schedule. (DONE)
-- Public Post Pages (): Created public URLs for DJ drafts to drive traffic from FB to the site, featuring auto-play radio and rotating advertisers. (DONE)
+- Reverted Image Generation to Gemini Nano Banana and fixed a missing  function call in the frontend that prevented the UI from refreshing the image. (DONE)
+- Fixed  public posts: removed internal AI tags (, ), parsed hashtags into chips, and fixed sponsor querying to use  and . (DONE)
+- Shortened URL slugs to max 35 characters, stripping Spanish/English stop words. (DONE)
+- Converted the DJ Studio New Post popup modal into a dedicated full-page view (, ). (DONE)
+- Injected a strict  (40+, Mexican Regional, no Reggaeton, no politics/immigration) into all Claude AI system prompts. (DONE)
+- Created 9 new AI templates (5 Local, 3 Sports, 1 Community Alert). (DONE)
+- Created the public  page listing all published posts with category filtering. (DONE)
+- Fixed Facebook comments on posts by switching to the  plugin and adding a  field in DJ Studio. (DONE)
+- Built the V1 World Cup Bracket () with a Quick Pick mode, public Leaderboard, and Admin scoring panel. (DONE)
+- Created  deploy script to handle  immutable file locks on the client's cPanel VPS, and fixed a Pydantic mutable default bug. (DONE)
 
 **Earlier issues found/mentioned but not fixed**
 *None*
 
 **Known issue recurrence from previous fork**
-- Issue recurrence in previous fork: The user's VPS cannot handle yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. due to OOM errors. 
-- Recurrence count: 2
-- Status: RESOLVED (Mitigated by running ============================================
-  Building frontend for prod (lacampeona880am.com)
+- Issue recurrence in previous fork: The user's VPS locks frontend build files making them immutable (), causing  to fail with Permission denied.
+- Recurrence count: 3
+- Status: RESOLVED (Mitigated by creating  which runs  before removal, and patching ============================================
+  Deploy Update — port 8006
 ============================================
-  https://cra.link/deployment
-
-Done in 22.06s.
-
-  ✅ build/ ready (5.1M) with URL https://lacampeona880am.com
-
-  Next: click 'Save to Github' to commit & push. locally in the Emergent environment before instructing the user to Save to Github).
-- **CRITICAL**: The user's VPS sometimes traps  processes. Deployment scripts now use  to kill ghost processes before restarting.
+[1/6] git pull... with the same command for future runs. Added a 60s wait loop for uvicorn startup.)
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-React, TailwindCSS, FastAPI, MongoDB,  (Claude 3.5 Sonnet, OpenAI ), Media Session API, JWT (), Streaming Pulse proxying.
+React, TailwindCSS, FastAPI, MongoDB,  (Claude 3.5 Sonnet, Gemini Nano Banana for Images), Media Session API, JWT, Streaming Pulse proxying, Bracket Tournament Scoring logic.
 
 **key DB schema**
 - : {id, email, password_hash, name, role, host_slug}
-- : {id, host_slug, template_type, text, platform, status, scheduled_at, **slug**, **views_count**, **fb_post_url**, **photo_path**}
-- : {station_name, ..., **default_hero_bg**, **default_artwork**, **featured_show**}
+- : {id, host_slug, template_type, text, platform, status, scheduled_at, slug, views_count, fb_post_url, cover_image}
+- : {id, user_id (optional), name, city, email, whatsapp, mode, predictions, score, created_at}
+- : {id (=bracket_settings), sponsor_advertiser_id, results (dict), status}
 
 **changes in tech stack**
-- Added OpenAI  via  to replace Gemini Nano Banana for image generation.
+- Reverted back to Gemini Nano Banana (via ) for AI Image Generation per user request.
 
 **All files of reference**
-- : Modified  endpoint.
-- : Contains the DraftCoverImage component to trigger image generation.
-- : New public-facing article view for social media traffic.
+- : Active file for building the visual tournament bracket tree.
+- : The new dedicated AI post creation page.
+- : Contains bracket logic, strict audience profiles, and 17 AI content templates.
 - 
-╔════════════════════════════════════════════╗
-║   La Campeona — One-Command Update         ║
-╚════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════╗
+║   LA CAMPEONA — DESBLOQUEAR + DEPLOY MANUAL      ║
+╚══════════════════════════════════════════════════╝
 
-[1/4] Pulling latest from GitHub...: The new single-command deploy script used by the client on their VPS.
-- : MUST be run locally before committing.
+[1/7] Git pull para asegurar archivos nuevos en el repo...
+
+[2/7] Verificando que el build esté listo en el repo...
+    ❌ NO existe /home/lacampeona/repo/frontend/build/index.html
+    Necesitas hacer 'Save to Github' en Emergent primero.: The new deployment script used to clear immutable files on the VPS.
 
 **Areas that need refactoring**
--  is nearly 2000 lines long. Splitting it into routers is highly recommended (P2).
+-  is over 2600 lines long. Splitting it into routers is highly recommended (P2).
 
 **key api endpoints**
-- : Proxies Streaming Pulse to fetch current song/art.
-- : Retrieves public post details + advertiser.
-- : Uses OpenAI via Emergent to create post covers.
+- : Submit a World Cup prediction.
+- : Get groups, teams, and tournament structure.
+- : Used for the  page to list published posts.
 
 **Critical Info for New Agent**
 - **Frontend Build Process**: Any changes to React files **MUST** be pre-built locally using ============================================
@@ -109,85 +101,62 @@ React, TailwindCSS, FastAPI, MongoDB,  (Claude 3.5 Sonnet, OpenAI ), Media Sessi
 ============================================
   https://cra.link/deployment
 
-Done in 12.09s.
+Done in 22.85s.
 
-  ✅ build/ ready (5.1M) with URL https://lacampeona880am.com
+  ✅ build/ ready (5.3M) with URL https://lacampeona880am.com
 
-  Next: click 'Save to Github' to commit & push.. The user deploys by pulling from GitHub and running  on their server.
-- **Image Generation**: The testing instructions for OpenAI image generation specify that it can take up to 1 minute, so any tests must implement a long timeout. Ensure base64 string logging is truncated.
-- **Audio Autoplay**: The public  page uses an auto-playing radio player to convert social traffic into listeners.
-- **Role Hierarchy**:  >  > . Super admins bypass strict DJ restrictions.
+  Next: click 'Save to Github' to commit & push.. The user deploys by pulling from GitHub and running ❌ User lacampeona missing or 
+╔══════════════════════════════════════════════════╗
+║   LA CAMPEONA — DESBLOQUEAR + DEPLOY MANUAL      ║
+╚══════════════════════════════════════════════════╝
+
+[1/7] Git pull para asegurar archivos nuevos en el repo...
+
+[2/7] Verificando que el build esté listo en el repo...
+    ❌ NO existe /home/lacampeona/repo/frontend/build/index.html
+    Necesitas hacer 'Save to Github' en Emergent primero. on their server.
+- **Audience Restrictions**: The AI must strictly adhere to the 40+ demographic profile (Regional Mexican, no Reggaeton, zero politics/immigration). This is currently enforced in the  prompts.
+- **Bracket Tree Request**: The user wants a standard visual bracket tree for the knockout stages (Round of 32 down to the final) in  where clicking a matchup selects the advancing team. 
 
 **documents and test reports created in this job**
 - 
-╔════════════════════════════════════════════╗
-║   La Campeona — One-Command Update         ║
-╚════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════╗
+║   LA CAMPEONA — DESBLOQUEAR + DEPLOY MANUAL      ║
+╚══════════════════════════════════════════════════╝
 
-[1/4] Pulling latest from GitHub...
-- ╔════════════════════════════════════════════╗
-║   La Campeona — Diagnostic Report          ║
-╚════════════════════════════════════════════╝
+[1/7] Git pull para asegurar archivos nuevos en el repo...
 
-──── 1. Backend has /api/now-playing endpoint? ────
-    ✗ NO — endpoint NOT in /opt/lacampeona/backend/server.py
-
-──── 2. Backend responds to /api/now-playing? ────
-
-HTTP_CODE:000
-
-──── 3. Frontend build has now-playing code? ────
-    refs to 'now-playing' in deployed bundle: 0
-
-──── 4. Frontend has player-artwork test id? ────
-    refs to 'player-artwork': 0
-
-──── 5. uvicorn processes running ────
-    PID=107 CPU=0.0% MEM=0.0% CMD=/bin/bash -c mkdir -p /app/.emergent &&
-
-──── 6. Last 10 lines of backend.log ────
-
-──── 7. Streaming Pulse endpoint reachable from server? ────
-    {"cache-time":14,"artist":"LOS SOCIOS DEL RITMO","title":"MAMA CUMBIA","image":"\/\/de5.streamingpulse.com\/app\/cache\/los.socios.del.ritmo.jpeg"}
-    HTTP_CODE:200
-
-──── 8. index.html in webroot is fresh? ────
-
-╔════════════════════════════════════════════╗
-║   Copy ALL of the output above & paste it   ║
-║   to the agent.                              ║
-╚════════════════════════════════════════════╝
-- Killing anything on port 8006...
-Clearing Python cache...
-Starting fresh uvicorn...
-
-──── Verifying ────
-
-✗ Still failing: 
+[2/7] Verificando que el build esté listo en el repo...
+    ❌ NO existe /home/lacampeona/repo/frontend/build/index.html
+    Necesitas hacer 'Save to Github' en Emergent primero.
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-- *User*: puedes bajar la seccion de los eventos y subir la seccion del show del genio lucas (Done).
-- *User*: sube los anunciantes destacado y baja los eventos (Done).
-- *User*: baja el link de Anunciate del navegation bar... ponlo en el footer (Done).
-- *User*: revisar el schedule del mundial y hacer el update (Done).
-- *User*: Asked to drive social traffic to the website via links (Done - created  public pages).
-- *User*: Asked if there is a way to create an image for each post (Done - added Image Gen to DJ Studio).
-- *User*: Complained image generation failed on their server, asked to switch to their OpenAI account (Agent swapped code to use OpenAI  via Emergent integrations).
-- *Pending*: Agent needs to test the newly swapped OpenAI endpoint, confirm it works, and build the frontend for the user.
+- *User*: me salio lo mismo: bash deploy.sh ... Permission denied 
+- *Agent*: Explains the immutable file issue on cPanel and provides an emergency unblock command.
+- *User*: dame un .sh para correr los comandos ... llama el file borrar.sh
+- *Agent*: Creates  to pull, unlock, build, and restart.
+- *User*: Runs  but backend startup fails/times out.
+- *Agent*: Identifies a Pydantic mutable default issue in backend and fixes the startup timeout limit from 3s to 60s in .
+- *User*: Runs  successfully, everything works.
+- *User*: Asks to confirm that  wasn't replaced/deleted. Agent confirms.
+- *User*: Uploads a reference image of a visual bracket tree, asking to change the step-by-step wizard to a visual tree where users click to advance teams.
+- *Pending*: Agent acknowledged the request and opened  to begin refactoring the UI into a visual tournament tree.
 
 **Project Health Check:**
-- Broken: The Image Generation endpoint might be broken on the VPS if not tested properly after the code swap.
+- Broken: None
 - Mocked: None
 
 **3rd Party Integrations**
 - Emergent Object Storage — uses Emergent LLM Key.
 - Claude 3.5 Sonnet (via emergentintegrations) — uses Emergent LLM Key.
-- OpenAI GPT-Image-1 (via emergentintegrations) — uses Emergent LLM Key.
+- Gemini Nano Banana (via emergentintegrations) — uses Emergent LLM Key.
 
 **Testing status**
-- Testing agent used after significant changes: NO (Pending for recent OpenAI integration)
+- Testing agent used after significant changes: NO 
 - Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None recently.
+- Test files created: None
 - Known regressions: None
 
 **Credentials to test flow:**
@@ -196,10 +165,10 @@ Starting fresh uvicorn...
 - DJ Demo:  / 
 
 **What agent forgot to execute**
-The agent swapped the code for image generation to OpenAI but ran out of tokens before testing the backend endpoint and running .
+The agent just started looking into  to implement the visual bracket tree but the session ended before code was written.
 
 **Debugging checklist for current issue**
-Issue: Verify  with .
+Issue: Refactor  to use a visual tournament tree for knockout stages.
 Frontend files to check: 
-Backend files to check: 
-{"detail":"Not authenticated"}</analysis>
+- 
+*Action*: Replace the current step-by-step wizard inputs for Round of 32, Round of 16, etc., with a Flex/Grid-based tree layout connecting matchups to the next round, mimicking the user's reference bracket.</analysis>

@@ -27,6 +27,92 @@ const PREV_ROUND = { sf: "qf", qf: "r16", r16: "r32" };
 const ROUND_LABEL = { r32: "32avos", r16: "Octavos", qf: "Cuartos", sf: "Semis", final: "Final" };
 const ROUND_MATCHES = { r32: 16, r16: 8, qf: 4, sf: 2 };
 
+// ---- Official FIFA World Cup 2026 Round-of-32 bracket structure ----
+// Source: FIFA / Fox Sports official bracket. Each R32 slot is defined by group
+// position: W=group winner (1X), R=runner-up (2X), T=one of the best 8 thirds
+// (allowed only from the listed groups). The 16 slots are ordered so this app's
+// binary tree (r16[i] = r32[2i] vs r32[2i+1], etc.) reproduces the real
+// knockout tree converging to the Final.
+const W = (g) => ({ t: "w", g });
+const R = (g) => ({ t: "r", g });
+const T = (groups) => ({ t: "t", groups });
+
+const R32_SLOTS = [
+  [W("E"), T(["A", "B", "C", "D", "F"])], // 1E vs 3(ABCDF)
+  [W("I"), T(["C", "D", "F", "G", "H"])], // 1I vs 3(CDFGH)
+  [W("A"), T(["C", "E", "F", "H", "I"])], // 1A vs 3(CEFHI)
+  [W("F"), R("C")],                        // 1F vs 2C
+  [W("B"), T(["E", "F", "G", "I", "J"])], // 1B vs 3(EFGIJ)
+  [R("K"), R("L")],                        // 2K vs 2L
+  [W("D"), T(["B", "E", "F", "I", "J"])], // 1D vs 3(BEFIJ)
+  [W("L"), T(["E", "H", "I", "J", "K"])], // 1L vs 3(EHIJK)
+  [R("A"), R("B")],                        // 2A vs 2B
+  [W("C"), R("F")],                        // 1C vs 2F
+  [W("G"), T(["A", "E", "H", "I", "J"])], // 1G vs 3(AEHIJ)
+  [R("E"), R("I")],                        // 2E vs 2I
+  [W("K"), T(["D", "E", "I", "J", "L"])], // 1K vs 3(DEIJL)
+  [R("D"), R("G")],                        // 2D vs 2G
+  [W("J"), R("H")],                        // 1J vs 2H
+  [W("H"), R("J")],                        // 1H vs 2J
+];
+
+const seedLabel = (spec) => (spec.t === "w" ? `1${spec.g}` : spec.t === "r" ? `2${spec.g}` : "3°");
+const R32_LABELS = R32_SLOTS.map(([h, a]) => [seedLabel(h), seedLabel(a)]);
+
+// Assign the 8 chosen best-thirds to the 8 "third" slots respecting each slot's
+// allowed groups (FIFA rule: a third can only land in specific bracket slots).
+// Uses Kuhn's bipartite matching; falls back to filling any free slot.
+function matchThirdsToSlots(thirds, slots) {
+  const slotMatch = new Array(slots.length).fill(-1);
+  const canUse = (k, j) => thirds[k].g && slots[j].groups.includes(thirds[k].g);
+  const tryAssign = (k, seen) => {
+    for (let j = 0; j < slots.length; j++) {
+      if (canUse(k, j) && !seen[j]) {
+        seen[j] = true;
+        if (slotMatch[j] === -1 || tryAssign(slotMatch[j], seen)) {
+          slotMatch[j] = k;
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  for (let k = 0; k < thirds.length; k++) tryAssign(k, new Array(slots.length).fill(false));
+  const used = new Set(slotMatch.filter((x) => x !== -1));
+  const free = thirds.map((_, k) => k).filter((k) => !used.has(k));
+  for (let j = 0; j < slots.length && free.length; j++) {
+    if (slotMatch[j] === -1) slotMatch[j] = free.shift();
+  }
+  const out = {};
+  slots.forEach((s, j) => {
+    if (slotMatch[j] !== -1) out[`${s.i}-${s.side}`] = thirds[slotMatch[j]].team;
+  });
+  return out;
+}
+
+// Build the 16 R32 matchups (pairs of resolved team names) from the user's
+// group standings and chosen best-thirds.
+function buildR32Matchups(groupPositions, bestThirds) {
+  const groupOfThird = {};
+  for (const [g, teams] of Object.entries(groupPositions)) {
+    if (teams && teams[2]) groupOfThird[teams[2]] = g;
+  }
+  const thirdSlots = [];
+  R32_SLOTS.forEach(([home, away], i) => {
+    if (home.t === "t") thirdSlots.push({ i, side: 0, groups: home.groups });
+    if (away.t === "t") thirdSlots.push({ i, side: 1, groups: away.groups });
+  });
+  const thirds = bestThirds.filter(Boolean).map((team) => ({ team, g: groupOfThird[team] }));
+  const assigned = matchThirdsToSlots(thirds, thirdSlots);
+  const resolve = (spec, key) => {
+    if (spec.t === "w") return (groupPositions[spec.g] || [])[0];
+    if (spec.t === "r") return (groupPositions[spec.g] || [])[1];
+    return assigned[key];
+  };
+  return R32_SLOTS.map(([home, away], i) => [resolve(home, `${i}-0`), resolve(away, `${i}-1`)]);
+}
+
+
 // Render only one bracket layout (desktop tree OR mobile stack) instead of
 // mounting both and CSS-hiding one — avoids duplicated DOM + duplicated testids.
 function useIsDesktop() {
@@ -109,15 +195,12 @@ export default function QuinielaBracket() {
     return out;
   }, [groupPositions]);
 
-  // 32 teams seeded into the bracket: 12 firsts, 12 seconds, 8 best thirds
-  const r32Teams = useMemo(() => {
-    const top = [], second = [];
-    for (const teams of Object.values(groupPositions)) {
-      if (teams && teams[0]) top.push(teams[0]);
-      if (teams && teams[1]) second.push(teams[1]);
-    }
-    return [...top, ...second, ...bestThirds];
-  }, [groupPositions, bestThirds]);
+  // 16 Round-of-32 matchups (pairs of team names) following the official
+  // FIFA 2026 bracket structure (group winners / runners-up / best thirds).
+  const r32Matchups = useMemo(
+    () => buildR32Matchups(groupPositions, bestThirds),
+    [groupPositions, bestThirds]
+  );
 
   const moveTeam = (gid, idx, dir) => {
     setGroupPositions((g) => {
@@ -147,12 +230,15 @@ export default function QuinielaBracket() {
 
   // participants feeding a given (round, idx)
   const getParts = (round, idx) => {
-    if (round === "r32") return [r32Teams[idx * 2], r32Teams[idx * 2 + 1]];
+    if (round === "r32") return r32Matchups[idx] || [undefined, undefined];
     if (round === "r16") return [r32[idx * 2], r32[idx * 2 + 1]];
     if (round === "qf")  return [r16[idx * 2], r16[idx * 2 + 1]];
     if (round === "sf")  return [qf[idx * 2], qf[idx * 2 + 1]];
     return [sf[0], sf[1]]; // final
   };
+
+  // official seed labels (1A / 2C / 3°) for a R32 match; null for later rounds
+  const getLabels = (round, idx) => (round === "r32" ? R32_LABELS[idx] : null);
 
   const getWinner = (round, idx) => {
     if (round === "r32") return r32[idx];
@@ -165,7 +251,7 @@ export default function QuinielaBracket() {
   // remove downstream picks that are no longer valid participants
   const sanitize = (n32, n16, nqf, nsf, nfp) => {
     const a32 = [...n32], a16 = [...n16], aqf = [...nqf], asf = [...nsf];
-    for (let i = 0; i < 16; i++) { const o = [r32Teams[2 * i], r32Teams[2 * i + 1]]; if (a32[i] && !o.includes(a32[i])) a32[i] = undefined; }
+    for (let i = 0; i < 16; i++) { const o = r32Matchups[i] || []; if (a32[i] && !o.includes(a32[i])) a32[i] = undefined; }
     for (let i = 0; i < 8; i++)  { const o = [a32[2 * i], a32[2 * i + 1]];           if (a16[i] && !o.includes(a16[i])) a16[i] = undefined; }
     for (let i = 0; i < 4; i++)  { const o = [a16[2 * i], a16[2 * i + 1]];           if (aqf[i] && !o.includes(aqf[i])) aqf[i] = undefined; }
     for (let i = 0; i < 2; i++)  { const o = [aqf[2 * i], aqf[2 * i + 1]];           if (asf[i] && !o.includes(asf[i])) asf[i] = undefined; }
@@ -295,6 +381,7 @@ export default function QuinielaBracket() {
           <StepBracket
             getParts={getParts}
             getWinner={getWinner}
+            getLabels={getLabels}
             pickWinner={pickWinner}
             finalPicks={finalPicks}
             setFinalPicks={setFinalPicks}
@@ -346,9 +433,10 @@ export default function QuinielaBracket() {
 
 // ---------- Match button (one matchup, two teams) ----------
 
-function MatchCard({ round, idx, getParts, getWinner, pickWinner, gold, testidPrefix = "bkt" }) {
+function MatchCard({ round, idx, getParts, getWinner, getLabels, pickWinner, gold, testidPrefix = "bkt" }) {
   const [a, b] = getParts(round, idx);
   const winner = getWinner(round, idx);
+  const labels = getLabels ? getLabels(round, idx) : null;
   return (
     <div
       className={`rounded-xl border-2 overflow-hidden shadow-sm w-full ${gold ? "border-amber-400" : "border-slate-200"} bg-white`}
@@ -364,7 +452,7 @@ function MatchCard({ round, idx, getParts, getWinner, pickWinner, gold, testidPr
             disabled={empty}
             onClick={() => pickWinner(round, idx, team)}
             data-testid={`${testidPrefix}-${round}-${idx}-team-${ti}`}
-            className={`w-full flex items-center justify-between gap-1 px-2.5 py-2 text-sm font-bold text-left transition ${ti === 0 ? "border-b border-slate-100" : ""} ${
+            className={`w-full flex items-center justify-between gap-1.5 px-2.5 py-2 text-sm font-bold text-left transition ${ti === 0 ? "border-b border-slate-100" : ""} ${
               isWin
                 ? gold ? "bg-amber-400 text-slate-900" : "bg-emerald-500 text-white"
                 : empty
@@ -372,7 +460,14 @@ function MatchCard({ round, idx, getParts, getWinner, pickWinner, gold, testidPr
                 : "bg-white text-slate-800 hover:bg-orange-50"
             }`}
           >
-            <span className="truncate">{team || "—"}</span>
+            <span className="flex items-center gap-1.5 min-w-0">
+              {labels && (
+                <span className={`shrink-0 text-[9px] font-black rounded px-1 py-0.5 leading-none ${isWin ? "bg-white/25" : "bg-slate-100 text-slate-500"}`}>
+                  {labels[ti]}
+                </span>
+              )}
+              <span className="truncate">{team || "—"}</span>
+            </span>
             {isWin && <Check className="w-3.5 h-3.5 shrink-0" />}
           </button>
         );
@@ -424,8 +519,8 @@ function renderHalf(round, idx, mirror, mc) {
 
 // ---------- Step: Bracket (the visual tree) ----------
 
-function StepBracket({ getParts, getWinner, pickWinner, finalPicks, setFinalPicks, qf, sf, pichi }) {
-  const mc = { getParts, getWinner, pickWinner };
+function StepBracket({ getParts, getWinner, getLabels, pickWinner, finalPicks, setFinalPicks, qf, sf, pichi }) {
+  const mc = { getParts, getWinner, getLabels, pickWinner };
   const isDesktop = useIsDesktop();
   return (
     <div data-testid="step-bracket-content">

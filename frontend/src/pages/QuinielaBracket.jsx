@@ -752,7 +752,9 @@ function StepThirds({ thirdPlaceTeams, bestThirds, toggleBestThird }) {
 function StepReview({ submission, info, qf, sf, finalPicks }) {
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
-  const shareUrl = submission ? `${window.location.origin}/quiniela/ver/${submission.id}` : "";
+  const shareUrl = submission
+    ? `${process.env.REACT_APP_BACKEND_URL}/api/bracket/og/${submission.id}`
+    : "";
   const shareText = `Mi bracket del Mundial 2026 ⚽🏆: Campeón ${finalPicks.champion} ${finalPicks.final_score_home}-${finalPicks.final_score_away} ${finalPicks.runner_up}. ¡Haz el tuyo en La Campeona 880 AM!`;
   const copyLink = () => {
     navigator.clipboard.writeText(shareUrl).then(() => {

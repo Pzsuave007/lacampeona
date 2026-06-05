@@ -15,7 +15,7 @@ from typing import List, Optional
 import bcrypt
 import jwt
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Header, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, RedirectResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
@@ -2431,6 +2431,151 @@ async def bracket_view_public(prediction_id: str):
     for private in ("email", "whatsapp", "edit_token", "ip_hash"):
         doc.pop(private, None)
     return doc
+
+
+# ---- Social share: Open Graph preview (image + meta tags) ----
+
+def _og_font(size: int, bold: bool = True):
+    from PIL import ImageFont
+    path = (
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+        if bold else
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+    )
+    try:
+        return ImageFont.truetype(path, size)
+    except Exception:
+        return ImageFont.load_default()
+
+
+def _render_bracket_og(name: str, city: str, champion: str, runner_up: str) -> bytes:
+    """Render a 1200x630 social-share card showing the user's picked champion."""
+    import io as _io
+    from PIL import Image, ImageDraw
+
+    W, H = 1200, 630
+    img = Image.new("RGB", (W, H))
+    draw = ImageDraw.Draw(img)
+
+    # vertical gradient (deep maroon -> red)
+    c1, c2 = (63, 10, 10), (153, 29, 29)
+    for y in range(H):
+        t = y / H
+        col = (
+            int(c1[0] + (c2[0] - c1[0]) * t),
+            int(c1[1] + (c2[1] - c1[1]) * t),
+            int(c1[2] + (c2[2] - c1[2]) * t),
+        )
+        draw.line([(0, y), (W, y)], fill=col)
+
+    amber = (252, 211, 77)
+    white = (255, 255, 255)
+    dark = (30, 18, 18)
+
+    def center(text, y, font, fill):
+        w = draw.textlength(text, font=font)
+        draw.text(((W - w) / 2, y), text, font=font, fill=fill)
+
+    # header
+    center("QUINIELA MUNDIAL 2026", 64, _og_font(46), amber)
+    draw.line([(360, 130), (840, 130)], fill=amber, width=3)
+
+    # champion
+    center("CAMPEON", 175, _og_font(34), amber)
+    champ = (champion or "?").upper()
+    csize = 130
+    f = _og_font(csize)
+    while draw.textlength(champ, font=f) > (W - 140) and csize > 44:
+        csize -= 6
+        f = _og_font(csize)
+    center(champ, 218, f, white)
+
+    if runner_up:
+        center(f"vs {runner_up}", 218 + csize + 20, _og_font(34), (255, 255, 255))
+
+    # who made it
+    who = f"El bracket de {name}"
+    if city:
+        who += f"  ·  {city}"
+    center(who, 460, _og_font(36), white)
+
+    # bottom call-to-action band
+    draw.rectangle([(0, H - 78), (W, H)], fill=amber)
+    center("Haz tu bracket gratis en La Campeona 880 AM", H - 60, _og_font(36, bold=True), dark)
+
+    buf = _io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _public_base(request: Request) -> str:
+    """Best public base URL for absolute share links. Prefers an explicit
+    PUBLIC_BASE_URL env (set in production), then proxy-forwarded host headers,
+    then the request Host. Avoids leaking internal cluster hostnames."""
+    env_base = os.environ.get("PUBLIC_BASE_URL")
+    if env_base:
+        return env_base.rstrip("/")
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or (request.url.hostname or "")
+    host = host.split(",")[0].strip()
+    proto = (request.headers.get("x-forwarded-proto") or "https").split(",")[0].strip()
+    return f"{proto}://{host}"
+
+
+@api.get("/bracket/og-image/{prediction_id}.png")
+async def bracket_og_image(prediction_id: str):
+    doc = await db.bracket_predictions.find_one({"id": prediction_id}, {"_id": 0}) or {}
+    pq = doc.get("picks_quick") or {}
+    png = _render_bracket_og(
+        doc.get("name") or "Un fan",
+        doc.get("city") or "",
+        pq.get("champion") or "?",
+        pq.get("runner_up") or "",
+    )
+    return Response(content=png, media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
+@api.get("/bracket/og/{prediction_id}")
+async def bracket_og(prediction_id: str, request: Request):
+    """HTML page with Open Graph tags for social sharing; humans are redirected
+    to the interactive bracket view, crawlers read the preview tags."""
+    import html as _html
+    base = _public_base(request)
+    view_url = f"{base}/quiniela/ver/{prediction_id}"
+    doc = await db.bracket_predictions.find_one({"id": prediction_id}, {"_id": 0})
+    if not doc:
+        return RedirectResponse(view_url)
+    pq = doc.get("picks_quick") or {}
+    name = doc.get("name") or "Un fan"
+    champ = pq.get("champion") or "?"
+    title = f"El Bracket del Mundial 2026 de {name}"
+    desc = (f"{name} ya armo su quiniela del Mundial 2026 (Campeon: {champ}) en La Campeona "
+            f"880 AM. Haz el tuyo gratis y reta a tus amigos!")
+    img = f"{base}/api/bracket/og-image/{prediction_id}.png"
+    e = _html.escape
+    html_page = (
+        "<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+        f"<title>{e(title)}</title>"
+        "<meta property=\"og:type\" content=\"website\">"
+        "<meta property=\"og:site_name\" content=\"La Campeona 880 AM\">"
+        f"<meta property=\"og:title\" content=\"{e(title)}\">"
+        f"<meta property=\"og:description\" content=\"{e(desc)}\">"
+        f"<meta property=\"og:image\" content=\"{e(img)}\">"
+        "<meta property=\"og:image:width\" content=\"1200\">"
+        "<meta property=\"og:image:height\" content=\"630\">"
+        f"<meta property=\"og:url\" content=\"{e(view_url)}\">"
+        "<meta name=\"twitter:card\" content=\"summary_large_image\">"
+        f"<meta name=\"twitter:title\" content=\"{e(title)}\">"
+        f"<meta name=\"twitter:description\" content=\"{e(desc)}\">"
+        f"<meta name=\"twitter:image\" content=\"{e(img)}\">"
+        f"<meta http-equiv=\"refresh\" content=\"0; url={e(view_url)}\">"
+        f"</head><body style=\"font-family:sans-serif;text-align:center;padding:40px\">"
+        f"<script>window.location.replace({_html.escape(repr(view_url))});</script>"
+        f"<p>Redirigiendo… <a href=\"{e(view_url)}\">Ver el bracket</a></p>"
+        "</body></html>"
+    )
+    return HTMLResponse(content=html_page)
 
 
 # ---- Admin endpoints ----

@@ -62,8 +62,9 @@ chattr -i -R "$WEB" 2>/dev/null
 find "$WEB" -type f -exec chattr -i {} \; 2>/dev/null
 find "$WEB" -type d -exec chattr -i {} \; 2>/dev/null
 # Confirma que ya no hay archivos con +i
-LOCKED_COUNT=$(lsattr -R "$WEB" 2>/dev/null | grep -c '^\-*i\-*\s' || echo 0)
-if [ "$LOCKED_COUNT" -gt 0 ]; then
+LOCKED_COUNT=$(lsattr -R "$WEB" 2>/dev/null | grep -c '^\-*i\-*\s')
+LOCKED_COUNT=${LOCKED_COUNT:-0}
+if [ "$LOCKED_COUNT" -gt 0 ] 2>/dev/null; then
     echo "    ⚠️  Aún hay $LOCKED_COUNT archivos bloqueados — pruebo lsattr ver:"
     lsattr -R "$WEB" 2>/dev/null | grep '^\-*i\-*\s' | head -5
 else
@@ -129,8 +130,22 @@ nohup uvicorn server:app --host 0.0.0.0 --port "$PORT" --workers 2 \
     > "$PROD/backend.log" 2>&1 &
 disown
 deactivate
-sleep 3
-echo "    ✓ Backend reiniciado"
+
+# Wait up to 60 seconds for the backend to be ready (creates indexes + seeds)
+echo "    ⏳ Esperando que el backend complete el startup (max 60s)..."
+READY=0
+for i in $(seq 1 30); do
+    if curl -sf "http://localhost:${PORT}/api/" >/dev/null 2>&1; then
+        READY=1
+        echo "    ✓ Backend listo después de $((i*2)) segundos"
+        break
+    fi
+    sleep 2
+done
+if [ "$READY" -eq 0 ]; then
+    echo "    ⚠️  Backend no respondió en 60 segundos. Tail del log:"
+    tail -40 "${PROD}/backend.log" 2>/dev/null | sed 's/^/         │ /'
+fi
 echo ""
 
 # ---------- 7. Pruebas de salud ----------

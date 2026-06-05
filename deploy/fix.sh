@@ -54,30 +54,35 @@ cp -rf "$REPO/backend/tests/"*.py   "$PROD/tests/"   2>/dev/null || true
 
 # ----- 4. Verify pre-built frontend (low-RAM VPS — never build on server) -----
 echo "[4/6] Verifying pre-built frontend at $REPO/frontend/build ..."
+DEPLOY_FRONTEND=1
 if [ ! -f "$REPO/frontend/build/index.html" ]; then
-    echo "ERROR: $REPO/frontend/build/index.html missing."
-    echo "Build the frontend LOCALLY (in Emergent) before deploying:"
-    echo "  cd frontend && REACT_APP_BACKEND_URL=https://${DOMAIN} yarn build"
-    echo "Then commit frontend/build/ and 'git push'."
-    exit 1
+    echo "    ⚠ frontend/build/index.html missing — SKIPPING frontend deploy."
+    echo "    (Backend will still be updated & restarted. To update the site,"
+    echo "     rebuild locally in Emergent and 'Save to Github', then deploy again.)"
+    DEPLOY_FRONTEND=0
+else
+    echo "    ✓ build/ found ($(du -sh "$REPO/frontend/build" | cut -f1))"
 fi
-echo "    ✓ build/ found ($(du -sh "$REPO/frontend/build" | cut -f1))"
 
-# ----- 5. Deploy frontend + fix ownership -----
-echo "[5/6] Deploying frontend to $WEB ..."
-# AlmaLinux/cPanel sometimes leaves files with chattr +i (immutable) from a
-# previous failed deploy or backup tool. Strip it defensively so rm always works.
-chattr -i -R "$WEB/static" 2>/dev/null || true
-for f in index.html asset-manifest.json manifest.json robots.txt favicon.ico; do
-    chattr -i "$WEB/$f" 2>/dev/null || true
-done
-rm -rf "$WEB/static" "$WEB/index.html" "$WEB/asset-manifest.json" "$WEB/manifest.json"
-cp -rf "$REPO/frontend/build/"* "$WEB/"
-cp -f  "$REPO/deploy/htaccess"  "$WEB/.htaccess"
-# Re-set ownership and permissions for cPanel/Apache
-chown -R "${CPANEL_USER}:${CPANEL_USER}" "$WEB" 2>/dev/null || true
-find "$WEB" -type f -exec chmod 644 {} \;
-find "$WEB" -type d -exec chmod 755 {} \;
+# ----- 5. Deploy frontend + fix ownership (only when a new build is present) -----
+if [ "$DEPLOY_FRONTEND" = "1" ]; then
+    echo "[5/6] Deploying frontend to $WEB ..."
+    # AlmaLinux/cPanel sometimes leaves files with chattr +i (immutable) from a
+    # previous failed deploy or backup tool. Strip it defensively so rm always works.
+    chattr -i -R "$WEB/static" 2>/dev/null || true
+    for f in index.html asset-manifest.json manifest.json robots.txt favicon.ico; do
+        chattr -i "$WEB/$f" 2>/dev/null || true
+    done
+    rm -rf "$WEB/static" "$WEB/index.html" "$WEB/asset-manifest.json" "$WEB/manifest.json"
+    cp -rf "$REPO/frontend/build/"* "$WEB/"
+    cp -f  "$REPO/deploy/htaccess"  "$WEB/.htaccess"
+    # Re-set ownership and permissions for cPanel/Apache
+    chown -R "${CPANEL_USER}:${CPANEL_USER}" "$WEB" 2>/dev/null || true
+    find "$WEB" -type f -exec chmod 644 {} \;
+    find "$WEB" -type d -exec chmod 755 {} \;
+else
+    echo "[5/6] Skipped frontend deploy (no new build — existing site kept)."
+fi
 
 # ----- 6. Restart backend (same port everywhere) -----
 echo "[6/6] Restarting backend..."

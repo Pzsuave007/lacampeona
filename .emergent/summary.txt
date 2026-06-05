@@ -3,30 +3,41 @@
 **User's preferred language**: Spanish
 **INSTRUCT NEXT AGENT**: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only. **RESPOND TO THE USER EN ESPAÑOL.**
 
-**what currently exists?**: A fully functional bilingual (ES/EN) React+FastAPI+MongoDB web application. Includes a live radio player (with current song metadata and auto-reconnect), dynamic DJ Hero section, Admin Dashboards, and a Content Studio (DJ Dashboard). Recent additions include a public  with category filtering, automated Facebook post embedding for  pages, 17 AI content templates (tailored strictly to a 40+ Regional Mexican audience profile), and the foundation of a World Cup 2026 Prediction Bracket (). Image generation is currently utilizing Gemini Nano Banana (reverted from OpenAI). Customized deployment scripts handle cPanel immutable file quirks.
+**what currently exists?**: A fully functional React+FastAPI+MongoDB bilingual web app. Includes a live radio player, DJ content studio, AI content generation, and a World Cup 2026 Prediction Bracket (). The bracket now uses a fully visual interactive tournament tree for the knockout stages. It implements the official 2026 FIFA 48-team logic (16 matchups with group winners and the 8 best 3rd-place teams mapped accurately). The backend has new Open Graph endpoints () and dynamic share image generation using .
 
-**Last working item**: 
-- Last item agent was working: Refactoring the World Cup Pro Bracket frontend UI () to display a visual knockout tournament tree. The user rejected the step-by-step wizard approach for the knockout stages and uploaded a reference image of a traditional visual tournament bracket where users can click advancing teams directly on the tree.
+**Last working item**:
+- Last item agent was working: Fixing the Social Share functionality for the World Cup bracket. The user reported that the share link input field is completely empty. The agent discovered that if the user refreshes the page (Ctrl+Shift+R) while on the final Review/Share step, the  object (which holds the generated bracket ID) is lost from React state because it is not persisted in .
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use?: screenshot tool (to visually verify the bracket layout), then testing agent for e2e.
+- Which testing method agent to use?: screenshot tool (to visually verify the frontend share URL field after a refresh)
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-*No pending bugs, only the active feature refactor below.*
+  Issue 1: Empty share link after page refresh (P0)
+     - Attempted fixes: The agent just discovered the root cause (state loss of the  object upon page reload) but the session ended before code was written to fix it.
+     - Next debug checklist: Modify  to persist  (or at least ) into  under  when the bracket is submitted. Restore it on component mount so the share step always has the correct URL.
+     - Why fix this issue and what will be achieved with the fix?: Ensures users always get a valid link to share on Facebook/WhatsApp, driving viral traffic to the app.
+     - Status: IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix?: Frontend
+     - Blocked on other issue: None
+
+  Issue 2: Backend OG endpoints returning 404 in Production VPS (P0)
+     - Attempted fixes: The agent added  routes, but the user's production server deploy failed to restart the backend due to permission errors ( was root-owned) and missing  folders. The agent updated  and  to automatically  permissions and avoid aborting backend restarts when the frontend build is missing.
+     - Next debug checklist: Wait for the user to confirm they have successfully deployed the backend via the updated , or instruct them to manually restart their  process. You can verify it's live by doing a curl to their production domain for .
+     - Why fix this issue and what will be achieved with the fix?: The Open Graph previews (Facebook/WhatsApp images) will only work once the new backend code is actually running on their server.
+     - Status: USER VERIFICATION PENDING
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix?: Backend (curl)
+     - Blocked on other issue: None
 
 **In progress Task List**:
-Task 1: World Cup Bracket Visual Tree UI (P0)
-  - Where to resume: Modify  to render a full visual tournament tree (Round of 32 down to the Final) instead of standard form inputs.
-  - What will be achieved with this?: Creates an engaging, highly visual, and shareable interface for users to submit their World Cup knockout predictions.
-  - Status: IN PROGRESS
-  - Should Test frontend/backend/both after fix?: Frontend (UI visual layout and state management for advancing teams).
-  - Blocked on something: None.
+*None active besides the bugs above.*
 
 **Upcoming and Future Tasks**
 Upcoming Tasks:
 - Add a Download Bracket Image button (P1) - Allow users to download their completed bracket as a PNG/JPEG (using ) for social media sharing.
-- Content Studio Phase 2: UGC (User Generated Content) Inbox (P1) - Photo of the day, Map of listeners (¿Dónde escuchas?), live shoutout wall, and testimonials. Includes an admin moderation inbox.
+- Content Studio Phase 2: UGC (User Generated Content) Inbox (P1) - Photo of the day, Map of listeners, live shoutout wall, and testimonials. Includes an admin moderation inbox.
 - Viral Engagement Phase 3 (P1) - Weekly Polls and Local Hero of the Month community nominations.
 
 Future Tasks:
@@ -35,117 +46,83 @@ Future Tasks:
 - Refactor  to use separated FastAPI routers (P2).
 
 **Completed work in this session**
-- Reverted Image Generation to Gemini Nano Banana and fixed a missing  function call in the frontend that prevented the UI from refreshing the image. (DONE)
-- Fixed  public posts: removed internal AI tags (, ), parsed hashtags into chips, and fixed sponsor querying to use  and . (DONE)
-- Shortened URL slugs to max 35 characters, stripping Spanish/English stop words. (DONE)
-- Converted the DJ Studio New Post popup modal into a dedicated full-page view (, ). (DONE)
-- Injected a strict  (40+, Mexican Regional, no Reggaeton, no politics/immigration) into all Claude AI system prompts. (DONE)
-- Created 9 new AI templates (5 Local, 3 Sports, 1 Community Alert). (DONE)
-- Created the public  page listing all published posts with category filtering. (DONE)
-- Fixed Facebook comments on posts by switching to the  plugin and adding a  field in DJ Studio. (DONE)
-- Built the V1 World Cup Bracket () with a Quick Pick mode, public Leaderboard, and Admin scoring panel. (DONE)
-- Created  deploy script to handle  immutable file locks on the client's cPanel VPS, and fixed a Pydantic mutable default bug. (DONE)
+- Refactored  into a fully interactive visual knockout tree layout (desktop and mobile responsive) (DONE).
+- Implemented official FIFA 2026 matching logic (e.g., 1A vs 3C, etc.) and best-thirds assignment constraints (DONE).
+- Fixed a state bug where reordering group rankings caused a team to appear twice in the knockout stages if it was left stale in the best thirds selection (DONE).
+- Added  to dependencies and implemented backend endpoints ( & ) for generating dynamic social share preview images showing the user's Champion (DONE).
+- Refactored  and ============================================
+  Deploy Update — port 8006
+============================================
+[1/6] git pull... to prevent aborting backend restarts if the  is temporarily missing, and added  fixes for cPanel VPS permissions (DONE).
 
 **Earlier issues found/mentioned but not fixed**
 *None*
 
 **Known issue recurrence from previous fork**
-- Issue recurrence in previous fork: The user's VPS locks frontend build files making them immutable (), causing  to fail with Permission denied.
-- Recurrence count: 3
-- Status: RESOLVED (Mitigated by creating  which runs  before removal, and patching ============================================
-  Deploy Update — port 8006
-============================================
-[1/6] git pull... with the same command for future runs. Added a 60s wait loop for uvicorn startup.)
+- Issue recurrence in previous fork: The user's VPS script  frequently aborts and fails to restart the backend due to either  tracking issues in git or restrictive file permissions.
+- Recurrence count: 4
+- Status: IN PROGRESS (Agent heavily patched  and  this session to make the backend restart independent of the frontend build status).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-React, TailwindCSS, FastAPI, MongoDB,  (Claude 3.5 Sonnet, Gemini Nano Banana for Images), Media Session API, JWT, Streaming Pulse proxying, Bracket Tournament Scoring logic.
+React, TailwindCSS, FastAPI, MongoDB,  (Image Generation), Open Graph Meta Tags, cPanel VPS deployment (), React Context/LocalStorage state synchronization.
 
 **key DB schema**
-- : {id, email, password_hash, name, role, host_slug}
-- : {id, host_slug, template_type, text, platform, status, scheduled_at, slug, views_count, fb_post_url, cover_image}
 - : {id, user_id (optional), name, city, email, whatsapp, mode, predictions, score, created_at}
 - : {id (=bracket_settings), sponsor_advertiser_id, results (dict), status}
 
 **changes in tech stack**
-- Reverted back to Gemini Nano Banana (via ) for AI Image Generation per user request.
+- Added  to backend for dynamically drawing World Cup social share PNGs.
 
 **All files of reference**
-- : Active file for building the visual tournament bracket tree.
-- : The new dedicated AI post creation page.
-- : Contains bracket logic, strict audience profiles, and 17 AI content templates.
-- 
-╔══════════════════════════════════════════════════╗
-║   LA CAMPEONA — DESBLOQUEAR + DEPLOY MANUAL      ║
-╚══════════════════════════════════════════════════╝
-
-[1/7] Git pull para asegurar archivos nuevos en el repo...
-
-[2/7] Verificando que el build esté listo en el repo...
-    ❌ NO existe /home/lacampeona/repo/frontend/build/index.html
-    Necesitas hacer 'Save to Github' en Emergent primero.: The new deployment script used to clear immutable files on the VPS.
+- : Core UI for the visual bracket tree and state management (needs the local storage fix).
+- : Contains the newly added  routes.
+- ❌ User lacampeona missing & ============================================
+  Deploy Update — port 8006
+============================================
+[1/6] git pull...: Deployment scripts optimized for the user's specific server.
 
 **Areas that need refactoring**
--  is over 2600 lines long. Splitting it into routers is highly recommended (P2).
+-  is nearly 3000 lines long. Splitting it into routers is highly recommended (P2).
 
 **key api endpoints**
 - : Submit a World Cup prediction.
-- : Get groups, teams, and tournament structure.
-- : Used for the  page to list published posts.
+- : Generates Open Graph HTML for Facebook/WhatsApp sharing.
+- : Uses Pillow to generate the share image.
 
 **Critical Info for New Agent**
-- **Frontend Build Process**: Any changes to React files **MUST** be pre-built locally using ============================================
+- **Deployment Process**: The user relies on ❌ User lacampeona missing on their VPS. Any frontend changes MUST be compiled synchronously locally in the Emergent environment via ============================================
   Building frontend for prod (lacampeona880am.com)
 ============================================
   https://cra.link/deployment
 
-Done in 22.85s.
+Done in 28.02s.
 
   ✅ build/ ready (5.3M) with URL https://lacampeona880am.com
 
-  Next: click 'Save to Github' to commit & push.. The user deploys by pulling from GitHub and running ❌ User lacampeona missing or 
-╔══════════════════════════════════════════════════╗
-║   LA CAMPEONA — DESBLOQUEAR + DEPLOY MANUAL      ║
-╚══════════════════════════════════════════════════╝
-
-[1/7] Git pull para asegurar archivos nuevos en el repo...
-
-[2/7] Verificando que el build esté listo en el repo...
-    ❌ NO existe /home/lacampeona/repo/frontend/build/index.html
-    Necesitas hacer 'Save to Github' en Emergent primero. on their server.
-- **Audience Restrictions**: The AI must strictly adhere to the 40+ demographic profile (Regional Mexican, no Reggaeton, zero politics/immigration). This is currently enforced in the  prompts.
-- **Bracket Tree Request**: The user wants a standard visual bracket tree for the knockout stages (Round of 32 down to the final) in  where clicking a matchup selects the advancing team. 
+  Next: click 'Save to Github' to commit & push. BEFORE clicking Save to Github, or the  folder will drop from git tracking and break the user's site. 
+- **The specific bug right now**: The user is sharing screenshots where the share URL input field is completely empty. This happens if they hit  to refresh the page on the final step because the  object (which holds the ID needed for the share link) isn't saved to  and gets wiped.
 
 **documents and test reports created in this job**
-- 
-╔══════════════════════════════════════════════════╗
-║   LA CAMPEONA — DESBLOQUEAR + DEPLOY MANUAL      ║
-╚══════════════════════════════════════════════════╝
-
-[1/7] Git pull para asegurar archivos nuevos en el repo...
-
-[2/7] Verificando que el build esté listo en el repo...
-    ❌ NO existe /home/lacampeona/repo/frontend/build/index.html
-    Necesitas hacer 'Save to Github' en Emergent primero.
 - 
 - 
 
 **Last 10 User Messages and any pending HUMAN messages**
-- *User*: me salio lo mismo: bash deploy.sh ... Permission denied 
-- *Agent*: Explains the immutable file issue on cPanel and provides an emergency unblock command.
-- *User*: dame un .sh para correr los comandos ... llama el file borrar.sh
-- *Agent*: Creates  to pull, unlock, build, and restart.
-- *User*: Runs  but backend startup fails/times out.
-- *Agent*: Identifies a Pydantic mutable default issue in backend and fixes the startup timeout limit from 3s to 60s in .
-- *User*: Runs  successfully, everything works.
-- *User*: Asks to confirm that  wasn't replaced/deleted. Agent confirms.
-- *User*: Uploads a reference image of a visual bracket tree, asking to change the step-by-step wizard to a visual tree where users click to advance teams.
-- *Pending*: Agent acknowledged the request and opened  to begin refactoring the UI into a visual tournament tree.
+- *User*: Mentions USA appears twice in the bracket.
+- *Agent*: Diagnoses state de-sync from stale 3rd place picks, fixes the logic in  to strictly filter valid 3rd place teams.
+- *User*: Complains that sharing the bracket on social media shows no image and no info.
+- *Agent*: Builds backend OG endpoints + Pillow image generation. Tests it, adds Open Graph tags to frontend. 
+- *User*: Says the share link still copies nothing and is blank.
+- *Agent*: Adds a visible input field for the share URL and fixes a copy-clipboard bug. Notices the production server  failed to actually restart the backend, returning 404s for the new OG endpoints.
+- *User*: Runs  but gets Permission denied on .
+- *Agent*: Gives  commands for the user's server to fix root ownership, and refactors  and  to prevent aborts in the future.
+- *User*: Runs the commands. Deploy succeeds partially but aborts on missing . Refreshes browser (), tries sharing, and shows screenshot where the share link field is completely blank.
+- *Pending*: Agent realized that refreshing the page wipes the  data from state because it isn't saved in , leading to the blank share link. Needs to implement the fix.
 
 **Project Health Check:**
-- Broken: None
+- Broken: Production backend deploy is stalled on the user's VPS (requires user verification of backend restart).
 - Mocked: None
 
 **3rd Party Integrations**
@@ -154,10 +131,10 @@ Done in 22.85s.
 - Gemini Nano Banana (via emergentintegrations) — uses Emergent LLM Key.
 
 **Testing status**
-- Testing agent used after significant changes: NO 
+- Testing agent used after significant changes: YES
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
-- Known regressions: None
+- Known regressions:  state lost on refresh in .
 
 **Credentials to test flow:**
 - Super Admin:  / 
@@ -165,10 +142,10 @@ Done in 22.85s.
 - DJ Demo:  / 
 
 **What agent forgot to execute**
-The agent just started looking into  to implement the visual bracket tree but the session ended before code was written.
+The agent realized the root cause of the empty share URL (state loss on refresh) but the session terminated before the code to persist the  object to  could be written.
 
 **Debugging checklist for current issue**
-Issue: Refactor  to use a visual tournament tree for knockout stages.
+Issue:  object (and therefore the generated share link) is lost on page refresh in the World Cup Bracket.
 Frontend files to check: 
 - 
-*Action*: Replace the current step-by-step wizard inputs for Round of 32, Round of 16, etc., with a Flex/Grid-based tree layout connecting matchups to the next round, mimicking the user's reference bracket.</analysis>
+*Action*: Look at the  that loads data from  (). It restores , , etc., but does not restore . When  succeeds, save the  response into the local storage object, and restore it on mount so the Share step always has the  to construct the URL.</analysis>

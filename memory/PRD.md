@@ -162,4 +162,5 @@ Cada plantilla incluye su `SUGGESTION_PROMPT` ajustado al Pacífico NW (Dallas/S
 - Backend payload unchanged (`/api/bracket/submit`, mode `pro`, picks_quick + picks_pro).
 - Fixed a build blocker: the `emergentbase-visual-edits` babel plugin stack-overflowed on a self-referencing recursive JSX component — solved by converting it to a plain recursive function (`renderHalf`).
 - Validated end-to-end by testing agent (iteration_7); rebuilt prod bundle via `bash build-for-prod.sh`.
+- **Blank-page hardening (Jun 2026)**: User reported the bracket showed a blank page on the PUBLISHED site (lacampeona880am.com) — root cause was the published site still running the OLD build (new code not yet deployed). Added defensive guards so the page can never blank: clamp restored `stepIdx` from localStorage to `STEPS` range (old V1 wizard saved indexes up to 8), and `STEPS[stepIdx] || STEPS[0]` fallbacks in render/`canGoNext`. Verified the production `build/` renders the bracket with stale localStorage (stepIdx=8) without crashing. User must `Save to Github` + redeploy (`borrar.sh`) to update prod.
 

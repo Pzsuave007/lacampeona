@@ -1,0 +1,48 @@
+{
+  "summary": "Frontend-only validation of the refactored visual bracket at /quiniela/bracket. Page renders without crashing (recursive renderHalf works — no 'Maximum call stack size exceeded'). All 11 review-request checkpoints validated end-to-end against the public REACT_APP_BACKEND_URL: 5 step indicators, step 1 form, 12 group cards, 12 third-place team buttons with bracket-next correctly disabled until exactly 8 are picked, visual tree renders, AUTO-ADVANCE propagates R32 → R16 → QF → SF → Final, CASCADE CLEAR resets champion to '?' when an early R32 pick is changed, final extras (final-score-home/away, final-pichichi, third-pick-*, mxqf-*) render, POST /api/bracket/submit succeeds and review step shows '¡Bracket guardado!' + bracket-visual + share-copy/fb/wa. Desktop (1440x900) two-sided converging tree confirmed; mobile (390x844) stacked rounds with 32avos/Octavos/Cuartos/Semis/Final headers confirmed. ONE TESTABILITY BUG: every bkt-* match testid is rendered TWICE in the DOM (desktop tree + mobile stack always mount; only CSS-hidden via lg:block/lg:hidden), so Playwright selectors are ambiguous and rapid sequential force-clicks land on hidden elements, causing intermittent state loss. With ≥150ms between clicks (real user speed) the flow is 100% reliable.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "QuinielaBracket.jsx StepBracket (desktop + mobile blocks)",
+        "issue": "Every match testid (bkt-r32-{i}, bkt-r16-{i}, bkt-qf-{i}, bkt-sf-{i}, bkt-final-0 and their -team-0/-team-1 children) is duplicated in the DOM because the desktop tree (.hidden.lg:block) and the mobile stack (.lg:hidden) both render unconditionally — only display:none toggles via Tailwind. Result: querySelectorAll returns 2 elements per testid and automated tests are ambiguous; Playwright strict-mode would throw; force-clicks may dispatch to the offscreen hidden node, losing state updates between rapid clicks.",
+        "selector": "[data-testid='bkt-r32-0'] (count=2 on both desktop and mobile viewports)",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Some <img> in the layout (Header/Footer/PlayerBar)",
+        "issue": "React warns twice on every page render: 'An empty string (\"\") was passed to the src attribute.' Find the image rendering src=\"\" and either omit the attribute conditionally or pass null.",
+        "selector": "img[src='']",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Render the bracket layout conditionally (e.g., a useMediaQuery / useEffect+matchMedia hook driving a single tree) instead of mounting both desktop and mobile DOM trees with shared testids. Alternative: suffix testids per layout (bkt-r32-0-d / bkt-r32-0-m) to disambiguate.",
+    "Track down the <img src=''> that triggers React's empty-string-src warning (likely a station logo / avatar fallback) and gate the src attribute on a truthy value."
+  ],
+  "critical_code_review_comments": [
+    "QuinielaBracket.jsx is 717 lines — at the 700-line guideline limit. Extract StepBracket / MatchCard / FinalDetails / StepInfo / StepGroups / StepThirds / StepReview into separate files under src/pages/quiniela_bracket/.",
+    "Both layout branches (hidden lg:block + lg:hidden) always mount: this doubles DOM work, duplicates testids, and lets force-clicks on a non-visible node still invoke pickWinner — confusing for both users (screen readers) and tests. Prefer JS responsive rendering or rename testids.",
+    "useEffect that writes to localStorage on every state change is fine but unthrottled; consider debouncing to avoid serialising 33+ teams on every keystroke in the info form.",
+    "pickWinner+sanitize logic is correct (verified end-to-end). Cascade-clear on group reordering uses setR32([]) etc.; consider running sanitize() instead of nuking to preserve picks whose group ordering didn't actually move them out.",
+    "submit() does no client-side guard for finalPicks.champion (canGoNext gates the button, but a programmatic call would 400). Backend POST /api/bracket/submit accepted the payload correctly in the test run."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (POST /api/bracket/submit returned 200 with valid payload; GET /api/bracket/meta returned groups A-L + pichichi)",
+    "frontend": "100% functional / 90% testability (duplicate testid issue)"
+  },
+  "test_credentials": "Not required — bracket page is public.",
+  "seed_data_creation": "One real bracket submission persisted to backend during testing: name='Test', city='City', email='t@e.com', champion='México', runner_up='Inglaterra', final score 2-1, mexico_to_quarters not set in final run. Main agent may wish to clean from Mongo if seed data is undesired.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "When automating clicks on the bracket tree, EITHER (a) wait ≥150ms between sequential pickWinner clicks so React re-renders and pickWinner closure refreshes, OR (b) query the visible element only (offsetParent !== null) since each bkt-* testid currently appears twice in DOM (desktop + mobile copies). Useful testids: bracket-page, step-info/groups/thirds/bracket/review, bracket-name/city/email/whatsapp, bracket-next, bracket-prev, bracket-submit, group-{A..L}, group-{gid}-up-{idx}/down-{idx}, third-{teamName} (select 8), third-pick-{teamName} (3rd place), bkt-r32-{0..15}, bkt-r16-{0..7}, bkt-qf-{0..3}, bkt-sf-{0..1}, bkt-final-0 each with -team-0/-team-1, bracket-champion-banner, final-score-home, final-score-away, final-pichichi, mxqf-true/mxqf-false, step-review-content, bracket-visual, share-copy/share-fb/share-wa. Storage key: localStorage 'lc_bracket_progress' — clear before fresh runs.",
+  "rca of the issue": "Duplicate testid: StepBracket renders both <div className='hidden lg:block'>…desktop tree…</div> and <div className='lg:hidden'>…mobile stack…</div> in the same component tree. Tailwind responsive utilities only toggle CSS display, they do not unmount, so both MatchCards (with identical data-testid) coexist in DOM at every viewport. Mitigation: replace with a JS-driven viewport check (useMediaQuery('(min-width: 1024px)')) and render only the matching branch, OR namespace the testids per layout. The functional pickWinner/sanitize chain is correct — verified by completing a full bracket and confirming POST /api/bracket/submit succeeded with champion='México'."
+}

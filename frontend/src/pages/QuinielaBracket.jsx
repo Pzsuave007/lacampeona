@@ -5,24 +5,27 @@ import { toast } from "sonner";
 import { api } from "../lib/api";
 
 /**
- * Visual World Cup 2026 bracket wizard.
- * Linear, step-by-step. Each step is a focused screen. Final step shows the
- * complete visual bracket + share button.
+ * Visual World Cup 2026 bracket.
+ * Steps: datos -> grupos -> mejores 3os -> BRACKET (árbol visual) -> compartir.
+ * The knockout rounds (32avos -> Final) are one interactive tournament tree.
+ * Mobile: rounds stacked vertically. Desktop (lg+): two-sided bracket
+ * converging to the Final in the center. Tap a team to advance it.
  */
 
 const STEPS = [
-  { id: "info",         label: "Tus datos" },
-  { id: "groups",       label: "Grupos" },
-  { id: "thirds",       label: "Mejores 3os" },
-  { id: "r32",          label: "32avos" },
-  { id: "r16",          label: "Octavos" },
-  { id: "qf",           label: "Cuartos" },
-  { id: "sf",           label: "Semifinales" },
-  { id: "final",        label: "Final" },
-  { id: "review",       label: "Compartir" },
+  { id: "info",    label: "Tus datos" },
+  { id: "groups",  label: "Grupos" },
+  { id: "thirds",  label: "Mejores 3os" },
+  { id: "bracket", label: "Bracket" },
+  { id: "review",  label: "Compartir" },
 ];
 
 const STORAGE_KEY = "lc_bracket_progress";
+
+// Round order from outer to inner. matchIdx within round.
+const PREV_ROUND = { sf: "qf", qf: "r16", r16: "r32" };
+const ROUND_LABEL = { r32: "32avos", r16: "Octavos", qf: "Cuartos", sf: "Semis", final: "Final" };
+const ROUND_MATCHES = { r32: 16, r16: 8, qf: 4, sf: 2 };
 
 export default function QuinielaBracket() {
   const navigate = useNavigate();
@@ -30,11 +33,10 @@ export default function QuinielaBracket() {
   const [loading, setLoading] = useState(true);
   const [stepIdx, setStepIdx] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [submission, setSubmission] = useState(null); // {id, edit_token, score} when saved
+  const [submission, setSubmission] = useState(null);
 
   // form state
   const [info, setInfo] = useState({ name: "", city: "", email: "", whatsapp: "" });
-  // groups: {"A": [team1, team2, team3, team4], ...} — order = position
   const [groupPositions, setGroupPositions] = useState({});
   const [bestThirds, setBestThirds] = useState([]);  // 8 teams
   const [r32, setR32] = useState([]);   // 16 winners
@@ -50,13 +52,11 @@ export default function QuinielaBracket() {
   useEffect(() => {
     api.get("/bracket/meta").then(({ data }) => {
       setMeta(data);
-      // Initialize groupPositions with the official order
       const init = {};
       for (const [gid, teams] of Object.entries(data.groups || {})) init[gid] = [...teams];
       setGroupPositions(init);
     }).catch(() => toast.error("No se pudo cargar")).finally(() => setLoading(false));
 
-    // Restore from localStorage if there's progress
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (saved) {
@@ -73,7 +73,6 @@ export default function QuinielaBracket() {
     } catch { /* ignore */ }
   }, []);
 
-  // Persist locally on every change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -82,7 +81,6 @@ export default function QuinielaBracket() {
     } catch { /* ignore */ }
   }, [info, groupPositions, bestThirds, r32, r16, qf, sf, finalPicks, stepIdx]);
 
-  // Derived: list of 3rd place teams from groups (for "best 3rds" step)
   const thirdPlaceTeams = useMemo(() => {
     const out = [];
     for (const teams of Object.values(groupPositions)) {
@@ -91,15 +89,14 @@ export default function QuinielaBracket() {
     return out;
   }, [groupPositions]);
 
-  // Derived: 32 teams advancing (top 2 of each group + 8 best thirds)
+  // 32 teams seeded into the bracket: 12 firsts, 12 seconds, 8 best thirds
   const r32Teams = useMemo(() => {
-    const top12 = [];
-    const second12 = [];
+    const top = [], second = [];
     for (const teams of Object.values(groupPositions)) {
-      if (teams && teams[0]) top12.push(teams[0]);
-      if (teams && teams[1]) second12.push(teams[1]);
+      if (teams && teams[0]) top.push(teams[0]);
+      if (teams && teams[1]) second.push(teams[1]);
     }
-    return [...top12, ...second12, ...bestThirds];
+    return [...top, ...second, ...bestThirds];
   }, [groupPositions, bestThirds]);
 
   const moveTeam = (gid, idx, dir) => {
@@ -110,6 +107,9 @@ export default function QuinielaBracket() {
       [teams[idx], teams[swapIdx]] = [teams[swapIdx], teams[idx]];
       return { ...g, [gid]: teams };
     });
+    // group order changed -> invalidate downstream knockout picks
+    setR32([]); setR16([]); setQf([]); setSf([]);
+    setFinalPicks((f) => ({ ...f, champion: "", runner_up: "", third_place_winner: "" }));
   };
 
   const toggleBestThird = (team) => {
@@ -121,12 +121,55 @@ export default function QuinielaBracket() {
       }
       return [...arr, team];
     });
+    setR32([]); setR16([]); setQf([]); setSf([]);
+    setFinalPicks((f) => ({ ...f, champion: "", runner_up: "", third_place_winner: "" }));
   };
 
-  const pickWinner = (setter, currentList, slotIdx, team) => {
-    const next = [...currentList];
-    next[slotIdx] = team;
-    setter(next);
+  // participants feeding a given (round, idx)
+  const getParts = (round, idx) => {
+    if (round === "r32") return [r32Teams[idx * 2], r32Teams[idx * 2 + 1]];
+    if (round === "r16") return [r32[idx * 2], r32[idx * 2 + 1]];
+    if (round === "qf")  return [r16[idx * 2], r16[idx * 2 + 1]];
+    if (round === "sf")  return [qf[idx * 2], qf[idx * 2 + 1]];
+    return [sf[0], sf[1]]; // final
+  };
+
+  const getWinner = (round, idx) => {
+    if (round === "r32") return r32[idx];
+    if (round === "r16") return r16[idx];
+    if (round === "qf")  return qf[idx];
+    if (round === "sf")  return sf[idx];
+    return finalPicks.champion; // final
+  };
+
+  // remove downstream picks that are no longer valid participants
+  const sanitize = (n32, n16, nqf, nsf, nfp) => {
+    const a32 = [...n32], a16 = [...n16], aqf = [...nqf], asf = [...nsf];
+    for (let i = 0; i < 16; i++) { const o = [r32Teams[2 * i], r32Teams[2 * i + 1]]; if (a32[i] && !o.includes(a32[i])) a32[i] = undefined; }
+    for (let i = 0; i < 8; i++)  { const o = [a32[2 * i], a32[2 * i + 1]];           if (a16[i] && !o.includes(a16[i])) a16[i] = undefined; }
+    for (let i = 0; i < 4; i++)  { const o = [a16[2 * i], a16[2 * i + 1]];           if (aqf[i] && !o.includes(aqf[i])) aqf[i] = undefined; }
+    for (let i = 0; i < 2; i++)  { const o = [aqf[2 * i], aqf[2 * i + 1]];           if (asf[i] && !o.includes(asf[i])) asf[i] = undefined; }
+    const fp = { ...nfp };
+    const finalOpts = [asf[0], asf[1]];
+    if (fp.champion && !finalOpts.includes(fp.champion)) { fp.champion = ""; fp.runner_up = ""; }
+    else if (fp.champion) { fp.runner_up = finalOpts.find((t) => t && t !== fp.champion) || ""; }
+    const sfLosers = aqf.filter((t) => t && !asf.includes(t));
+    if (fp.third_place_winner && !sfLosers.includes(fp.third_place_winner)) fp.third_place_winner = "";
+    return { a32, a16, aqf, asf, fp };
+  };
+
+  const pickWinner = (round, idx, team) => {
+    if (!team) return;
+    let n32 = r32, n16 = r16, nqf = qf, nsf = sf, nfp = finalPicks;
+    if (round === "r32") { n32 = [...r32]; n32[idx] = team; }
+    else if (round === "r16") { n16 = [...r16]; n16[idx] = team; }
+    else if (round === "qf")  { nqf = [...qf]; nqf[idx] = team; }
+    else if (round === "sf")  { nsf = [...sf]; nsf[idx] = team; }
+    else if (round === "final") {
+      nfp = { ...finalPicks, champion: team, runner_up: [sf[0], sf[1]].find((t) => t && t !== team) || "" };
+    }
+    const s = sanitize(n32, n16, nqf, nsf, nfp);
+    setR32(s.a32); setR16(s.a16); setQf(s.aqf); setSf(s.asf); setFinalPicks(s.fp);
   };
 
   const canGoNext = () => {
@@ -134,17 +177,14 @@ export default function QuinielaBracket() {
     if (s.id === "info")    return info.name && info.city && info.email;
     if (s.id === "groups")  return true;
     if (s.id === "thirds")  return bestThirds.length === 8;
-    if (s.id === "r32")     return r32.filter(Boolean).length === 16;
-    if (s.id === "r16")     return r16.filter(Boolean).length === 8;
-    if (s.id === "qf")      return qf.filter(Boolean).length === 4;
-    if (s.id === "sf")      return sf.filter(Boolean).length === 2;
-    if (s.id === "final")   return finalPicks.champion && finalPicks.runner_up;
+    if (s.id === "bracket") return !!finalPicks.champion;
     return true;
   };
 
   const submit = async () => {
     setSaving(true);
     try {
+      const otherSemis = qf.filter((t) => t && t !== finalPicks.champion && t !== finalPicks.runner_up);
       const payload = {
         mode: "pro",
         name: info.name,
@@ -155,10 +195,8 @@ export default function QuinielaBracket() {
         picks_quick: {
           champion: finalPicks.champion,
           runner_up: finalPicks.runner_up,
-          semi_final_3: sf[0] !== finalPicks.champion && sf[0] !== finalPicks.runner_up
-            ? sf[0] : (qf.find((t) => t !== finalPicks.champion && t !== finalPicks.runner_up) || ""),
-          semi_final_4: sf[1] !== finalPicks.champion && sf[1] !== finalPicks.runner_up
-            ? sf[1] : (qf.find((t) => t !== finalPicks.champion && t !== finalPicks.runner_up && t !== sf[0]) || ""),
+          semi_final_3: otherSemis[0] || "",
+          semi_final_4: otherSemis[1] || "",
           top_scorer: finalPicks.top_scorer,
           final_score_home: finalPicks.final_score_home === "" ? null : Number(finalPicks.final_score_home),
           final_score_away: finalPicks.final_score_away === "" ? null : Number(finalPicks.final_score_away),
@@ -195,19 +233,18 @@ export default function QuinielaBracket() {
   }
 
   const step = STEPS[stepIdx];
+  const wide = step.id === "bracket";
 
   return (
     <div className="bg-slate-50 min-h-screen" data-testid="bracket-page">
-      {/* Header */}
       <header className="bg-gradient-to-br from-[#3F0A0A] via-[#7F1D1D] to-[#991B1B] text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Link to="/quiniela" className="inline-flex items-center gap-1.5 text-amber-200 hover:text-white text-sm font-bold mb-2">
             <ChevronLeft className="w-4 h-4" /> Volver
           </Link>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight inline-flex items-center gap-3">
             <Trophy className="w-8 h-8 text-amber-300" /> Mi Bracket del Mundial 2026
           </h1>
-          {/* Steps progress */}
           <div className="mt-5 flex flex-wrap gap-1 text-xs">
             {STEPS.map((s, i) => (
               <button
@@ -228,44 +265,28 @@ export default function QuinielaBracket() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={`${wide ? "max-w-7xl" : "max-w-5xl"} mx-auto px-4 sm:px-6 lg:px-8 py-8`}>
         {step.id === "info" && <StepInfo info={info} setInfo={setInfo} />}
-        {step.id === "groups" && (
-          <StepGroups groupPositions={groupPositions} moveTeam={moveTeam} />
-        )}
+        {step.id === "groups" && <StepGroups groupPositions={groupPositions} moveTeam={moveTeam} />}
         {step.id === "thirds" && (
           <StepThirds thirdPlaceTeams={thirdPlaceTeams} bestThirds={bestThirds} toggleBestThird={toggleBestThird} />
         )}
-        {step.id === "r32" && (
-          <StepKnockout title="32avos de Final" subtitle="16 partidos: elige quién pasa a Octavos" teams={r32Teams} winners={r32} setWinners={setR32} slotCount={16} pairSize={2} />
-        )}
-        {step.id === "r16" && (
-          <StepKnockout title="Octavos de Final" subtitle="8 partidos: elige quién pasa a Cuartos" teams={r32.filter(Boolean)} winners={r16} setWinners={setR16} slotCount={8} pairSize={2} />
-        )}
-        {step.id === "qf" && (
-          <StepKnockout title="Cuartos de Final" subtitle="4 partidos: elige quién pasa a Semis" teams={r16.filter(Boolean)} winners={qf} setWinners={setQf} slotCount={4} pairSize={2} />
-        )}
-        {step.id === "sf" && (
-          <StepKnockout title="Semifinales" subtitle="2 partidos: elige quién va a la Final" teams={qf.filter(Boolean)} winners={sf} setWinners={setSf} slotCount={2} pairSize={2} />
-        )}
-        {step.id === "final" && (
-          <StepFinal sf={sf} qf={qf} finalPicks={finalPicks} setFinalPicks={setFinalPicks} pichi={meta?.pichichi_candidates || []} />
-        )}
-        {step.id === "review" && (
-          <StepReview
-            submission={submission}
-            info={info}
-            groupPositions={groupPositions}
-            bestThirds={bestThirds}
-            r32={r32}
-            r16={r16}
+        {step.id === "bracket" && (
+          <StepBracket
+            getParts={getParts}
+            getWinner={getWinner}
+            pickWinner={pickWinner}
+            finalPicks={finalPicks}
+            setFinalPicks={setFinalPicks}
             qf={qf}
             sf={sf}
-            finalPicks={finalPicks}
+            pichi={meta?.pichichi_candidates || []}
           />
         )}
+        {step.id === "review" && (
+          <StepReview submission={submission} info={info} qf={qf} sf={sf} finalPicks={finalPicks} />
+        )}
 
-        {/* Nav buttons */}
         {step.id !== "review" && (
           <div className="mt-8 flex items-center justify-between">
             <button
@@ -276,7 +297,7 @@ export default function QuinielaBracket() {
             >
               <ChevronLeft className="w-4 h-4" /> Atrás
             </button>
-            {step.id === "final" ? (
+            {step.id === "bracket" ? (
               <button
                 onClick={submit}
                 disabled={!canGoNext() || saving}
@@ -303,7 +324,198 @@ export default function QuinielaBracket() {
   );
 }
 
-// ----- Step components -----
+// ---------- Match button (one matchup, two teams) ----------
+
+function MatchCard({ round, idx, getParts, getWinner, pickWinner, gold, testidPrefix = "bkt" }) {
+  const [a, b] = getParts(round, idx);
+  const winner = getWinner(round, idx);
+  return (
+    <div
+      className={`rounded-xl border-2 overflow-hidden shadow-sm w-full ${gold ? "border-amber-400" : "border-slate-200"} bg-white`}
+      data-testid={`${testidPrefix}-${round}-${idx}`}
+    >
+      {[a, b].map((team, ti) => {
+        const isWin = winner && winner === team;
+        const empty = !team;
+        return (
+          <button
+            key={ti}
+            type="button"
+            disabled={empty}
+            onClick={() => pickWinner(round, idx, team)}
+            data-testid={`${testidPrefix}-${round}-${idx}-team-${ti}`}
+            className={`w-full flex items-center justify-between gap-1 px-2.5 py-2 text-sm font-bold text-left transition ${ti === 0 ? "border-b border-slate-100" : ""} ${
+              isWin
+                ? gold ? "bg-amber-400 text-slate-900" : "bg-emerald-500 text-white"
+                : empty
+                ? "bg-slate-50 text-slate-300 cursor-not-allowed"
+                : "bg-white text-slate-800 hover:bg-orange-50"
+            }`}
+          >
+            <span className="truncate">{team || "—"}</span>
+            {isWin && <Check className="w-3.5 h-3.5 shrink-0" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// connector that merges two child subtrees into the parent ("]" shape)
+function Connector({ mirror }) {
+  return (
+    <div className="relative self-stretch w-6 shrink-0">
+      {/* horizontal stubs to each child */}
+      <div className={`absolute top-1/4 h-0.5 bg-slate-300 -translate-y-1/2 ${mirror ? "right-0 left-1/2" : "left-0 right-1/2"}`} />
+      <div className={`absolute bottom-1/4 h-0.5 bg-slate-300 translate-y-1/2 ${mirror ? "right-0 left-1/2" : "left-0 right-1/2"}`} />
+      {/* vertical bar */}
+      <div className={`absolute top-1/4 bottom-1/4 w-0.5 bg-slate-300 ${mirror ? "left-1/2" : "right-1/2"}`} />
+      {/* horizontal to parent */}
+      <div className={`absolute top-1/2 w-1/2 h-0.5 bg-slate-300 -translate-y-1/2 ${mirror ? "left-0" : "right-0"}`} />
+    </div>
+  );
+}
+
+// recursive half-bracket built as a plain function (no self-referencing JSX
+// component tag — that pattern crashes the visual-edits babel plugin).
+// `mirror` flips it horizontally for the right side of the bracket.
+function renderHalf(round, idx, mirror, mc) {
+  if (round === "r32") {
+    return (
+      <div className="flex items-center" style={{ minWidth: 150 }} key={`r32-${idx}`}>
+        <MatchCard round="r32" idx={idx} {...mc} />
+      </div>
+    );
+  }
+  const prev = PREV_ROUND[round];
+  return (
+    <div className={`flex items-center ${mirror ? "flex-row-reverse" : ""}`} key={`${round}-${idx}`}>
+      <div className="flex flex-col justify-center gap-3">
+        {renderHalf(prev, idx * 2, mirror, mc)}
+        {renderHalf(prev, idx * 2 + 1, mirror, mc)}
+      </div>
+      <Connector mirror={mirror} />
+      <div className="flex items-center" style={{ minWidth: 150 }}>
+        <MatchCard round={round} idx={idx} {...mc} />
+      </div>
+    </div>
+  );
+}
+
+// ---------- Step: Bracket (the visual tree) ----------
+
+function StepBracket({ getParts, getWinner, pickWinner, finalPicks, setFinalPicks, qf, sf, pichi }) {
+  const mc = { getParts, getWinner, pickWinner };
+  return (
+    <div data-testid="step-bracket-content">
+      <h2 className="text-2xl font-black text-slate-900 mb-1">El Bracket — Eliminatorias</h2>
+      <p className="text-slate-500 mb-5">Toca al equipo que crees que avanza en cada partido. Avanza solo hasta la Final 🏆.</p>
+
+      {/* Champion banner */}
+      <div className="mb-6 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white px-5 py-3 flex items-center justify-center gap-3 shadow-md" data-testid="bracket-champion-banner">
+        <Trophy className="w-6 h-6" />
+        <span className="text-sm font-extrabold uppercase tracking-[0.2em]">Campeón:</span>
+        <span className="text-xl font-black">{finalPicks.champion || "?"}</span>
+      </div>
+
+      {/* DESKTOP: two-sided converging bracket */}
+      <div className="hidden lg:block overflow-x-auto pb-4">
+        <div className="flex items-stretch justify-center gap-2 min-w-max">
+          {/* left half feeds SF #0 */}
+          {renderHalf("sf", 0, false, mc)}
+          {/* center: Final */}
+          <div className="flex flex-col items-center justify-center px-2" style={{ minWidth: 170 }}>
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-600 mb-2">Final</div>
+            <MatchCard round="final" idx={0} gold {...mc} />
+          </div>
+          {/* right half feeds SF #1 (mirrored) */}
+          {renderHalf("sf", 1, true, mc)}
+        </div>
+      </div>
+
+      {/* MOBILE: rounds stacked vertically */}
+      <div className="lg:hidden space-y-6">
+        {["r32", "r16", "qf", "sf"].map((round) => (
+          <div key={round}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-700">{ROUND_LABEL[round]}</span>
+              <span className="text-xs text-slate-400">({ROUND_MATCHES[round]} partidos)</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {Array.from({ length: ROUND_MATCHES[round] }).map((_, i) => (
+                <MatchCard key={i} round={round} idx={i} {...mc} />
+              ))}
+            </div>
+          </div>
+        ))}
+        <div>
+          <div className="text-xs font-black uppercase tracking-[0.2em] text-amber-600 mb-2 flex items-center gap-1.5">
+            <Trophy className="w-4 h-4" /> Final
+          </div>
+          <MatchCard round="final" idx={0} gold {...mc} />
+        </div>
+      </div>
+
+      {/* Final extras */}
+      <FinalDetails finalPicks={finalPicks} setFinalPicks={setFinalPicks} qf={qf} sf={sf} pichi={pichi} />
+    </div>
+  );
+}
+
+function FinalDetails({ finalPicks, setFinalPicks, qf, sf, pichi }) {
+  const set = (k, v) => setFinalPicks({ ...finalPicks, [k]: v });
+  const finalists = sf.filter(Boolean);
+  const semifinalists = qf.filter((t) => t && !finalists.includes(t));
+  return (
+    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-300 p-5">
+        <h3 className="font-black text-lg text-slate-900 mb-3">🏆 Detalles de la Final</h3>
+        <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">Marcador final</label>
+        <div className="flex items-center gap-2 mt-1 mb-4">
+          <input data-testid="final-score-home" type="number" min="0" value={finalPicks.final_score_home} onChange={(e) => set("final_score_home", e.target.value)} className="w-16 px-2 py-2 rounded-lg border-2 border-slate-200 text-center text-2xl font-black" placeholder="2" />
+          <span className="font-black text-slate-400 text-2xl">-</span>
+          <input data-testid="final-score-away" type="number" min="0" value={finalPicks.final_score_away} onChange={(e) => set("final_score_away", e.target.value)} className="w-16 px-2 py-2 rounded-lg border-2 border-slate-200 text-center text-2xl font-black" placeholder="1" />
+        </div>
+        <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">Goleador del torneo</label>
+        <select data-testid="final-pichichi" value={finalPicks.top_scorer} onChange={(e) => set("top_scorer", e.target.value)} className="mt-1 w-full px-3 py-2 rounded-lg border-2 border-slate-200 bg-white">
+          <option value="">— Selecciona —</option>
+          {pichi.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h3 className="font-black text-base text-slate-900 mb-2">🥉 Partido del 3er Lugar</h3>
+          <p className="text-xs text-slate-500 mb-3">Entre los que perdieron las semifinales: {semifinalists.join(" vs ") || "—"}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {semifinalists.map((t) => (
+              <button key={t} type="button" onClick={() => set("third_place_winner", t)} data-testid={`third-pick-${t}`}
+                className={`px-3 py-2 rounded-xl font-bold text-sm transition ${
+                  finalPicks.third_place_winner === t ? "bg-emerald-500 text-white shadow-md" : "bg-slate-50 text-slate-700 hover:bg-emerald-50"
+                }`}>
+                {finalPicks.third_place_winner === t && "🥉 "} {t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <h3 className="font-black text-base text-slate-900 mb-2">Bonus 🇲🇽</h3>
+          <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">¿México llega a cuartos? (+5 pts)</label>
+          <div className="flex gap-2 mt-1">
+            {[["true", "Sí"], ["false", "No"]].map(([v, l]) => (
+              <button key={v} type="button" onClick={() => set("mexico_to_quarters", v)} data-testid={`mxqf-${v}`}
+                className={`px-5 py-2 rounded-full font-bold transition ${
+                  finalPicks.mexico_to_quarters === v ? "bg-orange-600 text-white shadow-md" : "bg-slate-100 text-slate-700"
+                }`}>{l}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Other steps (datos / grupos / 3os / review) ----------
 
 function StepInfo({ info, setInfo }) {
   return (
@@ -402,132 +614,7 @@ function StepThirds({ thirdPlaceTeams, bestThirds, toggleBestThird }) {
   );
 }
 
-function StepKnockout({ title, subtitle, teams, winners, setWinners, slotCount, pairSize = 2 }) {
-  // Generate matchups: pair teams[0] vs teams[1], [2] vs [3], ...
-  const matchups = useMemo(() => {
-    const m = [];
-    for (let i = 0; i < slotCount; i++) {
-      const teamA = teams[i * pairSize] || "—";
-      const teamB = teams[i * pairSize + 1] || "—";
-      m.push([teamA, teamB]);
-    }
-    return m;
-  }, [teams, slotCount, pairSize]);
-
-  const pick = (matchIdx, team) => {
-    const next = [...winners];
-    next[matchIdx] = team;
-    setWinners(next);
-  };
-
-  return (
-    <div>
-      <h2 className="text-2xl font-black text-slate-900 mb-1">{title}</h2>
-      <p className="text-slate-500 mb-5">{subtitle}</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {matchups.map(([a, b], idx) => (
-          <div key={idx} className="bg-white rounded-2xl border-2 border-slate-200 p-3" data-testid={`match-${idx}`}>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Partido {idx + 1}</div>
-            {[a, b].map((team, ti) => (
-              <button
-                key={team + ti}
-                type="button"
-                disabled={team === "—"}
-                onClick={() => pick(idx, team)}
-                data-testid={`match-${idx}-pick-${ti}`}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-bold transition mt-1 first:mt-0 ${
-                  winners[idx] === team
-                    ? "bg-emerald-500 text-white shadow-md"
-                    : team === "—"
-                    ? "bg-slate-50 text-slate-300 cursor-not-allowed"
-                    : "bg-slate-50 text-slate-800 hover:bg-orange-50 hover:ring-2 hover:ring-orange-200"
-                }`}
-              >
-                {winners[idx] === team && <Check className="w-3.5 h-3.5 inline mr-1" />} {team}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StepFinal({ sf, qf, finalPicks, setFinalPicks, pichi }) {
-  const finalists = sf.filter(Boolean);
-  const set = (k, v) => setFinalPicks({ ...finalPicks, [k]: v });
-  const semifinalists = qf.filter((t) => !finalists.includes(t));
-  return (
-    <div data-testid="step-final-content">
-      <h2 className="text-2xl font-black text-slate-900 mb-1">Final + 3er Lugar</h2>
-      <p className="text-slate-500 mb-5">Tus 2 finalistas: <strong>{finalists.join(" vs ") || "—"}</strong></p>
-
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl border-2 border-amber-300 p-6">
-        <h3 className="font-black text-xl text-slate-900 mb-3">🏆 La Final</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-          {finalists.map((t) => (
-            <button key={t} type="button" onClick={() => {
-              set("champion", t);
-              set("runner_up", finalists.find((f) => f !== t) || "");
-            }} data-testid={`final-pick-${t}`}
-              className={`px-4 py-3 rounded-xl font-black text-lg transition ${
-                finalPicks.champion === t ? "bg-amber-400 text-slate-900 shadow-lg" : "bg-white text-slate-700 hover:bg-amber-100"
-              }`}>
-              {finalPicks.champion === t && "🏆 "} {t}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">Marcador final</label>
-            <div className="flex items-center gap-2 mt-1">
-              <input data-testid="final-score-home" type="number" min="0" value={finalPicks.final_score_home} onChange={(e) => set("final_score_home", e.target.value)} className="w-16 px-2 py-2 rounded-lg border-2 border-slate-200 text-center text-2xl font-black" placeholder="2" />
-              <span className="font-black text-slate-400 text-2xl">-</span>
-              <input data-testid="final-score-away" type="number" min="0" value={finalPicks.final_score_away} onChange={(e) => set("final_score_away", e.target.value)} className="w-16 px-2 py-2 rounded-lg border-2 border-slate-200 text-center text-2xl font-black" placeholder="1" />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">Goleador del torneo</label>
-            <select data-testid="final-pichichi" value={finalPicks.top_scorer} onChange={(e) => set("top_scorer", e.target.value)} className="mt-1 w-full px-3 py-2 rounded-lg border-2 border-slate-200 bg-white">
-              <option value="">— Selecciona —</option>
-              {pichi.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 bg-white rounded-3xl border border-slate-200 p-6">
-        <h3 className="font-black text-lg text-slate-900 mb-3">🥉 Partido del 3er Lugar</h3>
-        <p className="text-sm text-slate-500 mb-3">Entre los que perdieron las semifinales: {semifinalists.join(" vs ") || "—"}</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {semifinalists.map((t) => (
-            <button key={t} type="button" onClick={() => set("third_place_winner", t)} data-testid={`third-pick-${t}`}
-              className={`px-4 py-2.5 rounded-xl font-bold transition ${
-                finalPicks.third_place_winner === t ? "bg-emerald-500 text-white shadow-md" : "bg-slate-50 text-slate-700 hover:bg-emerald-50"
-              }`}>
-              {finalPicks.third_place_winner === t && "🥉 "} {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-5 bg-white rounded-3xl border border-slate-200 p-6">
-        <h3 className="font-black text-lg text-slate-900 mb-3">Bonus 🇲🇽</h3>
-        <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">¿México llega a cuartos? (+5 pts)</label>
-        <div className="flex gap-2 mt-1">
-          {[["true", "Sí"], ["false", "No"]].map(([v, l]) => (
-            <button key={v} type="button" onClick={() => set("mexico_to_quarters", v)} data-testid={`mxqf-${v}`}
-              className={`px-5 py-2 rounded-full font-bold transition ${
-                finalPicks.mexico_to_quarters === v ? "bg-orange-600 text-white shadow-md" : "bg-slate-100 text-slate-700"
-              }`}>{l}</button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StepReview({ submission, info, groupPositions, bestThirds, r32, r16, qf, sf, finalPicks }) {
+function StepReview({ submission, info, qf, sf, finalPicks }) {
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
   const shareUrl = submission ? `${window.location.origin}/quiniela/ver/${submission.id}` : "";
@@ -570,8 +657,7 @@ function StepReview({ submission, info, groupPositions, bestThirds, r32, r16, qf
         </div>
       </div>
 
-      {/* Visual bracket summary */}
-      <BracketVisual info={info} groupPositions={groupPositions} r32={r32} r16={r16} qf={qf} sf={sf} finalPicks={finalPicks} />
+      <BracketVisual info={info} qf={qf} sf={sf} finalPicks={finalPicks} />
 
       <div className="mt-6 flex justify-center">
         <button onClick={() => navigate("/quiniela/leaderboard")} className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-6 py-3 transition shadow-md">
@@ -583,7 +669,6 @@ function StepReview({ submission, info, groupPositions, bestThirds, r32, r16, qf
 }
 
 function BracketVisual({ info, finalPicks, qf, sf }) {
-  // Visual rendering of the knockout side of the bracket — easy to screenshot
   return (
     <div className="bg-white rounded-3xl border-2 border-amber-200 overflow-hidden shadow-md" data-testid="bracket-visual">
       <div className="bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white px-6 py-4 text-center">
@@ -592,7 +677,6 @@ function BracketVisual({ info, finalPicks, qf, sf }) {
         <p className="text-sm opacity-90">{info.city}</p>
       </div>
       <div className="p-6">
-        {/* Champion box */}
         <div className="text-center mb-4">
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-600">🏆 Campeón</p>
           <p className="text-3xl font-black text-slate-900 mt-1">{finalPicks.champion || "?"}</p>
@@ -600,21 +684,16 @@ function BracketVisual({ info, finalPicks, qf, sf }) {
             {finalPicks.champion} {finalPicks.final_score_home}-{finalPicks.final_score_away} {finalPicks.runner_up}
           </p>
         </div>
-
-        {/* Semis */}
         <div className="grid grid-cols-2 gap-3 mb-3">
           <Bucket label="🥈 Subcampeón" team={finalPicks.runner_up} />
           <Bucket label="🥉 3er lugar" team={finalPicks.third_place_winner} />
         </div>
-
-        {/* Semifinalists (= QF winners minus the finalists) */}
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mt-4 mb-2">Semifinalistas</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {qf.filter(Boolean).slice(0, 4).map((t) => (
             <div key={t} className="bg-emerald-50 border border-emerald-200 rounded-xl px-2 py-1.5 text-sm font-bold text-emerald-800 text-center">{t}</div>
           ))}
         </div>
-
         {finalPicks.top_scorer && (
           <div className="mt-4 text-center text-sm text-slate-600">
             <span className="font-bold">⚽ Pichichi:</span> {finalPicks.top_scorer}

@@ -65,10 +65,17 @@ echo "    ✓ build/ found ($(du -sh "$REPO/frontend/build" | cut -f1))"
 
 # ----- 5. Deploy frontend + fix ownership -----
 echo "[5/6] Deploying frontend to $WEB ..."
+# AlmaLinux/cPanel sometimes leaves files with chattr +i (immutable) from a
+# previous failed deploy or backup tool. Strip it defensively so rm always works.
+chattr -i -R "$WEB/static" 2>/dev/null || true
+for f in index.html asset-manifest.json manifest.json robots.txt favicon.ico; do
+    chattr -i "$WEB/$f" 2>/dev/null || true
+done
 rm -rf "$WEB/static" "$WEB/index.html" "$WEB/asset-manifest.json" "$WEB/manifest.json"
 cp -rf "$REPO/frontend/build/"* "$WEB/"
 cp -f  "$REPO/deploy/htaccess"  "$WEB/.htaccess"
-# chown not needed — lacampeona already owns public_html
+# Re-set ownership and permissions for cPanel/Apache
+chown -R "${CPANEL_USER}:${CPANEL_USER}" "$WEB" 2>/dev/null || true
 find "$WEB" -type f -exec chmod 644 {} \;
 find "$WEB" -type d -exec chmod 755 {} \;
 

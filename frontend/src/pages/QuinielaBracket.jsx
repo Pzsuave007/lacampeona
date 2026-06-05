@@ -756,12 +756,37 @@ function StepReview({ submission, info, qf, sf, finalPicks }) {
     ? `${process.env.REACT_APP_BACKEND_URL}/api/bracket/og/${submission.id}`
     : "";
   const shareText = `Mi bracket del Mundial 2026 ⚽🏆: Campeón ${finalPicks.champion} ${finalPicks.final_score_home}-${finalPicks.final_score_away} ${finalPicks.runner_up}. ¡Haz el tuyo en La Campeona 880 AM!`;
-  const copyLink = () => {
-    navigator.clipboard.writeText(shareUrl).then(() => {
+  const copyLink = async () => {
+    if (!shareUrl) return;
+    const markCopied = () => {
       setCopied(true);
-      toast.success("Link copiado");
+      toast.success("¡Link copiado!");
       setTimeout(() => setCopied(false), 2000);
-    });
+    };
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareUrl);
+        markCopied();
+        return;
+      }
+      throw new Error("clipboard unavailable");
+    } catch {
+      // Fallback for browsers/contexts where the async clipboard API is blocked
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = shareUrl;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        markCopied();
+      } catch {
+        toast.error("No se pudo copiar — mantén presionado el link para copiarlo");
+      }
+    }
   };
   const shareFb = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank");
   const shareWa = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "_blank");
@@ -792,6 +817,13 @@ function StepReview({ submission, info, qf, sf, finalPicks }) {
             <Share2 className="w-4 h-4" /> WhatsApp
           </button>
         </div>
+        <input
+          readOnly
+          value={shareUrl}
+          data-testid="share-url-input"
+          onFocus={(e) => e.target.select()}
+          className="mt-3 w-full text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-mono"
+        />
       </div>
 
       <BracketVisual info={info} qf={qf} sf={sf} finalPicks={finalPicks} />

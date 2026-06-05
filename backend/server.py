@@ -2436,14 +2436,30 @@ async def bracket_view_public(prediction_id: str):
 # ---- Social share: Open Graph preview (image + meta tags) ----
 
 def _og_font(size: int, bold: bool = True):
+    """Load a sans-serif TTF, trying common Debian/RHEL paths, then falling back
+    to Pillow's bundled scalable default (works on any OS, incl. AlmaLinux)."""
     from PIL import ImageFont
-    path = (
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
-        if bold else
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+    candidates = (
+        [
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+            "/usr/share/fonts/liberation-sans/LiberationSans-Bold.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",
+        ] if bold else
+        [
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+        ]
     )
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            continue
     try:
-        return ImageFont.truetype(path, size)
+        return ImageFont.load_default(size=size)  # Pillow >=10: scalable
     except Exception:
         return ImageFont.load_default()
 

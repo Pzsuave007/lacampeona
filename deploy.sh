@@ -120,7 +120,21 @@ else
     # fix.sh (which runs as that user) cannot write the deps stamp, copy the
     # new server.py, or restart the backend — aborting the whole update.
     chown -R "$CPANEL_USER:$CPANEL_USER" "$PROD" 2>/dev/null || true
-    as_user "bash $REPO/deploy/fix.sh"
+    # Don't let a fix.sh hiccup abort the deploy before the backend restarts.
+    as_user "bash $REPO/deploy/fix.sh" || echo "  ⚠️  fix.sh reported an issue — forcing a backend restart below..."
+fi
+
+# ----- Guaranteed backend restart (covers the case where fix.sh aborted) -----
+# Ensures the running uvicorn always picks up the latest server.py (e.g. the
+# /api/bracket/og Open Graph routes), even if an earlier step failed.
+cp -f "$REPO/backend/server.py" "$PROD/server.py" 2>/dev/null || true
+OG_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/api/bracket/og/healthcheck" 2>/dev/null)
+if [ "$OG_CODE" != "307" ] && [ "$OG_CODE" != "200" ]; then
+    echo ">>> Backend missing new routes (HTTP $OG_CODE) — force restarting uvicorn..."
+    pkill -f "uvicorn.*${PORT}" 2>/dev/null || true
+    sleep 2
+    as_user "cd $PROD && source venv/bin/activate && nohup venv/bin/uvicorn server:app --host 0.0.0.0 --port ${PORT} --workers 2 > $PROD/backend.log 2>&1 &"
+    sleep 5
 fi
 
 # ----- Final verification -----

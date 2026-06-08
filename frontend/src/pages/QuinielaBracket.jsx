@@ -777,8 +777,15 @@ function StepReview({ submission, info, qf, sf, finalPicks }) {
       }
     }
   };
+  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const nativeShare = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.share({ title: "Mi Bracket del Mundial 2026", text: shareText, url: shareUrl });
+    } catch { /* usuario canceló o no soportado */ }
+  };
   const shareFb = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank");
-  const shareWa = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "_blank");
+  const shareWa = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`, "_blank");
 
   return (
     <div data-testid="step-review-content">
@@ -795,6 +802,11 @@ function StepReview({ submission, info, qf, sf, finalPicks }) {
       <div className="bg-white rounded-3xl border border-slate-200 p-6 mb-6">
         <h3 className="font-black text-lg text-slate-900 mb-2">Comparte tu bracket</h3>
         <p className="text-sm text-slate-500 mb-4">Reta a tus amigos a hacer su propio bracket en La Campeona 880 AM.</p>
+        {canNativeShare && (
+          <button onClick={nativeShare} data-testid="share-native" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-full px-6 py-3 mb-3 transition active:scale-95 shadow-md">
+            <Share2 className="w-5 h-5" /> Compartir mi bracket
+          </button>
+        )}
         <div className="flex flex-wrap gap-2">
           <button onClick={copyLink} data-testid="share-copy" className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-full px-4 py-2.5 transition">
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? "Copiado" : "Copiar link"}
@@ -806,12 +818,14 @@ function StepReview({ submission, info, qf, sf, finalPicks }) {
             <Share2 className="w-4 h-4" /> WhatsApp
           </button>
         </div>
+        <p className="mt-3 text-[11px] text-slate-400">Si el botón Copiar link no funciona en tu teléfono, mantén presionado el texto de abajo para copiarlo.</p>
         <input
           readOnly
           value={shareUrl}
           data-testid="share-url-input"
+          onClick={(e) => e.target.select()}
           onFocus={(e) => e.target.select()}
-          className="mt-3 w-full text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-mono"
+          className="mt-1 w-full text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-mono"
         />
       </div>
 

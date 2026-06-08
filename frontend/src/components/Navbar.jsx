@@ -6,8 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useStation } from "../contexts/StationContext";
 import { bannerUrl } from "../lib/api";
 
-const DEFAULT_LOGO =
-  "https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png";
+const DEFAULT_LOGO = "/logos/la-campeona-880am.png";
 
 export default function Navbar() {
   const { t, lang, toggle } = useLanguage();

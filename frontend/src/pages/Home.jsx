@@ -304,13 +304,13 @@ function DefaultHero({ t, stationName, tagline, stationWa, lang, heroBg }) {
           {/* Right: Brand logo stack */}
           <div className="lg:col-span-5 relative h-[420px] hidden lg:block">
             <BrandPolaroid
-              src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png"
+              src="/logos/la-campeona-880am.png"
               caption="880 AM"
               tone="amber"
               className="absolute top-0 left-6 tilt-l w-64"
             />
             <BrandPolaroid
-              src="https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/2nch7aix_LaCampeona-fuego-logot-big%20%281%29.png"
+              src="/logos/la-campeona-fuego-1039fm.png"
               caption="103.9 FM"
               tone="rose"
               className="absolute top-32 right-0 tilt-r w-64"

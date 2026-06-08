@@ -22,6 +22,20 @@ const STEPS = [
 
 const STORAGE_KEY = "lc_bracket_progress";
 
+const EMPTY_FINAL = {
+  champion: "", runner_up: "", third_place_winner: "",
+  final_score_home: "", final_score_away: "",
+  top_scorer: "", mexico_to_quarters: "",
+};
+
+// Read persisted wizard progress once (used for lazy state init so a page
+// refresh on the Share step keeps the generated bracket id / share link).
+function loadSaved() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; }
+  catch { return {}; }
+}
+const clampStep = (n) => Math.min(Math.max(0, n | 0), STEPS.length - 1);
+
 // Round order from outer to inner. matchIdx within round.
 const PREV_ROUND = { sf: "qf", qf: "r16", r16: "r32" };
 const ROUND_LABEL = { r32: "32avos", r16: "Octavos", qf: "Cuartos", sf: "Semis", final: "Final" };
@@ -137,61 +151,44 @@ function useIsDesktop() {
 
 export default function QuinielaBracket() {
   const navigate = useNavigate();
+  const [saved] = useState(loadSaved);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [stepIdx, setStepIdx] = useState(0);
+  const [stepIdx, setStepIdx] = useState(() =>
+    saved.stepIdx !== undefined ? clampStep(saved.stepIdx) : 0
+  );
   const [saving, setSaving] = useState(false);
-  const [submission, setSubmission] = useState(null);
+  const [submission, setSubmission] = useState(saved.submission || null);
 
-  // form state
-  const [info, setInfo] = useState({ name: "", city: "", email: "", whatsapp: "" });
-  const [groupPositions, setGroupPositions] = useState({});
-  const [bestThirds, setBestThirds] = useState([]);  // 8 teams
-  const [r32, setR32] = useState([]);   // 16 winners
-  const [r16, setR16] = useState([]);   // 8 winners
-  const [qf, setQf]   = useState([]);   // 4 winners
-  const [sf, setSf]   = useState([]);   // 2 winners (finalists)
-  const [finalPicks, setFinalPicks] = useState({
-    champion: "", runner_up: "", third_place_winner: "",
-    final_score_home: "", final_score_away: "",
-    top_scorer: "", mexico_to_quarters: "",
-  });
+  // form state (lazy-initialised from any persisted progress)
+  const [info, setInfo] = useState(saved.info || { name: "", city: "", email: "", whatsapp: "" });
+  const [groupPositions, setGroupPositions] = useState(saved.groupPositions || {});
+  const [bestThirds, setBestThirds] = useState(saved.bestThirds || []);  // 8 teams
+  const [r32, setR32] = useState(saved.r32 || []);   // 16 winners
+  const [r16, setR16] = useState(saved.r16 || []);   // 8 winners
+  const [qf, setQf]   = useState(saved.qf || []);    // 4 winners
+  const [sf, setSf]   = useState(saved.sf || []);    // 2 winners (finalists)
+  const [finalPicks, setFinalPicks] = useState(saved.finalPicks || EMPTY_FINAL);
 
   useEffect(() => {
     api.get("/bracket/meta").then(({ data }) => {
       setMeta(data);
-      const init = {};
-      for (const [gid, teams] of Object.entries(data.groups || {})) init[gid] = [...teams];
-      setGroupPositions(init);
-    }).catch(() => toast.error("No se pudo cargar")).finally(() => setLoading(false));
-
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      if (saved) {
-        if (saved.info) setInfo(saved.info);
-        if (saved.groupPositions) setGroupPositions(saved.groupPositions);
-        if (saved.bestThirds) setBestThirds(saved.bestThirds);
-        if (saved.r32) setR32(saved.r32);
-        if (saved.r16) setR16(saved.r16);
-        if (saved.qf) setQf(saved.qf);
-        if (saved.sf) setSf(saved.sf);
-        if (saved.finalPicks) setFinalPicks(saved.finalPicks);
-        // Clamp restored step: old V1 wizard saved larger stepIdx values that
-        // would point past the new STEPS array and blank the page.
-        if (saved.stepIdx !== undefined) {
-          setStepIdx(Math.min(Math.max(0, saved.stepIdx | 0), STEPS.length - 1));
-        }
+      // Only seed default group order when the user has no saved progress yet.
+      if (!saved.groupPositions) {
+        const init = {};
+        for (const [gid, teams] of Object.entries(data.groups || {})) init[gid] = [...teams];
+        setGroupPositions(init);
       }
-    } catch { /* ignore */ }
-  }, []);
+    }).catch(() => toast.error("No se pudo cargar")).finally(() => setLoading(false));
+  }, [saved]);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        info, groupPositions, bestThirds, r32, r16, qf, sf, finalPicks, stepIdx,
+        info, groupPositions, bestThirds, r32, r16, qf, sf, finalPicks, stepIdx, submission,
       }));
     } catch { /* ignore */ }
-  }, [info, groupPositions, bestThirds, r32, r16, qf, sf, finalPicks, stepIdx]);
+  }, [info, groupPositions, bestThirds, r32, r16, qf, sf, finalPicks, stepIdx, submission]);
 
   const thirdPlaceTeams = useMemo(() => {
     const out = [];
@@ -201,17 +198,6 @@ export default function QuinielaBracket() {
     return out;
   }, [groupPositions]);
 
-  // Keep selected best-thirds in sync with the current standings: if a group is
-  // reordered so a previously-chosen 3rd is no longer a 3rd place team, drop it
-  // (prevents a team appearing twice in the bracket and keeps the 8/8 count real).
-  useEffect(() => {
-    const valid = new Set(thirdPlaceTeams);
-    setBestThirds((arr) => {
-      const filtered = arr.filter((t) => valid.has(t));
-      return filtered.length === arr.length ? arr : filtered;
-    });
-  }, [thirdPlaceTeams]);
-
   // 16 Round-of-32 matchups (pairs of team names) following the official
   // FIFA 2026 bracket structure (group winners / runners-up / best thirds).
   const r32Matchups = useMemo(
@@ -220,13 +206,16 @@ export default function QuinielaBracket() {
   );
 
   const moveTeam = (gid, idx, dir) => {
-    setGroupPositions((g) => {
-      const teams = [...(g[gid] || [])];
-      const swapIdx = idx + dir;
-      if (swapIdx < 0 || swapIdx >= teams.length) return g;
-      [teams[idx], teams[swapIdx]] = [teams[swapIdx], teams[idx]];
-      return { ...g, [gid]: teams };
-    });
+    const teams = [...(groupPositions[gid] || [])];
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= teams.length) return;
+    [teams[idx], teams[swapIdx]] = [teams[swapIdx], teams[idx]];
+    const next = { ...groupPositions, [gid]: teams };
+    setGroupPositions(next);
+    // Drop any chosen best-third that is no longer a 3rd-place team after the
+    // reorder (prevents a team appearing twice in the bracket).
+    const validThirds = new Set(Object.values(next).map((t) => t && t[2]).filter(Boolean));
+    setBestThirds((arr) => arr.filter((t) => validThirds.has(t)));
     // group order changed -> invalidate downstream knockout picks
     setR32([]); setR16([]); setQf([]); setSf([]);
     setFinalPicks((f) => ({ ...f, champion: "", runner_up: "", third_place_winner: "" }));

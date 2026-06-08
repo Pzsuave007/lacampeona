@@ -4,8 +4,7 @@ import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { bannerUrl } from "../lib/api";
 
-const FALLBACK_LOGO =
-  "https://customer-assets.emergentagent.com/job_radio-ads-hub/artifacts/nebxp78j_logo_old_remake_fm-2018.png";
+const FALLBACK_LOGO = "/logos/la-campeona-880am.png";
 
 export default function RadioPlayer() {
   const { settings, nowPlaying } = useStation();

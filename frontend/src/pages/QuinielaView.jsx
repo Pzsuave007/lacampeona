@@ -1,8 +1,39 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Trophy, ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
 import BracketExportCard from "../components/BracketExportCard";
+
+const CARD_W = 1260;
+
+/** Renders the full bracket card scaled down to fit its container width, so the
+ *  ENTIRE bracket is always visible (no horizontal scroll / iframe box). */
+function ResponsiveBracket(props) {
+  const wrapRef = useRef(null);
+  const cardRef = useRef(null);
+  const [dims, setDims] = useState({ scale: 1, height: undefined });
+  useEffect(() => {
+    const measure = () => {
+      const wrap = wrapRef.current, card = cardRef.current;
+      if (!wrap || !card) return;
+      const scale = Math.min(1, wrap.clientWidth / CARD_W);
+      setDims({ scale, height: card.offsetHeight * scale });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (wrapRef.current) ro.observe(wrapRef.current);
+    const t = setTimeout(measure, 600); // re-measure after images/fonts load
+    window.addEventListener("resize", measure);
+    return () => { ro.disconnect(); clearTimeout(t); window.removeEventListener("resize", measure); };
+  }, []);
+  return (
+    <div ref={wrapRef} style={{ width: "100%", height: dims.height, overflow: "hidden" }}>
+      <div ref={cardRef} style={{ width: CARD_W, transform: `scale(${dims.scale})`, transformOrigin: "top left" }}>
+        <BracketExportCard {...props} />
+      </div>
+    </div>
+  );
+}
 
 /**
  * Public read-only view of a participant's bracket — for social media sharing.
@@ -60,67 +91,67 @@ export default function QuinielaView() {
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-8">
-        {hasFullTree ? (
-          <>
-            <p className="text-center text-xs text-slate-400 mb-2 sm:hidden">Desliza para ver todo el bracket →</p>
-            <div className="max-w-6xl mx-auto overflow-x-auto pb-3" data-testid="bracket-view-tree">
-              <div className="mx-auto w-fit rounded-3xl overflow-hidden shadow-xl">
-                <BracketExportCard
-                  info={{ name: data.name, city: data.city }}
-                  r32={pp.r32_winners || []}
-                  r16={pp.r16_winners || []}
-                  qf={pp.qf_winners || []}
-                  sf={pp.sf_winners || []}
-                  finalPicks={finalPicks}
-                />
-              </div>
-            </div>
-            {pq.top_scorer ? (
-              <div className="max-w-6xl mx-auto mt-4 text-center">
-                <span className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 rounded-full px-3 py-1.5 text-sm font-bold">
-                  <Sparkles className="w-4 h-4" /> Pichichi: {pq.top_scorer}
-                </span>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-3xl border-2 border-amber-200 overflow-hidden shadow-md">
-              <div className="bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white text-center py-5 px-6">
-                <p className="text-xs font-extrabold uppercase tracking-[0.3em] opacity-90">El bracket de</p>
-                <h3 className="text-3xl font-black">{data.name}</h3>
-                <p className="text-sm opacity-90">{data.city}</p>
-              </div>
-              <div className="p-6">
-                <div className="text-center mb-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-600">Campeón</p>
-                  <p className="text-3xl sm:text-4xl font-black text-slate-900 mt-1">{pq.champion || "?"}</p>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {pq.champion} {pq.final_score_home ?? "?"}-{pq.final_score_away ?? "?"} {pq.runner_up}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Subcampeón</p>
-                    <p className="font-black text-slate-900 mt-1">{pq.runner_up || "?"}</p>
-                  </div>
-                  <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">3er lugar</p>
-                    <p className="font-black text-slate-900 mt-1">{pp.third_place_winner || "?"}</p>
-                  </div>
-                </div>
-                {pq.top_scorer && (
-                  <div className="mt-5 inline-flex items-center gap-2 bg-amber-100 text-amber-800 rounded-full px-3 py-1.5 text-sm">
-                    <Sparkles className="w-4 h-4" /> Pichichi: <strong>{pq.top_scorer}</strong>
-                  </div>
-                )}
-              </div>
-              <div className="bg-slate-900 text-white text-center py-3 text-xs font-bold uppercase tracking-[0.3em]">
-                Quiniela del Mundial 2026 · La Campeona 880 AM
-              </div>
-            </div>
+        {/* Full bracket of 16 (Octavos → Final) — scaled so the WHOLE tree shows */}
+        {hasFullTree && (
+          <div className="max-w-[1260px] mx-auto mb-8 rounded-3xl overflow-hidden shadow-xl" data-testid="bracket-view-tree">
+            <ResponsiveBracket
+              info={{ name: data.name, city: data.city }}
+              r32={pp.r32_winners || []}
+              r16={pp.r16_winners || []}
+              qf={pp.qf_winners || []}
+              sf={pp.sf_winners || []}
+              finalPicks={finalPicks}
+            />
           </div>
         )}
+
+        {/* Summary card */}
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-3xl border-2 border-amber-200 overflow-hidden shadow-md">
+            <div className="bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white text-center py-5 px-6">
+              <p className="text-xs font-extrabold uppercase tracking-[0.3em] opacity-90">El bracket de</p>
+              <h3 className="text-3xl font-black">{data.name}</h3>
+              <p className="text-sm opacity-90">{data.city}</p>
+            </div>
+            <div className="p-6">
+              <div className="text-center mb-5">
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-600">🏆 Campeón</p>
+                <p className="text-3xl sm:text-4xl font-black text-slate-900 mt-1">{pq.champion || "?"}</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  {pq.champion} {pq.final_score_home ?? "?"}-{pq.final_score_away ?? "?"} {pq.runner_up}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">🥈 Subcampeón</p>
+                  <p className="font-black text-slate-900 mt-1">{pq.runner_up || "?"}</p>
+                </div>
+                <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">🥉 3er lugar</p>
+                  <p className="font-black text-slate-900 mt-1">{pp.third_place_winner || "?"}</p>
+                </div>
+              </div>
+              {pp.qf_winners && pp.qf_winners.filter(Boolean).length > 0 && (
+                <>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mt-4 mb-2">Semifinalistas</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {pp.qf_winners.filter(Boolean).slice(0, 4).map((t) => (
+                      <div key={t} className="bg-emerald-50 border border-emerald-200 rounded-xl px-2 py-1.5 text-sm font-bold text-emerald-800 text-center">{t}</div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {pq.top_scorer && (
+                <div className="mt-5 inline-flex items-center gap-2 bg-amber-100 text-amber-800 rounded-full px-3 py-1.5 text-sm">
+                  <Sparkles className="w-4 h-4" /> Pichichi: <strong>{pq.top_scorer}</strong>
+                </div>
+              )}
+            </div>
+            <div className="bg-slate-900 text-white text-center py-3 text-xs font-bold uppercase tracking-[0.3em]">
+              Quiniela del Mundial 2026 · La Campeona 880 AM
+            </div>
+          </div>
+        </div>
 
         <div className="mt-6 text-center">
           <Link to="/quiniela/bracket" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-6 py-3 transition shadow-md">

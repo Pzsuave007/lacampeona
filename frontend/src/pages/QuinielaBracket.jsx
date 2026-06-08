@@ -336,6 +336,21 @@ export default function QuinielaBracket() {
     }
   };
 
+  // Clear all saved progress and start a brand-new bracket from step 1.
+  const startNew = () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    setSubmission(null);
+    setInfo({ name: "", city: "", email: "", whatsapp: "" });
+    setBestThirds([]);
+    setR32([]); setR16([]); setQf([]); setSf([]);
+    setFinalPicks(EMPTY_FINAL);
+    const init = {};
+    for (const [gid, teams] of Object.entries(meta?.groups || {})) init[gid] = [...teams];
+    setGroupPositions(init);
+    setStepIdx(0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
@@ -397,7 +412,7 @@ export default function QuinielaBracket() {
           />
         )}
         {step.id === "review" && (
-          <StepReview submission={submission} info={info} qf={qf} sf={sf} finalPicks={finalPicks} />
+          <StepReview submission={submission} info={info} qf={qf} sf={sf} finalPicks={finalPicks} onStartNew={startNew} />
         )}
 
         {step.id !== "review" && (
@@ -738,7 +753,7 @@ function StepThirds({ thirdPlaceTeams, bestThirds, toggleBestThird }) {
   );
 }
 
-function StepReview({ submission, info, qf, sf, finalPicks }) {
+function StepReview({ submission, info, qf, sf, finalPicks, onStartNew }) {
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
   const shareUrl = submission
@@ -838,9 +853,12 @@ function StepReview({ submission, info, qf, sf, finalPicks }) {
 
       <BracketVisual info={info} qf={qf} sf={sf} finalPicks={finalPicks} />
 
-      <div className="mt-6 flex justify-center">
-        <button onClick={() => navigate("/quiniela/leaderboard")} className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-6 py-3 transition shadow-md">
+      <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+        <button onClick={() => navigate("/quiniela/leaderboard")} className="inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-6 py-3 transition shadow-md">
           <Trophy className="w-5 h-5" /> Ver tabla de posiciones
+        </button>
+        <button onClick={onStartNew} data-testid="bracket-start-new" className="inline-flex items-center justify-center gap-2 bg-white border-2 border-slate-200 hover:border-orange-300 text-slate-700 font-bold rounded-full px-6 py-3 transition">
+          <Trophy className="w-5 h-5" /> Hacer otro bracket
         </button>
       </div>
     </div>

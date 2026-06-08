@@ -28,6 +28,20 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.html [L]
 
+# 5. Caching policy (fixes "works in incognito but not normal Chrome").
+#    NEVER cache the app shell (index.html / manifests) so a new deploy loads
+#    immediately; cache fingerprinted /static assets (hashed filenames) forever.
+<IfModule mod_headers.c>
+  <FilesMatch "(index\.html|asset-manifest\.json|manifest\.json|service-worker\.js)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+  <FilesMatch "\.(js|css|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
 # php -- BEGIN cPanel-generated handler, do not edit
 <IfModule mime_module>
   AddHandler application/x-httpd-ea-php81 .php .php8 .phtml

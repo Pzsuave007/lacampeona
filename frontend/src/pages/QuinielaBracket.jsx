@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronRight, ChevronLeft, Trophy, Loader2, Check, ArrowUp, ArrowDown, Share2, Copy } from "lucide-react";
+import { ChevronRight, ChevronLeft, Trophy, Loader2, Check, ArrowUp, ArrowDown, Share2, Copy, Download } from "lucide-react";
 import { toast } from "sonner";
+import * as htmlToImage from "html-to-image";
 import { api } from "../lib/api";
+import BracketExportCard from "../components/BracketExportCard";
 
 /**
  * Visual World Cup 2026 bracket.
@@ -412,7 +414,7 @@ export default function QuinielaBracket() {
           />
         )}
         {step.id === "review" && (
-          <StepReview submission={submission} info={info} qf={qf} sf={sf} finalPicks={finalPicks} onStartNew={startNew} />
+          <StepReview submission={submission} info={info} r32={r32} r16={r16} qf={qf} sf={sf} finalPicks={finalPicks} onStartNew={startNew} />
         )}
 
         {step.id !== "review" && (
@@ -753,8 +755,10 @@ function StepThirds({ thirdPlaceTeams, bestThirds, toggleBestThird }) {
   );
 }
 
-function StepReview({ submission, info, qf, sf, finalPicks, onStartNew }) {
+function StepReview({ submission, info, r32, r16, qf, sf, finalPicks, onStartNew }) {
   const [copied, setCopied] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
+  const exportRef = useRef(null);
   const navigate = useNavigate();
   const shareUrl = submission
     ? `${process.env.REACT_APP_BACKEND_URL}/api/bracket/og/${submission.id}`
@@ -809,6 +813,59 @@ function StepReview({ submission, info, qf, sf, finalPicks, onStartNew }) {
   const shareFb = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank");
   const shareWa = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`, "_blank");
 
+  // ---- Full bracket image (download / share as PNG) ----
+  const makeBlob = async () => {
+    const node = exportRef.current;
+    if (!node) return null;
+    // render twice — first pass warms web fonts/images so the export is crisp
+    await htmlToImage.toPng(node, { pixelRatio: 2, cacheBust: true });
+    return htmlToImage.toBlob(node, { pixelRatio: 2, cacheBust: true });
+  };
+  const fileName = `mi-bracket-mundial-2026-${(info.name || "fan").trim().replace(/\s+/g, "-").toLowerCase()}.png`;
+  const downloadImage = async () => {
+    setImgBusy(true);
+    try {
+      const blob = await makeBlob();
+      if (!blob) throw new Error("no blob");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast.success("¡Imagen descargada!");
+    } catch {
+      toast.error("No se pudo generar la imagen, intenta de nuevo");
+    } finally {
+      setImgBusy(false);
+    }
+  };
+  const shareImage = async () => {
+    setImgBusy(true);
+    try {
+      const blob = await makeBlob();
+      if (!blob) throw new Error("no blob");
+      const file = new File([blob], fileName, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Mi Bracket del Mundial 2026", text: shareText });
+      } else {
+        // Desktop / unsupported → download instead so they can attach it manually
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        toast.info("Imagen descargada — adjúntala en tu publicación");
+      }
+    } catch (e) {
+      if (!(e && e.name === "AbortError")) toast.error("No se pudo compartir la imagen");
+    } finally {
+      setImgBusy(false);
+    }
+  };
+
   return (
     <div data-testid="step-review-content">
       <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-3xl p-6 mb-6">
@@ -851,7 +908,26 @@ function StepReview({ submission, info, qf, sf, finalPicks, onStartNew }) {
         />
       </div>
 
+      {/* Download / share the full bracket as an image */}
+      <div className="bg-gradient-to-br from-[#3F0A0A] to-[#7F1D1D] text-white rounded-3xl p-6 mb-6">
+        <h3 className="font-black text-lg mb-1">Descarga tu bracket completo 🏆</h3>
+        <p className="text-sm text-amber-100/90 mb-4">Genera una imagen con todo tu árbol (Octavos → Final) para guardarla o postearla donde quieras.</p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button onClick={downloadImage} disabled={imgBusy} data-testid="bracket-download-img" className="inline-flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-6 py-3 transition active:scale-95 disabled:opacity-50">
+            {imgBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />} Descargar imagen
+          </button>
+          <button onClick={shareImage} disabled={imgBusy} data-testid="bracket-share-img" className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold rounded-full px-6 py-3 transition active:scale-95 disabled:opacity-50">
+            {imgBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />} Compartir imagen
+          </button>
+        </div>
+      </div>
+
       <BracketVisual info={info} qf={qf} sf={sf} finalPicks={finalPicks} />
+
+      {/* Off-screen full-bracket card used only to render the export PNG */}
+      <div data-testid="bracket-export-wrapper" aria-hidden style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none", opacity: 0 }}>
+        <BracketExportCard ref={exportRef} info={info} r32={r32} r16={r16} qf={qf} sf={sf} finalPicks={finalPicks} />
+      </div>
 
       <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
         <button onClick={() => navigate("/quiniela/leaderboard")} className="inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-6 py-3 transition shadow-md">

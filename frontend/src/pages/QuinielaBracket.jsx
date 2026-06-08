@@ -778,11 +778,18 @@ function StepReview({ submission, info, qf, sf, finalPicks }) {
     }
   };
   const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
-  const nativeShare = async () => {
+  const shareBracket = async () => {
     if (!shareUrl) return;
-    try {
-      await navigator.share({ title: "Mi Bracket del Mundial 2026", text: shareText, url: shareUrl });
-    } catch { /* usuario canceló o no soportado */ }
+    if (canNativeShare) {
+      try {
+        await navigator.share({ title: "Mi Bracket del Mundial 2026", text: shareText, url: shareUrl });
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return; // usuario canceló el menú
+        // si el share nativo falla, caemos a copiar el link
+      }
+    }
+    copyLink();
   };
   const shareFb = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank");
   const shareWa = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`, "_blank");
@@ -803,7 +810,7 @@ function StepReview({ submission, info, qf, sf, finalPicks }) {
         <h3 className="font-black text-lg text-slate-900 mb-2">Comparte tu bracket</h3>
         <p className="text-sm text-slate-500 mb-4">Reta a tus amigos a hacer su propio bracket en La Campeona 880 AM.</p>
         {canNativeShare && (
-          <button onClick={nativeShare} data-testid="share-native" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-full px-6 py-3 mb-3 transition active:scale-95 shadow-md">
+          <button onClick={shareBracket} data-testid="share-native" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-full px-6 py-3 mb-3 transition active:scale-95 shadow-md">
             <Share2 className="w-5 h-5" /> Compartir mi bracket
           </button>
         )}

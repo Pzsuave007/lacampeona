@@ -395,7 +395,7 @@ class Event(EventIn):
 DEFAULT_SETTINGS = {
     "station_name": "Radio Latina FM",
     "station_tagline": "El sabor de tu música",
-    "station_whatsapp": "13105550100",
+    "station_whatsapp": "19712279207",
     "stream_url": "https://ice1.somafm.com/groovesalad-128-mp3",
     "now_playing": "El Show de la Tarde",
     "active_advertiser_id": "AUTO",

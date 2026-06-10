@@ -32,7 +32,8 @@ export default function Home() {
   const { advertisers } = useAdvertisers();
   const { events } = useEvents();
 
-  const stationWa = waLink(settings?.station_whatsapp, t.home.heardOnRadio);
+  // Blank chat (no pre-filled text) so listeners write their own message.
+  const stationWa = waLink(settings?.station_whatsapp);
   const stationName = settings?.station_name || "KWIP La Campeona";
 
   const tickerEs = [

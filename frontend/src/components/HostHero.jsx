@@ -51,12 +51,9 @@ export default function HostHero({ host, stationName, stationTagline }) {
   const { t, lang } = useLanguage();
   const photo = host.photo_path ? bannerUrl(host.photo_path) : "";
   const color = host.color || "#7F1D1D";
-  const wa = waLink(
-    host.whatsapp,
-    lang === "es"
-      ? `Hola ${host.name.split(" ")[0]}, te escucho en ${stationName}`
-      : `Hi ${host.name.split(" ")[0]}, I'm listening on ${stationName}`,
-  );
+  // No pre-filled message: open a blank chat so listeners can send their own
+  // text, photos or audio to the DJ.
+  const wa = waLink(host.whatsapp);
   const tel = telLink(host.phone);
   const scheduleStr = formatScheduleShort(host.schedule, lang);
 

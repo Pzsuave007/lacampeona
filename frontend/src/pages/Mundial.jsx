@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useStation } from "../contexts/StationContext";
+import { toast } from "sonner";
 import { WORLD_CUP_INFO, WORLD_CUP_MATCHES } from "../data/staticContent";
 import { waLink } from "../lib/api";
 
@@ -50,7 +51,7 @@ function icsStamp(d) {
 const icsEsc = (s) =>
   String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 
-function addMatchToCalendar(match, lang) {
+function matchVevent(match, lang) {
   const start = new Date(match.kickoff);
   const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // ~2h
   const listenUrl = (typeof window !== "undefined" ? window.location.origin : "https://lacampeona880am.com");
@@ -59,12 +60,7 @@ function addMatchToCalendar(match, lang) {
   const desc = (lang === "es"
     ? `Escucha el partido EN VIVO en La Campeona 880 AM. Abre la app: ${listenUrl}`
     : `Listen LIVE on La Campeona 880 AM. Open the app: ${listenUrl}`);
-  const ics = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//La Campeona 880 AM//Mundial 2026//ES",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
+  return [
     "BEGIN:VEVENT",
     `UID:${match.id}@lacampeona880am.com`,
     `DTSTAMP:${icsStamp(new Date())}`,
@@ -80,18 +76,47 @@ function addMatchToCalendar(match, lang) {
     `DESCRIPTION:${icsEsc((lang === "es" ? "Pronto en La Campeona: " : "Soon on La Campeona: ") + matchup)}`,
     "END:VALARM",
     "END:VEVENT",
+  ];
+}
+
+function downloadIcs(veventLines, filename) {
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//La Campeona 880 AM//Mundial 2026//ES",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    ...veventLines,
     "END:VCALENDAR",
   ].join("\r\n");
   const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${match.id}-mundial2026.ics`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
+
+function addMatchToCalendar(match, lang) {
+  downloadIcs(matchVevent(match, lang), `${match.id}-mundial2026.ics`);
+}
+
+function addTeamMatchesToCalendar(teamName, lang) {
+  const ms = WORLD_CUP_MATCHES.filter((m) => m.home.name === teamName || m.away.name === teamName);
+  if (ms.length === 0) return 0;
+  const lines = ms.flatMap((m) => matchVevent(m, lang));
+  const slug = teamName.normalize("NFD").replace(/[^\w]+/g, "-").toLowerCase();
+  downloadIcs(lines, `${slug}-mundial2026.ics`);
+  return ms.length;
+}
+
+// Unique group-stage national teams (the 48), alphabetised, for the picker.
+const SELECTION_TEAMS = Array.from(
+  new Set(WORLD_CUP_MATCHES.filter((m) => m.group).flatMap((m) => [m.home.name, m.away.name]))
+).sort((a, b) => a.localeCompare(b, "es"));
 
 // Show only matches from "today" through the next `days-1` days. Past matches
 // are hidden. Before the tournament starts (or if today has no games yet), the
@@ -120,6 +145,7 @@ export default function Mundial() {
   const { lang } = useLanguage();
   const { settings } = useStation();
   const [showAll, setShowAll] = useState(false);
+  const [selTeam, setSelTeam] = useState("");
   const grouped = showAll
     ? groupByDay(WORLD_CUP_MATCHES, lang)
     : groupByDay(filterUpcoming(WORLD_CUP_MATCHES, 4), lang);
@@ -247,6 +273,58 @@ export default function Mundial() {
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
               {lang === "es" ? "Hora de Oregon (PDT)" : "Oregon time (PDT)"}
             </span>
+          </div>
+        </div>
+
+        {/* One-tap: add ALL of your national team's matches to the calendar */}
+        <div className="mb-8 rounded-3xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-6 sm:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-5">
+            <div className="flex-1">
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-200 mb-1 inline-flex items-center gap-2">
+                <CalendarPlus className="w-4 h-4" />
+                {lang === "es" ? "De un solo toque" : "One tap"}
+              </p>
+              <h3 className="text-2xl sm:text-3xl font-black leading-tight">
+                {lang === "es" ? "Añadir TODOS los partidos de tu selección" : "Add ALL your team's matches"}
+              </h3>
+              <p className="text-sm text-emerald-100/90 mt-1">
+                {lang === "es"
+                  ? "Elige tu selección y agrega sus partidos a tu calendario con recordatorio 30 min antes."
+                  : "Pick your team and add its matches to your calendar with a 30-min reminder."}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 lg:w-auto w-full">
+              <select
+                value={selTeam}
+                onChange={(e) => setSelTeam(e.target.value)}
+                data-testid="team-select"
+                className="rounded-full px-5 py-3 text-slate-900 font-bold bg-white border-2 border-white focus:outline-none focus:ring-2 focus:ring-amber-300 min-w-[200px]"
+              >
+                <option value="">{lang === "es" ? "Elige tu selección…" : "Choose your team…"}</option>
+                {SELECTION_TEAMS.map((tm) => (
+                  <option key={tm} value={tm}>{tm}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => {
+                  if (!selTeam) {
+                    toast.info(lang === "es" ? "Primero elige tu selección" : "Pick your team first");
+                    return;
+                  }
+                  const count = addTeamMatchesToCalendar(selTeam, lang);
+                  toast.success(
+                    lang === "es"
+                      ? `¡${count} partidos de ${selTeam} añadidos a tu calendario!`
+                      : `${count} ${selTeam} matches added to your calendar!`
+                  );
+                }}
+                data-testid="add-team-matches-btn"
+                className="inline-flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#06281b] font-black rounded-full px-6 py-3 transition active:scale-95 shadow-lg whitespace-nowrap"
+              >
+                <CalendarPlus className="w-5 h-5" />
+                {lang === "es" ? "Añadir todos" : "Add all"}
+              </button>
+            </div>
           </div>
         </div>
 

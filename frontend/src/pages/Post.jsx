@@ -106,11 +106,13 @@ export default function Post() {
     }
   };
 
+  // Share to the backend OG page so Facebook/WhatsApp pull the article's
+  // title, excerpt and cover image (the SPA URL only serves the generic card).
   const shareWa = waLink(
     settings?.station_whatsapp || "",
-    `Mira esto: ${title}\n\n${publicUrl}`,
+    `Mira esto: ${title}\n\n${ogShareUrl}`,
   );
-  const shareFb = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicUrl)}`;
+  const shareFb = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(ogShareUrl)}`;
 
   return (
     <div data-testid="post-page" className="bg-slate-50 min-h-screen">

@@ -35,10 +35,33 @@ function groupByDay(matches, lang) {
   return Array.from(map.entries());
 }
 
+// Show only matches from "today" through the next `days-1` days. Past matches
+// are hidden. Before the tournament starts (or if today has no games yet), the
+// window anchors to the earliest upcoming match so the calendar is never empty.
+function filterUpcoming(matches, days = 4) {
+  if (!matches || matches.length === 0) return [];
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  const today = startOfDay(new Date());
+  const firstMatch = startOfDay(
+    matches.reduce((min, m) => {
+      const k = new Date(m.kickoff);
+      return k < min ? k : min;
+    }, new Date(matches[0].kickoff))
+  );
+  const anchor = today > firstMatch ? today : firstMatch; // max(today, firstMatch)
+  const end = new Date(anchor);
+  end.setDate(end.getDate() + (days - 1));
+  end.setHours(23, 59, 59, 999);
+  return matches.filter((m) => {
+    const k = new Date(m.kickoff);
+    return k >= anchor && k <= end;
+  });
+}
+
 export default function Mundial() {
   const { lang } = useLanguage();
   const { settings } = useStation();
-  const grouped = groupByDay(WORLD_CUP_MATCHES, lang);
+  const grouped = groupByDay(filterUpcoming(WORLD_CUP_MATCHES, 4), lang);
   const stationWa = waLink(
     settings?.station_whatsapp,
     lang === "es"
@@ -127,12 +150,12 @@ export default function Mundial() {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-700 mb-2 inline-flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              {lang === "es" ? "Calendario de partidos" : "Match schedule"}
+              {lang === "es" ? "Próximos partidos" : "Upcoming matches"}
             </p>
             <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter">
-              {lang === "es" ? "Cada gol, " : "Every goal, "}
+              {lang === "es" ? "Hoy y los " : "Today & the "}
               <span className="font-script font-normal italic text-emerald-700">
-                {lang === "es" ? "en tu radio" : "on your radio"}
+                {lang === "es" ? "próximos días" : "next days"}
               </span>
             </h2>
           </div>
@@ -141,19 +164,73 @@ export default function Mundial() {
           </span>
         </div>
 
-        <div className="space-y-8">
-          {grouped.map(([day, items]) => (
-            <div key={day}>
-              <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-slate-500 mb-3 inline-flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-600" /> {day}
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {items.map((m) => (
-                  <MatchCard key={m.id} match={m} lang={lang} />
-                ))}
+        {grouped.length === 0 ? (
+          <div className="text-center py-16 bg-emerald-50 rounded-3xl border-2 border-dashed border-emerald-200">
+            <Trophy className="w-12 h-12 text-emerald-300 mx-auto mb-3" />
+            <p className="font-black text-xl text-slate-700">
+              {lang === "es" ? "No hay partidos en los próximos días" : "No matches in the next few days"}
+            </p>
+            <p className="text-slate-500 mt-1">
+              {lang === "es" ? "Vuelve pronto para la siguiente jornada." : "Check back soon for the next round."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {grouped.map(([day, items]) => (
+              <div key={day}>
+                <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-slate-500 mb-3 inline-flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600" /> {day}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {items.map((m) => (
+                    <MatchCard key={m.id} match={m} lang={lang} />
+                  ))}
+                </div>
               </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Quiniela / Bracket section (moved here from the main menu) */}
+      <section className="bg-gradient-to-br from-[#3F0A0A] via-[#7F1D1D] to-[#991B1B] text-white py-14 md:py-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+            <div className="md:col-span-2">
+              <p className="text-xs uppercase tracking-[0.3em] text-amber-300 font-bold mb-2 inline-flex items-center gap-2">
+                <Trophy className="w-4 h-4" />
+                {lang === "es" ? "Juega gratis" : "Play free"}
+              </p>
+              <h3 className="text-4xl sm:text-5xl font-black tracking-tighter leading-[0.95]">
+                {lang === "es" ? "La Quiniela del " : "The "}
+                <span className="font-script font-normal italic text-amber-300">
+                  {lang === "es" ? "Mundial 2026" : "World Cup 2026 bracket"}
+                </span>
+              </h3>
+              <p className="mt-4 text-amber-100/90 max-w-xl">
+                {lang === "es"
+                  ? "Arma tu bracket completo, predice al campeón y reta a tus amigos. ¡El que más puntos sume gana!"
+                  : "Build your full bracket, predict the champion and challenge your friends. Top points wins!"}
+              </p>
             </div>
-          ))}
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/quiniela/bracket"
+                data-testid="mundial-quiniela-cta"
+                className="inline-flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-[#3F0A0A] font-black rounded-full px-7 py-4 transition active:scale-95 shadow-lg"
+              >
+                <Trophy className="w-5 h-5" />
+                {lang === "es" ? "Hacer mi bracket" : "Make my bracket"}
+              </Link>
+              <Link
+                to="/quiniela/leaderboard"
+                data-testid="mundial-leaderboard-cta"
+                className="inline-flex items-center justify-center gap-2 bg-white/10 border border-white/25 hover:bg-white/20 text-white font-bold rounded-full px-7 py-3 transition active:scale-95"
+              >
+                {lang === "es" ? "Ver tabla de posiciones" : "View leaderboard"}
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 

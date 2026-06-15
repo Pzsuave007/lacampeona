@@ -23,8 +23,9 @@ function fmtDate(iso, lang) {
 }
 function fmtTime(iso, lang) {
   const d = new Date(iso);
-  const opts = { hour: "2-digit", minute: "2-digit", hour12: lang === "en", timeZone: TZ };
-  return d.toLocaleTimeString(lang === "es" ? "es-MX" : "en-US", opts);
+  // Always 12-hour AM/PM (e.g. "3:00 PM") — clearer than 24h for listeners.
+  const opts = { hour: "numeric", minute: "2-digit", hour12: true, timeZone: TZ };
+  return d.toLocaleTimeString("en-US", opts);
 }
 
 // Group matches by date string

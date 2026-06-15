@@ -10,7 +10,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, bannerUrl, waLink } from "../lib/api";
+import { api, API, bannerUrl, waLink } from "../lib/api";
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -93,6 +93,9 @@ export default function Post() {
     "Post";
   const cover = post?.cover_image ? bannerUrl(post.cover_image) : null;
   const publicUrl = typeof window !== "undefined" ? window.location.href : "";
+  // Social shares point to the backend OG page so Facebook/WhatsApp show the
+  // article's title, excerpt and cover image (instead of the generic site card).
+  const ogShareUrl = slug ? `${API}/posts/og/${slug}` : publicUrl;
 
   const handleCopy = async () => {
     try {

@@ -1868,6 +1868,76 @@ async def posts_by_slug(slug: str):
     }
 
 
+_SOCIAL_CRAWLERS = (
+    "facebookexternalhit", "facebot", "twitterbot", "whatsapp", "slackbot",
+    "telegrambot", "linkedinbot", "pinterest", "discordbot", "embedly",
+    "redditbot", "googlebot", "bingbot", "vkshare", "skypeuripreview",
+)
+
+
+@api.get("/posts/og/{slug}")
+async def post_og(slug: str, request: Request):
+    """Open Graph page for a blog post. Social crawlers (Facebook/WhatsApp/…)
+    get the article title, excerpt and cover image WITHOUT a redirect; humans
+    are redirected to the real article so they read it on the app."""
+    import html as _html
+    import re as _re
+    base = _public_base(request)
+    view_url = f"{base}/p/{slug}"
+    og_url = f"{base}/api/posts/og/{slug}"
+    ua = (request.headers.get("user-agent") or "").lower()
+    is_crawler = any(b in ua for b in _SOCIAL_CRAWLERS)
+
+    doc = await db.content_drafts.find_one({"slug": slug}, {"_id": 0})
+    if not doc:
+        return RedirectResponse(view_url)
+
+    title = (doc.get("title") or "La Campeona 880 AM").strip()
+    raw = doc.get("text") or ""
+    desc = _re.sub(r"[*#`_>]+", "", raw)
+    desc = _re.sub(r"^\s*(DJ|Locutor|Host|Conductor)\s*:.*$", "", desc, flags=_re.M | _re.I)
+    desc = _re.sub(r"\s+", " ", desc).strip()
+    if len(desc) > 200:
+        desc = desc[:197].rstrip() + "…"
+    if not desc:
+        desc = "Noticias, música y comunidad en La Campeona 880 AM."
+
+    cover = (doc.get("cover_image") or "").strip()
+    if cover.lower().startswith("http"):
+        img = cover
+    elif cover:
+        img = f"{base}/api/files/{cover}"
+    else:
+        img = f"{base}/logos/la-campeona-880am.png"
+
+    e = _html.escape
+    redirect_bits = "" if is_crawler else (
+        f"<meta http-equiv=\"refresh\" content=\"0; url={e(view_url)}\">"
+        f"<script>window.location.replace({_html.escape(repr(view_url))});</script>"
+    )
+    html_page = (
+        "<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+        f"<title>{e(title)} · La Campeona 880 AM</title>"
+        "<meta property=\"og:type\" content=\"article\">"
+        "<meta property=\"og:site_name\" content=\"La Campeona 880 AM\">"
+        f"<meta property=\"og:title\" content=\"{e(title)}\">"
+        f"<meta property=\"og:description\" content=\"{e(desc)}\">"
+        f"<meta property=\"og:image\" content=\"{e(img)}\">"
+        f"<meta property=\"og:url\" content=\"{e(og_url)}\">"
+        "<meta name=\"twitter:card\" content=\"summary_large_image\">"
+        f"<meta name=\"twitter:title\" content=\"{e(title)}\">"
+        f"<meta name=\"twitter:description\" content=\"{e(desc)}\">"
+        f"<meta name=\"twitter:image\" content=\"{e(img)}\">"
+        f"{redirect_bits}"
+        "</head><body style=\"font-family:sans-serif;text-align:center;padding:40px\">"
+        f"<p>Redirigiendo… <a href=\"{e(view_url)}\">Leer el artículo</a></p>"
+        "</body></html>"
+    )
+    return HTMLResponse(content=html_page)
+
+
+
 # ---------------------- Super Admin ---------------------- #
 VALID_ROLES = {"super_admin", "admin", "dj"}
 

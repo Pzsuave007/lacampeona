@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Trophy,
   Calendar,
+  CalendarPlus,
   MapPin,
   Radio as RadioIcon,
   Sparkles,
@@ -13,14 +14,16 @@ import { useStation } from "../contexts/StationContext";
 import { WORLD_CUP_INFO, WORLD_CUP_MATCHES } from "../data/staticContent";
 import { waLink } from "../lib/api";
 
+const TZ = "America/Los_Angeles"; // Oregon / Pacific — match times shown in PDT
+
 function fmtDate(iso, lang) {
   const d = new Date(iso);
-  const opts = { weekday: "short", day: "numeric", month: "short" };
+  const opts = { weekday: "short", day: "numeric", month: "short", timeZone: TZ };
   return d.toLocaleDateString(lang === "es" ? "es-MX" : "en-US", opts);
 }
 function fmtTime(iso, lang) {
   const d = new Date(iso);
-  const opts = { hour: "2-digit", minute: "2-digit", hour12: lang === "en" };
+  const opts = { hour: "2-digit", minute: "2-digit", hour12: lang === "en", timeZone: TZ };
   return d.toLocaleTimeString(lang === "es" ? "es-MX" : "en-US", opts);
 }
 
@@ -33,6 +36,60 @@ function groupByDay(matches, lang) {
     map.get(key).push(m);
   }
   return Array.from(map.entries());
+}
+
+// ---- Add a match to the phone/computer calendar (.ics, works on iOS+Android) ----
+const pad2 = (n) => String(n).padStart(2, "0");
+function icsStamp(d) {
+  return (
+    `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}` +
+    `T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`
+  );
+}
+const icsEsc = (s) =>
+  String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+
+function addMatchToCalendar(match, lang) {
+  const start = new Date(match.kickoff);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // ~2h
+  const listenUrl = (typeof window !== "undefined" ? window.location.origin : "https://lacampeona880am.com");
+  const matchup = `${match.home.name} vs ${match.away.name}`;
+  const title = `⚽ ${matchup} — Mundial 2026`;
+  const desc = (lang === "es"
+    ? `Escucha el partido EN VIVO en La Campeona 880 AM. Abre la app: ${listenUrl}`
+    : `Listen LIVE on La Campeona 880 AM. Open the app: ${listenUrl}`);
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//La Campeona 880 AM//Mundial 2026//ES",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${match.id}@lacampeona880am.com`,
+    `DTSTAMP:${icsStamp(new Date())}`,
+    `DTSTART:${icsStamp(start)}`,
+    `DTEND:${icsStamp(end)}`,
+    `SUMMARY:${icsEsc(title)}`,
+    `DESCRIPTION:${icsEsc(desc)}`,
+    `LOCATION:${icsEsc(match.venue)}`,
+    `URL:${listenUrl}`,
+    "BEGIN:VALARM",
+    "TRIGGER:-PT30M",
+    "ACTION:DISPLAY",
+    `DESCRIPTION:${icsEsc((lang === "es" ? "Pronto en La Campeona: " : "Soon on La Campeona: ") + matchup)}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${match.id}-mundial2026.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 // Show only matches from "today" through the next `days-1` days. Past matches
@@ -61,7 +118,10 @@ function filterUpcoming(matches, days = 4) {
 export default function Mundial() {
   const { lang } = useLanguage();
   const { settings } = useStation();
-  const grouped = groupByDay(filterUpcoming(WORLD_CUP_MATCHES, 4), lang);
+  const [showAll, setShowAll] = useState(false);
+  const grouped = showAll
+    ? groupByDay(WORLD_CUP_MATCHES, lang)
+    : groupByDay(filterUpcoming(WORLD_CUP_MATCHES, 4), lang);
   const stationWa = waLink(
     settings?.station_whatsapp,
     lang === "es"
@@ -150,18 +210,43 @@ export default function Mundial() {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-700 mb-2 inline-flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              {lang === "es" ? "Próximos partidos" : "Upcoming matches"}
+              {showAll
+                ? (lang === "es" ? "Calendario completo" : "Full schedule")
+                : (lang === "es" ? "Próximos partidos" : "Upcoming matches")}
             </p>
             <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter">
-              {lang === "es" ? "Hoy y los " : "Today & the "}
-              <span className="font-script font-normal italic text-emerald-700">
-                {lang === "es" ? "próximos días" : "next days"}
-              </span>
+              {showAll ? (
+                <>
+                  {lang === "es" ? "Los " : "All "}
+                  <span className="font-script font-normal italic text-emerald-700">
+                    {lang === "es" ? "104 partidos" : "104 matches"}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {lang === "es" ? "Hoy y los " : "Today & the "}
+                  <span className="font-script font-normal italic text-emerald-700">
+                    {lang === "es" ? "próximos días" : "next days"}
+                  </span>
+                </>
+              )}
             </h2>
           </div>
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
-            {lang === "es" ? "Hora de Oregon (PDT)" : "Oregon time (PDT)"}
-          </span>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={() => setShowAll((v) => !v)}
+              data-testid="toggle-all-matches"
+              className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm rounded-full px-5 py-2.5 transition active:scale-95 shadow-sm"
+            >
+              <Calendar className="w-4 h-4" />
+              {showAll
+                ? (lang === "es" ? "Ver solo próximos" : "Show upcoming only")
+                : (lang === "es" ? "Ver calendario completo" : "View full schedule")}
+            </button>
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+              {lang === "es" ? "Hora de Oregon (PDT)" : "Oregon time (PDT)"}
+            </span>
+          </div>
         </div>
 
         {grouped.length === 0 ? (
@@ -319,6 +404,14 @@ function MatchCard({ match, lang }) {
           <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           {venue}
         </p>
+        <button
+          onClick={() => addMatchToCalendar(match, lang)}
+          data-testid={`add-calendar-${match.id}`}
+          className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-[13px] rounded-full px-4 py-2.5 transition active:scale-95"
+        >
+          <CalendarPlus className="w-4 h-4" />
+          {lang === "es" ? "Añadir a mi calendario" : "Add to my calendar"}
+        </button>
       </div>
       <div
         className={`px-5 py-2 text-[11px] font-extrabold uppercase tracking-wider flex items-center justify-between ${

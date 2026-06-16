@@ -47,16 +47,16 @@ function formatScheduleShort(slots, lang) {
   return parts.join(" · ");
 }
 
-export default function HostHero({ host, stationName, stationTagline }) {
+export default function HostHero({ host, stationName, stationTagline, stationWhatsapp }) {
   const { t, lang } = useLanguage();
   const photo = host.photo_path ? bannerUrl(host.photo_path) : "";
   const color = host.color || "#7F1D1D";
   // The program currently on air (per-slot) takes priority over the host's
   // generic show_name, so the hero changes with the day/time automatically.
   const liveShow = (host.current_program || "").trim() || host.show_name;
-  // No pre-filled message: open a blank chat so listeners can send their own
-  // text, photos or audio to the DJ.
-  const wa = waLink(host.whatsapp);
+  // WhatsApp ALWAYS points to the station/booth number (set by the admin),
+  // regardless of which host is on air. Opens a blank chat.
+  const wa = waLink(stationWhatsapp);
   const tel = telLink(host.phone);
   const scheduleStr = formatScheduleShort(host.schedule, lang);
 

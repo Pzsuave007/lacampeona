@@ -64,6 +64,7 @@ export default function Home() {
           host={liveHost}
           stationName={stationName}
           stationTagline={settings?.station_tagline}
+          stationWhatsapp={settings?.station_whatsapp}
         />
       ) : (
         <DefaultHero

@@ -237,7 +237,12 @@ export default function DjProfilePage() {
               <ProfileField testid="dj-profile-tagline" label="Eslogan" placeholder="¡La que te pone a bailar!" value={form.tagline} onChange={(v) => set("tagline", v)} wide />
               <ProfileTextArea testid="dj-profile-bio" label="Bio / Descripción" value={form.bio} onChange={(v) => set("bio", v)} />
               <ProfileField testid="dj-profile-phone" label="Teléfono del estudio" value={form.phone} onChange={(v) => set("phone", v)} />
-              <ProfileField testid="dj-profile-whatsapp" label="WhatsApp (sin +)" placeholder="15036230244" value={form.whatsapp} onChange={(v) => set("whatsapp", v)} />
+              <div className="md:col-span-2">
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">WhatsApp del hero</span>
+                <div data-testid="dj-profile-whatsapp-note" className="mt-1 w-full px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm text-slate-500">
+                  📞 El botón de WhatsApp del hero usa el número de la <strong>cabina</strong> (lo configura el administrador en Ajustes). Es el mismo para todos los locutores.
+                </div>
+              </div>
               <ProfileField testid="dj-profile-facebook" label="Facebook URL" value={form.facebook} onChange={(v) => set("facebook", v)} />
               <ProfileField testid="dj-profile-instagram" label="Instagram URL" value={form.instagram} onChange={(v) => set("instagram", v)} />
               <label className="block">

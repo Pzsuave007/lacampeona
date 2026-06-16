@@ -737,6 +737,14 @@ export default function AdminDashboard() {
                       Editar
                     </button>
                     <button
+                      data-testid={`admin-host-profile-${h.slug}`}
+                      onClick={() => navigate(`/dj/perfil?host=${h.slug}`)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-800 transition"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Vista locutor
+                    </button>
+                    <button
                       data-testid={`admin-host-delete-${h.slug}`}
                       onClick={() => onDeleteHost(h)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-red-50 hover:bg-red-100 text-red-700 transition"

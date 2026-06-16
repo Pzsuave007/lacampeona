@@ -1709,29 +1709,39 @@ class DjHostUpdate(BaseModel):
 
 
 @api.get("/dj/host")
-async def dj_get_host(user: dict = Depends(get_dj)):
-    """The host profile assigned to the logged-in DJ (None if not assigned)."""
-    slug = (user.get("host_slug") or "").strip()
-    if not slug:
+async def dj_get_host(slug: Optional[str] = None, user: dict = Depends(get_dj)):
+    """The host profile assigned to the logged-in DJ (None if not assigned).
+    Admins/super admins may pass ?slug=<host> to view ANY host."""
+    target = (slug or "").strip()
+    if target and user.get("role") in ("admin", "super_admin"):
+        h = await db.hosts.find_one({"slug": target}, {"_id": 0})
+        return {"host": h}
+    own = (user.get("host_slug") or "").strip()
+    if not own:
         return {"host": None}
-    h = await db.hosts.find_one({"slug": slug}, {"_id": 0})
+    h = await db.hosts.find_one({"slug": own}, {"_id": 0})
     return {"host": h}
 
 
 @api.put("/dj/host")
-async def dj_update_host(payload: DjHostUpdate, user: dict = Depends(get_dj)):
+async def dj_update_host(payload: DjHostUpdate, slug: Optional[str] = None, user: dict = Depends(get_dj)):
     """A DJ updates their own hero/profile + per-slot programs. Cannot change
-    their name, slug or assignment (admin-only)."""
-    slug = (user.get("host_slug") or "").strip()
-    if not slug:
+    their name, slug or assignment (admin-only). Admins/super admins may pass
+    ?slug=<host> to edit ANY host through this same view."""
+    target = (slug or "").strip()
+    if target and user.get("role") in ("admin", "super_admin"):
+        host_slug = target
+    else:
+        host_slug = (user.get("host_slug") or "").strip()
+    if not host_slug:
         raise HTTPException(status_code=400, detail="No tienes un locutor asignado. Pídele al administrador que te asigne uno.")
-    existing = await db.hosts.find_one({"slug": slug})
+    existing = await db.hosts.find_one({"slug": host_slug})
     if not existing:
         raise HTTPException(status_code=404, detail="Locutor no encontrado")
     update = payload.model_dump()
     update["updated_at"] = now_iso()
-    await db.hosts.update_one({"slug": slug}, {"$set": update})
-    return await db.hosts.find_one({"slug": slug}, {"_id": 0})
+    await db.hosts.update_one({"slug": host_slug}, {"$set": update})
+    return await db.hosts.find_one({"slug": host_slug}, {"_id": 0})
 
 
 @api.post("/dj/upload")

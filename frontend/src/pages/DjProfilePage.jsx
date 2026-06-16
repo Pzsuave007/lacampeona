@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Save, Upload, Plus, Trash2, Loader2, Mic2, Clock, CalendarDays, UserCog,
 } from "lucide-react";
@@ -20,6 +20,10 @@ export default function DjProfilePage() {
   const { user } = useAuth();
   const { loadLiveHost } = useStation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const adminSlug = searchParams.get("host") || "";
+  const [hosts, setHosts] = useState([]);
   const [host, setHost] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -30,23 +34,37 @@ export default function DjProfilePage() {
     if (user === null) navigate("/login");
   }, [user, navigate]);
 
+  // Admins get the full host list for the selector dropdown.
+  useEffect(() => {
+    if (!isAdmin) return;
+    api.get("/hosts").then(({ data }) => setHosts(data || [])).catch(() => {});
+  }, [isAdmin]);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      setLoading(true);
       try {
-        const { data } = await api.get("/dj/host");
+        // Admin viewing the picker but no host chosen yet → nothing to load.
+        if (isAdmin && !adminSlug) {
+          if (!cancelled) { setHost(null); setForm(EMPTY); }
+          return;
+        }
+        const { data } = await api.get("/dj/host", {
+          params: isAdmin && adminSlug ? { slug: adminSlug } : {},
+        });
         if (cancelled) return;
         setHost(data.host);
-        if (data.host) setForm({ ...EMPTY, ...data.host });
+        setForm(data.host ? { ...EMPTY, ...data.host } : EMPTY);
       } catch (e) {
-        if (!cancelled) toast.error(e?.response?.data?.detail || "Error al cargar tu perfil");
+        if (!cancelled) toast.error(e?.response?.data?.detail || "Error al cargar el perfil");
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
-    if (user && (user.role === "dj" || user.role === "admin" || user.role === "super_admin")) load();
+    if (user && (user.role === "dj" || isAdmin)) load();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, isAdmin, adminSlug]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -91,11 +109,13 @@ export default function DjProfilePage() {
           program: (s.program || "").trim(),
         })),
       };
-      const { data } = await api.put("/dj/host", payload);
+      const { data } = await api.put("/dj/host", payload, {
+        params: isAdmin && adminSlug ? { slug: adminSlug } : {},
+      });
       setHost(data);
       setForm({ ...EMPTY, ...data });
       loadLiveHost && loadLiveHost(); // refresh hero everywhere right away
-      toast.success("✅ Tu espacio fue actualizado");
+      toast.success("✅ El espacio del locutor fue actualizado");
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Error al guardar");
     } finally {
@@ -111,26 +131,57 @@ export default function DjProfilePage() {
     <div data-testid="dj-profile-page" className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <button
         type="button"
-        onClick={() => navigate("/dj")}
+        onClick={() => navigate(isAdmin ? "/admin" : "/dj")}
         data-testid="dj-profile-back"
         className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-600 hover:text-orange-600 mb-4 transition"
       >
-        <ArrowLeft className="w-4 h-4" /> Volver al Studio
+        <ArrowLeft className="w-4 h-4" /> {isAdmin ? "Volver al Admin" : "Volver al Studio"}
       </button>
 
       <div className="mb-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-extrabold uppercase tracking-[0.2em] mb-2">
-          <UserCog className="w-3.5 h-3.5" /> Mi Perfil
+          <UserCog className="w-3.5 h-3.5" /> {isAdmin ? "Perfil del locutor (vista admin)" : "Mi Perfil"}
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight">
-          Tu espacio en el hero
+          {isAdmin ? "Espacio del locutor en el hero" : "Tu espacio en el hero"}
         </h1>
-        <p className="text-slate-500 mt-1">Edita tu foto, tus datos y los programas que haces cada día. Los cambios se ven al instante en el sitio.</p>
+        <p className="text-slate-500 mt-1">
+          {isAdmin
+            ? "Revisa y edita el hero y los programas del locutor, tal como lo ve él. Los cambios se ven al instante en el sitio."
+            : "Edita tu foto, tus datos y los programas que haces cada día. Los cambios se ven al instante en el sitio."}
+        </p>
       </div>
+
+      {isAdmin && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-6" data-testid="admin-host-picker">
+          <label className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
+            Elige un locutor para ver/editar su espacio
+          </label>
+          <select
+            data-testid="admin-host-select"
+            value={adminSlug}
+            onChange={(e) => setSearchParams(e.target.value ? { host: e.target.value } : {})}
+            className="mt-2 w-full px-4 py-2.5 rounded-xl border-2 border-amber-300 bg-white font-bold"
+          >
+            <option value="">— Selecciona un locutor —</option>
+            {hosts.map((h) => (
+              <option key={h.slug} value={h.slug}>
+                {h.name}{h.show_name ? ` · ${h.show_name}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-slate-500">
           <Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando…
+        </div>
+      ) : isAdmin && !adminSlug ? (
+        <div data-testid="dj-profile-pick-prompt" className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-amber-200">
+          <UserCog className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+          <h3 className="text-xl font-black text-slate-900">Selecciona un locutor arriba</h3>
+          <p className="text-slate-500 mt-1">Elige un locutor del menú para revisar y editar su perfil y programas.</p>
         </div>
       ) : !host ? (
         <div data-testid="dj-profile-no-host" className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-orange-200">

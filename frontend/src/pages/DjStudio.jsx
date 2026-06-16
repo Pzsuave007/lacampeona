@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, Image as ImageIcon, RefreshCw, Newspaper, Search, UserCog } from "lucide-react";
+import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, RefreshCw, Newspaper, Search, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { api, bannerUrl } from "../lib/api";
@@ -92,12 +92,13 @@ export default function DjStudio() {
     }
   };
 
-  const onGenerateImage = async (draft) => {
+  const onGenerateImage = async (draft, style = "illustration") => {
     try {
-      toast.info("Generando imagen con IA...");
+      toast.info(style === "realistic" ? "Generando imagen realista..." : "Generando ilustración...");
       const { data } = await api.post("/dj/generate-image", {
         draft_id: draft.id,
         aspect: "wide",
+        style,
       });
       // Optimistically update the draft in local state so the new image
       // shows up immediately without waiting for another network round-trip.
@@ -268,13 +269,13 @@ function DraftsList({ drafts, templates, onEdit, onDelete, onCopy, onSetStatus, 
 }
 
 function DraftCoverImage({ draft, onGenerateImage }) {
-  const [busy, setBusy] = useState(false);
-  const handleGen = async () => {
-    setBusy(true);
+  const [busy, setBusy] = useState(null); // null | "illustration" | "realistic"
+  const handleGen = async (style) => {
+    setBusy(style);
     try {
-      await onGenerateImage(draft);
+      await onGenerateImage(draft, style);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
   if (draft.cover_image) {
@@ -286,38 +287,54 @@ function DraftCoverImage({ draft, onGenerateImage }) {
           className="w-full aspect-video object-cover rounded-xl border border-slate-200"
           data-testid={`dj-draft-cover-${draft.id}`}
         />
-        <button
-          onClick={handleGen}
-          disabled={busy}
-          data-testid={`dj-draft-regen-image-${draft.id}`}
-          className="absolute top-2 right-2 inline-flex items-center gap-1 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold rounded-full px-3 py-1.5 opacity-90 hover:opacity-100 transition disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-          {busy ? "Generando..." : "Regenerar"}
-        </button>
+        <div className="absolute top-2 right-2 flex gap-1.5">
+          <button
+            onClick={() => handleGen("illustration")}
+            disabled={!!busy}
+            data-testid={`dj-draft-regen-illustration-${draft.id}`}
+            className="inline-flex items-center gap-1 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold rounded-full px-3 py-1.5 opacity-90 hover:opacity-100 transition disabled:opacity-50"
+          >
+            {busy === "illustration" ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            🎨 Ilustración
+          </button>
+          <button
+            onClick={() => handleGen("realistic")}
+            disabled={!!busy}
+            data-testid={`dj-draft-regen-realistic-${draft.id}`}
+            className="inline-flex items-center gap-1 bg-slate-900/85 hover:bg-slate-900 text-white text-[10px] font-bold rounded-full px-3 py-1.5 opacity-90 hover:opacity-100 transition disabled:opacity-50"
+          >
+            {busy === "realistic" ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            📷 Realista
+          </button>
+        </div>
       </div>
     );
   }
   return (
-    <button
-      onClick={handleGen}
-      disabled={busy}
-      data-testid={`dj-draft-gen-image-${draft.id}`}
-      className="mt-3 w-full bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-dashed border-purple-300 hover:border-purple-500 rounded-xl py-6 flex flex-col items-center justify-center gap-2 transition disabled:opacity-60"
-    >
-      {busy ? (
-        <>
-          <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
-          <span className="text-sm font-bold text-purple-700">Generando imagen con IA...</span>
-        </>
-      ) : (
-        <>
-          <ImageIcon className="w-6 h-6 text-purple-600" />
-          <span className="text-sm font-bold text-purple-700">🎨 Generar imagen con IA</span>
-          <span className="text-[10px] text-slate-500">Gemini Nano Banana · 5-10 seg</span>
-        </>
-      )}
-    </button>
+    <div className="mt-3 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-dashed border-purple-300 rounded-xl p-4">
+      <p className="text-sm font-bold text-purple-700 text-center mb-1">Generar imagen con IA</p>
+      <p className="text-[10px] text-slate-500 text-center mb-3">Elige el estilo · Gemini Nano Banana · 5-10 seg</p>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => handleGen("illustration")}
+          disabled={!!busy}
+          data-testid={`dj-draft-gen-illustration-${draft.id}`}
+          className="bg-white hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-500 rounded-xl py-4 flex flex-col items-center justify-center gap-1 transition disabled:opacity-60"
+        >
+          {busy === "illustration" ? <Loader2 className="w-5 h-5 text-purple-600 animate-spin" /> : <span className="text-xl">🎨</span>}
+          <span className="text-xs font-bold text-purple-700">{busy === "illustration" ? "Generando..." : "Ilustración"}</span>
+        </button>
+        <button
+          onClick={() => handleGen("realistic")}
+          disabled={!!busy}
+          data-testid={`dj-draft-gen-realistic-${draft.id}`}
+          className="bg-white hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-500 rounded-xl py-4 flex flex-col items-center justify-center gap-1 transition disabled:opacity-60"
+        >
+          {busy === "realistic" ? <Loader2 className="w-5 h-5 text-purple-600 animate-spin" /> : <span className="text-xl">📷</span>}
+          <span className="text-xs font-bold text-purple-700">{busy === "realistic" ? "Generando..." : "Realista"}</span>
+        </button>
+      </div>
+    </div>
   );
 }
 

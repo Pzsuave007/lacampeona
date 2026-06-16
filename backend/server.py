@@ -2019,6 +2019,7 @@ class GenerateImageIn(BaseModel):
     draft_id: Optional[str] = None  # if provided, image will be saved as draft.cover_image
     prompt: Optional[str] = None    # custom prompt override
     aspect: Optional[str] = "wide"  # "wide" (16:9 for FB share) or "square" (1:1 for IG)
+    style: Optional[str] = "illustration"  # "illustration" or "realistic"
 
 
 @api.post("/dj/generate-image")
@@ -2049,11 +2050,21 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
         else "perfect 1:1 square composition centered"
     )
 
+    if (payload.style or "illustration") == "realistic":
+        style_hint = (
+            "photorealistic editorial photography, real people and real scenes, natural lighting, "
+            "shot on a DSLR camera, sharp focus, high detail, candid latin community lifestyle"
+        )
+    else:
+        style_hint = (
+            "vibrant photo-illustration, editorial magazine illustration style, latin culture friendly, "
+            "warm red/orange/amber palette"
+        )
+
     full_prompt = (
         f"Cover image for a Spanish-language radio station post by 'La Campeona 880 AM' "
         f"(KWIP, Dallas Oregon). Topic: {prompt_text}\n\n"
-        f"Style: vibrant photo-illustration, latin culture friendly, warm red/orange/amber palette, "
-        f"high quality, editorial magazine style, ready for Facebook/Instagram sharing. "
+        f"Style: {style_hint}, high quality, ready for Facebook/Instagram sharing. "
         f"{aspect_hint}. No text or letters in the image."
     )
 

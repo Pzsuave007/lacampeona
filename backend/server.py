@@ -279,6 +279,8 @@ class AdvertiserIn(BaseModel):
     maps_url: Optional[str] = ""
     website_url: Optional[str] = ""
     weekly_ad_url: Optional[str] = ""  # página externa de ofertas semanales para auto-scraping
+    weekly_ad_refresh_day: Optional[int] = None  # 0=Lunes .. 6=Domingo; None = auto (cada ~6h)
+    weekly_ad_refresh_time: Optional[str] = "08:00"  # "HH:MM" (hora de la estación)
     banner_path: Optional[str] = ""  # storage path or external URL
     color: Optional[str] = "#EA580C"
     schedule: List[ScheduleSlot] = []
@@ -808,6 +810,40 @@ def _scrape_weekly_ad(url: str) -> dict:
     return out
 
 
+def _last_scheduled_dt(day: int, time_str: str, now: datetime):
+    """Most recent occurrence of weekday `day` (0=Mon) at `time_str` (HH:MM)
+    at or before `now` (tz-aware, station time)."""
+    try:
+        parts = time_str.split(":")
+        hh, mm = int(parts[0]), int(parts[1])
+    except Exception:
+        return None
+    candidate = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+    candidate -= timedelta(days=(now.weekday() - day) % 7)
+    if candidate > now:
+        candidate -= timedelta(days=7)
+    return candidate
+
+
+async def _weekly_ad_is_fresh(cache: dict, adv: dict) -> bool:
+    """Decide whether the cached weekly ad is still fresh.
+    If a refresh day+time is configured, it's fresh only if the last scrape
+    happened AT/AFTER the most recent scheduled refresh. Otherwise, falls back
+    to the WEEKLY_AD_TTL_HOURS rolling window."""
+    try:
+        fetched = datetime.fromisoformat(cache["fetched_at"])
+    except Exception:
+        return False
+    day = adv.get("weekly_ad_refresh_day")
+    time_str = (adv.get("weekly_ad_refresh_time") or "").strip()
+    if day is not None and time_str:
+        now = await station_now()
+        sched = _last_scheduled_dt(int(day), time_str, now)
+        if sched is not None:
+            return fetched >= sched
+    return (datetime.now(timezone.utc) - fetched).total_seconds() < WEEKLY_AD_TTL_HOURS * 3600
+
+
 async def _get_weekly_ad(adv: dict, force: bool = False) -> dict:
     url = (adv.get("weekly_ad_url") or "").strip()
     if not url:
@@ -815,11 +851,7 @@ async def _get_weekly_ad(adv: dict, force: bool = False) -> dict:
     cache = adv.get("weekly_ad_cache") or {}
     fresh = False
     if cache.get("fetched_at") and not force:
-        try:
-            age = datetime.now(timezone.utc) - datetime.fromisoformat(cache["fetched_at"])
-            fresh = age.total_seconds() < WEEKLY_AD_TTL_HOURS * 3600
-        except Exception:
-            fresh = False
+        fresh = await _weekly_ad_is_fresh(cache, adv)
     if cache.get("ok") and fresh:
         return {"enabled": True, **cache}
 
@@ -3226,6 +3258,27 @@ async def backfill_report_tokens():
         )
 
 
+async def weekly_ad_scheduler_loop():
+    """Background loop: refreshes weekly ads on their configured day/time even
+    when no one is viewing the page. Lazy refresh (on view) still applies too."""
+    await asyncio.sleep(60)  # let startup settle
+    while True:
+        try:
+            cursor = db.advertisers.find(
+                {"weekly_ad_url": {"$nin": ["", None]},
+                 "weekly_ad_refresh_day": {"$ne": None}},
+                {"_id": 0},
+            )
+            async for adv in cursor:
+                try:
+                    await _get_weekly_ad(adv)  # only re-scrapes if due per schedule
+                except Exception as e:
+                    logger.error(f"weekly_ad refresh failed for {adv.get('slug')}: {e}")
+        except Exception as e:
+            logger.error(f"weekly_ad_scheduler loop error: {e}")
+        await asyncio.sleep(1800)  # check every 30 min
+
+
 @app.on_event("startup")
 async def on_startup():
     await db.users.create_index("email", unique=True)
@@ -3252,10 +3305,13 @@ async def on_startup():
     await backfill_report_tokens()
     await get_settings_doc()
     init_storage()
+    asyncio.create_task(weekly_ad_scheduler_loop())
+
 
 @app.on_event("shutdown")
 async def on_shutdown():
     client.close()
+
 
 # Mount router and CORS
 app.include_router(api)

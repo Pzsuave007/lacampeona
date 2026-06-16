@@ -16,6 +16,8 @@ const empty = {
   maps_url: "",
   website_url: "",
   weekly_ad_url: "",
+  weekly_ad_refresh_day: null,
+  weekly_ad_refresh_time: "08:00",
   banner_path: "",
   color: "#EA580C",
   schedule: [],
@@ -85,6 +87,11 @@ export default function AdvertiserForm({ initial, onCancel, onSaved }) {
         priority: Number(form.priority) || 5,
         spots_per_hour: Number(form.spots_per_hour) || 4,
         spot_duration_sec: Number(form.spot_duration_sec) || 30,
+        weekly_ad_refresh_day:
+          form.weekly_ad_refresh_day === "" || form.weekly_ad_refresh_day == null
+            ? null
+            : Number(form.weekly_ad_refresh_day),
+        weekly_ad_refresh_time: form.weekly_ad_refresh_time || "08:00",
         schedule: form.schedule.map((s) => ({
           day_of_week: Number(s.day_of_week),
           start_time: s.start_time,
@@ -139,23 +146,57 @@ export default function AdvertiserForm({ initial, onCancel, onSaved }) {
           </div>
 
           {form.weekly_ad_url && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3" data-testid="weekly-ad-admin-box">
-              <div>
-                <h4 className="text-sm font-extrabold text-emerald-900 uppercase tracking-wider">🛒 Ofertas semanales automáticas</h4>
-                <p className="text-xs text-slate-600 mt-1">El sistema lee la página del cliente y muestra el folleto en su ficha. Se refresca solo varias veces al día. {!isEdit && "Guarda primero para poder actualizar manualmente."}</p>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3" data-testid="weekly-ad-admin-box">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-extrabold text-emerald-900 uppercase tracking-wider">🛒 Ofertas semanales automáticas</h4>
+                  <p className="text-xs text-slate-600 mt-1">El sistema lee la página del cliente y muestra el folleto en su ficha. {!isEdit && "Guarda primero para poder actualizar manualmente."}</p>
+                </div>
+                {isEdit && (
+                  <button
+                    type="button"
+                    data-testid="weekly-ad-refresh-btn"
+                    onClick={refreshWeeklyAd}
+                    disabled={refreshing}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white transition active:scale-95 shrink-0"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+                    {refreshing ? "Actualizando..." : "Actualizar ahora"}
+                  </button>
+                )}
               </div>
-              {isEdit && (
-                <button
-                  type="button"
-                  data-testid="weekly-ad-refresh-btn"
-                  onClick={refreshWeeklyAd}
-                  disabled={refreshing}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white transition active:scale-95 shrink-0"
-                >
-                  <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-                  {refreshing ? "Actualizando..." : "Actualizar ahora"}
-                </button>
-              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-emerald-200">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.15em] text-emerald-800">Día de actualización automática</span>
+                  <select
+                    data-testid="weekly-ad-refresh-day"
+                    value={form.weekly_ad_refresh_day == null ? "" : form.weekly_ad_refresh_day}
+                    onChange={(e) => set("weekly_ad_refresh_day", e.target.value === "" ? null : Number(e.target.value))}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border-2 border-emerald-200 bg-white focus:border-emerald-500 focus:outline-none transition text-sm font-bold"
+                  >
+                    <option value="">Automático (varias veces al día)</option>
+                    {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map((d, idx) => (
+                      <option key={idx} value={idx}>{d}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.15em] text-emerald-800">Hora</span>
+                  <input
+                    data-testid="weekly-ad-refresh-time"
+                    type="time"
+                    value={form.weekly_ad_refresh_time || "08:00"}
+                    disabled={form.weekly_ad_refresh_day == null}
+                    onChange={(e) => set("weekly_ad_refresh_time", e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border-2 border-emerald-200 bg-white focus:border-emerald-500 focus:outline-none transition text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                </label>
+              </div>
+              <p className="text-[11px] text-emerald-800 bg-emerald-100 rounded-lg px-3 py-2">
+                {form.weekly_ad_refresh_day == null
+                  ? "🔄 Modo automático: se refresca solo varias veces al día."
+                  : `📅 Se actualizará solo cada ${["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][form.weekly_ad_refresh_day]} a las ${form.weekly_ad_refresh_time || "08:00"} (hora de la estación). También puedes usar "Actualizar ahora".`}
+              </p>
             </div>
           )}
 

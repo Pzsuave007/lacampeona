@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Save, X, Upload, Plus, Trash2 } from "lucide-react";
+import { Save, X, Upload, Plus, Trash2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { api, bannerUrl } from "../lib/api";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -15,6 +15,7 @@ const empty = {
   address: "",
   maps_url: "",
   website_url: "",
+  weekly_ad_url: "",
   banner_path: "",
   color: "#EA580C",
   schedule: [],
@@ -26,6 +27,24 @@ export default function AdvertiserForm({ initial, onCancel, onSaved }) {
   const [form, setForm] = useState({ ...empty, ...(initial || {}) });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshWeeklyAd = async () => {
+    if (!initial?.id) return;
+    setRefreshing(true);
+    try {
+      const { data } = await api.post(`/admin/advertisers/${initial.id}/weekly-ad/refresh`);
+      if (data.ok) {
+        toast.success(`✅ Ofertas actualizadas: ${data.images?.length || 0} imágenes${data.pdf_url ? " + PDF" : ""}${data.date_range ? ` (${data.date_range})` : ""}`);
+      } else {
+        toast.error(data.error || "No se encontraron ofertas en esa página");
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Error al actualizar ofertas");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -114,9 +133,31 @@ export default function AdvertiserForm({ initial, onCancel, onSaved }) {
             <Field testid="form-address" label="Address" wide value={form.address} onChange={(v) => set("address", v)} />
             <Field testid="form-maps" label="Google Maps URL" wide value={form.maps_url} onChange={(v) => set("maps_url", v)} />
             <Field testid="form-website" label="Website URL" wide value={form.website_url} onChange={(v) => set("website_url", v)} />
+            <Field testid="form-weekly-ad" label="URL del Weekly Ad (ofertas semanales — auto)" wide placeholder="https://www.mymegafoods.com/weekly-ad" value={form.weekly_ad_url} onChange={(v) => set("weekly_ad_url", v)} />
             <TextArea testid="form-description" label="Description" value={form.description} onChange={(v) => set("description", v)} />
             <TextArea testid="form-offer" label="Special Offer" value={form.special_offer} onChange={(v) => set("special_offer", v)} />
           </div>
+
+          {form.weekly_ad_url && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3" data-testid="weekly-ad-admin-box">
+              <div>
+                <h4 className="text-sm font-extrabold text-emerald-900 uppercase tracking-wider">🛒 Ofertas semanales automáticas</h4>
+                <p className="text-xs text-slate-600 mt-1">El sistema lee la página del cliente y muestra el folleto en su ficha. Se refresca solo varias veces al día. {!isEdit && "Guarda primero para poder actualizar manualmente."}</p>
+              </div>
+              {isEdit && (
+                <button
+                  type="button"
+                  data-testid="weekly-ad-refresh-btn"
+                  onClick={refreshWeeklyAd}
+                  disabled={refreshing}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white transition active:scale-95 shrink-0"
+                >
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+                  {refreshing ? "Actualizando..." : "Actualizar ahora"}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Banner upload */}
           <div>

@@ -13,6 +13,7 @@ import asyncio
 import html as html_lib
 import urllib.parse
 import feedparser
+from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 
@@ -277,6 +278,7 @@ class AdvertiserIn(BaseModel):
     address: Optional[str] = ""
     maps_url: Optional[str] = ""
     website_url: Optional[str] = ""
+    weekly_ad_url: Optional[str] = ""  # página externa de ofertas semanales para auto-scraping
     banner_path: Optional[str] = ""  # storage path or external URL
     color: Optional[str] = "#EA580C"
     schedule: List[ScheduleSlot] = []
@@ -733,6 +735,124 @@ async def get_advertiser(slug: str):
     return strip_private(adv)
 
 
+# ---------------------- Weekly Ad auto-scraper ---------------------- #
+WEEKLY_AD_TTL_HOURS = 6  # refresca varias veces al día (cubre los cambios del miércoles)
+_DATE_RANGE_RE = re.compile(
+    r"\d{1,2}\s*[/\-.]\s*\d{1,2}(?:\s*[/\-.]\s*\d{2,4})?\s*[-–—]\s*"
+    r"\d{1,2}\s*[/\-.]\s*\d{1,2}(?:\s*[/\-.]\s*\d{2,4})?"
+)
+_IMG_SKIP_WORDS = ("logo", "icon", "avatar", "sprite", "favicon", "badge", "header", "footer", "pixel")
+
+
+def _scrape_weekly_ad(url: str) -> dict:
+    """Generic weekly-ad scraper: pulls the date range, flyer images and PDF
+    link from an advertiser's ofertas page (works well for Wix sites like
+    Mega Foods). Returns a cache-friendly dict."""
+    out = {"ok": False, "source_url": url, "date_range": "", "images": [], "pdf_url": "", "error": ""}
+    try:
+        resp = requests.get(
+            url, timeout=15,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; LaCampeonaBot/1.0)"},
+        )
+        resp.raise_for_status()
+    except Exception as e:
+        out["error"] = f"fetch: {e}"
+        return out
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    # Date range like "6/10/2026 - 6/16/2026"
+    m = _DATE_RANGE_RE.search(soup.get_text(" ", strip=True))
+    if m:
+        out["date_range"] = m.group(0).strip()
+
+    # First PDF link
+    for a in soup.find_all("a", href=True):
+        if ".pdf" in a["href"].lower():
+            out["pdf_url"] = urllib.parse.urljoin(url, a["href"])
+            break
+
+    # Flyer images: large content images, skip backgrounds/logos.
+    seen = set()
+    for img in soup.find_all("img"):
+        src = img.get("src") or img.get("data-src") or ""
+        if not src or src.startswith("data:"):
+            continue
+        cls = " ".join(img.get("class") or [])
+        if "bgImage" in cls:
+            continue
+        if img.find_parent(attrs={"data-motion-part": re.compile("BG_")}) is not None:
+            continue
+        low = (src + " " + (img.get("alt") or "")).lower()
+        if any(w in low for w in _IMG_SKIP_WORDS):
+            continue
+        try:
+            w = int(float(img.get("width") or 0))
+            h = int(float(img.get("height") or 0))
+        except (ValueError, TypeError):
+            w = h = 0
+        if (w and w < 350) or (h and h < 250):
+            continue
+        full = urllib.parse.urljoin(url, src)
+        key = full.split("/v1/")[0]  # dedupe Wix transforms of the same media
+        if key in seen:
+            continue
+        seen.add(key)
+        out["images"].append(full)
+        if len(out["images"]) >= 8:
+            break
+
+    out["ok"] = bool(out["images"] or out["pdf_url"])
+    if not out["ok"]:
+        out["error"] = "No se encontraron imágenes ni PDF del folleto"
+    return out
+
+
+async def _get_weekly_ad(adv: dict, force: bool = False) -> dict:
+    url = (adv.get("weekly_ad_url") or "").strip()
+    if not url:
+        return {"enabled": False}
+    cache = adv.get("weekly_ad_cache") or {}
+    fresh = False
+    if cache.get("fetched_at") and not force:
+        try:
+            age = datetime.now(timezone.utc) - datetime.fromisoformat(cache["fetched_at"])
+            fresh = age.total_seconds() < WEEKLY_AD_TTL_HOURS * 3600
+        except Exception:
+            fresh = False
+    if cache.get("ok") and fresh:
+        return {"enabled": True, **cache}
+
+    result = await asyncio.to_thread(_scrape_weekly_ad, url)
+    result["fetched_at"] = now_iso()
+    # Don't overwrite a previously-good cache with a transient failure.
+    if not result.get("ok") and cache.get("ok"):
+        await db.advertisers.update_one(
+            {"id": adv["id"]}, {"$set": {"weekly_ad_cache.fetched_at": result["fetched_at"]}}
+        )
+        return {"enabled": True, **cache, "stale": True}
+    await db.advertisers.update_one({"id": adv["id"]}, {"$set": {"weekly_ad_cache": result}})
+    return {"enabled": True, **result}
+
+
+@api.get("/advertisers/{slug}/weekly-ad")
+async def advertiser_weekly_ad(slug: str):
+    adv = await db.advertisers.find_one({"slug": slug}, {"_id": 0})
+    if not adv:
+        adv = await db.advertisers.find_one({"id": slug}, {"_id": 0})
+    if not adv:
+        raise HTTPException(status_code=404, detail="Advertiser not found")
+    return await _get_weekly_ad(adv)
+
+
+@api.post("/admin/advertisers/{aid}/weekly-ad/refresh")
+async def admin_refresh_weekly_ad(aid: str, _: dict = Depends(get_admin)):
+    adv = await db.advertisers.find_one({"id": aid}, {"_id": 0})
+    if not adv:
+        raise HTTPException(status_code=404, detail="Advertiser not found")
+    return await _get_weekly_ad(adv, force=True)
+
+
 # ---------------------- Tracking & Analytics ---------------------- #
 class TrackIn(BaseModel):
     kind: str  # impression | call | whatsapp | directions | visit | tickets
@@ -979,11 +1099,15 @@ async def admin_create_advertiser(payload: AdvertiserIn, _: dict = Depends(get_a
 
 @api.put("/admin/advertisers/{aid}")
 async def admin_update_advertiser(aid: str, payload: AdvertiserIn, _: dict = Depends(get_admin)):
+    existing = await db.advertisers.find_one({"id": aid}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Advertiser not found")
     update = payload.model_dump()
     update["updated_at"] = now_iso()
-    res = await db.advertisers.update_one({"id": aid}, {"$set": update})
-    if res.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Advertiser not found")
+    # If the weekly-ad URL changed, drop the stale cache so it re-scrapes.
+    if (existing.get("weekly_ad_url") or "") != (update.get("weekly_ad_url") or ""):
+        update["weekly_ad_cache"] = {}
+    await db.advertisers.update_one({"id": aid}, {"$set": update})
     adv = await db.advertisers.find_one({"id": aid}, {"_id": 0})
     return adv
 

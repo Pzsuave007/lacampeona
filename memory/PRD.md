@@ -193,6 +193,16 @@ Cada plantilla incluye su `SUGGESTION_PROMPT` ajustado al Pacífico NW (Dallas/S
 ### Mundial: "Añadir TODOS los partidos de tu selección" (Jun 15 2026)
 - En `Mundial.jsx`: tarjeta verde con `<select>` (`team-select`, 48 selecciones de fase de grupos) + botón `add-team-matches-btn`. Genera UN `.ics` con todos los partidos de la selección elegida (recordatorio 30 min + link a la app). Helpers refactorizados: `matchVevent()` + `downloadIcs()` reutilizables; `addTeamMatchesToCalendar(team)`; constante `SELECTION_TEAMS`. Horarios ya en formato 12h AM/PM. Verificado: descarga `<slug>-mundial2026.ics` + toast con conteo.
 
+### Weekly Ads auto-scraper para anunciantes (Jun 16 2026)
+- **Objetivo**: mostrar las ofertas semanales de clientes (ej. Mega Foods) automáticamente, sin subirlas a mano.
+- **Modelo**: `AdvertiserIn.weekly_ad_url` (URL externa de ofertas). Cache en `advertiser.weekly_ad_cache` = {ok, date_range, images[], pdf_url, source_url, fetched_at}.
+- **Scraper** `_scrape_weekly_ad(url)` (requests + BeautifulSoup): extrae rango de fechas (regex), primer link `.pdf`, e imágenes grandes del folleto (excluye `bgImage`, fondos `BG_*`, logos/iconos; dedupe de transforms Wix). Genérico (funciona con páginas tipo Wix).
+- **Endpoints**: `GET /api/advertisers/{slug}/weekly-ad` (público, lazy-refresh con TTL 6h; no sobreescribe cache buena con un fallo); `POST /api/admin/advertisers/{aid}/weekly-ad/refresh` (admin, force). Cache se invalida al cambiar la URL en el update.
+- **Frontend**: `AdminAdvertiserForm` → campo "URL del Weekly Ad" + botón "Actualizar ahora" (modo edición). `AdvertiserDetail` → sección "🛒 Especiales de la semana" con rango de fechas + imágenes del folleto **apiladas (una arriba/otra abajo, full width)** + "Descargar PDF" + "Ver en su sitio". Fetch separado para no bloquear la página.
+- **Deps**: `beautifulsoup4` agregado a `backend/requirements.txt` y `deploy/requirements.prod.txt`.
+- Verificado con Mega Foods (real): detectó "6/10/2026 - 6/16/2026", 2 imágenes + PDF; ficha renderiza correctamente (imágenes 910px apiladas). Build prod recompilado.
+
+
 ### DJ Self-Service: Hero + Programas por día (Jun 16 2026)
 - **Nueva pestaña "Mi Perfil"** en el DJ Studio (`/dj/perfil`, `DjProfilePage.jsx`). Cada DJ ve/edita SOLO su propio locutor (resuelto por `host_slug`). El **nombre del locutor y la asignación siguen siendo admin-only**.
 - **Campos editables por el DJ**: foto (subida vía nuevo `POST /api/dj/upload`), nombre del programa general (`show_name`), eslogan, bio, teléfono, WhatsApp, Facebook, Instagram, color.

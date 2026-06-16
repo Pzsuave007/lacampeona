@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Phone, MessageCircle, MapPin, ArrowLeft, Sparkles, Globe } from "lucide-react";
+import { Phone, MessageCircle, MapPin, ArrowLeft, Sparkles, Globe, ShoppingCart, Calendar, Download, ExternalLink } from "lucide-react";
 import { api, bannerUrl, telLink, waLink, mapsLink } from "../lib/api";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -9,17 +9,28 @@ export default function AdvertiserDetail() {
   const { t } = useLanguage();
   const [adv, setAdv] = useState(null);
   const [error, setError] = useState(false);
+  const [weeklyAd, setWeeklyAd] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     setAdv(null);
     setError(false);
+    setWeeklyAd(null);
     (async () => {
       try {
         const { data } = await api.get(`/advertisers/${slug}`);
         if (!cancelled) setAdv(data);
       } catch {
         if (!cancelled) setError(true);
+      }
+    })();
+    // Fetch weekly ad separately so a slow scrape never blocks the page.
+    (async () => {
+      try {
+        const { data } = await api.get(`/advertisers/${slug}/weekly-ad`);
+        if (!cancelled) setWeeklyAd(data);
+      } catch {
+        if (!cancelled) setWeeklyAd(null);
       }
     })();
     return () => {
@@ -78,6 +89,70 @@ export default function AdvertiserDetail() {
           )}
         </div>
       </section>
+
+      {weeklyAd?.enabled && (weeklyAd.images?.length > 0 || weeklyAd.pdf_url) && (
+        <section data-testid="weekly-ad-section" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
+          <div className="bg-white rounded-3xl border border-emerald-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-6 sm:p-8 border-b border-slate-100">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-600 mb-1 inline-flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" /> Especiales de la semana
+                </p>
+                {weeklyAd.date_range && (
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 inline-flex items-center gap-2">
+                    <Calendar className="w-6 h-6 text-emerald-600" /> {weeklyAd.date_range}
+                  </h2>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {weeklyAd.pdf_url && (
+                  <a
+                    href={weeklyAd.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="weekly-ad-pdf"
+                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full px-5 py-2.5 transition active:scale-95"
+                  >
+                    <Download className="w-4 h-4" /> Descargar PDF
+                  </a>
+                )}
+                {weeklyAd.source_url && (
+                  <a
+                    href={weeklyAd.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="weekly-ad-source"
+                    className="inline-flex items-center gap-2 bg-white border-2 border-slate-200 hover:border-slate-900 text-slate-900 font-bold rounded-full px-5 py-2.5 transition active:scale-95"
+                  >
+                    <ExternalLink className="w-4 h-4" /> Ver en su sitio
+                  </a>
+                )}
+              </div>
+            </div>
+            {weeklyAd.images?.length > 0 && (
+              <div className="p-4 sm:p-6 grid grid-cols-1 gap-5 bg-slate-50">
+                {weeklyAd.images.map((src, i) => (
+                  <a
+                    key={i}
+                    href={weeklyAd.pdf_url || src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid={`weekly-ad-img-${i}`}
+                    className="block rounded-2xl overflow-hidden border border-slate-200 bg-white hover:shadow-lg transition group"
+                  >
+                    <img
+                      src={src}
+                      alt={`Folleto de ofertas página ${i + 1}`}
+                      loading="lazy"
+                      className="w-full h-auto group-hover:scale-[1.01] transition duration-500"
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         {adv.special_offer && (

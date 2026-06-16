@@ -51,6 +51,9 @@ export default function HostHero({ host, stationName, stationTagline }) {
   const { t, lang } = useLanguage();
   const photo = host.photo_path ? bannerUrl(host.photo_path) : "";
   const color = host.color || "#7F1D1D";
+  // The program currently on air (per-slot) takes priority over the host's
+  // generic show_name, so the hero changes with the day/time automatically.
+  const liveShow = (host.current_program || "").trim() || host.show_name;
   // No pre-filled message: open a blank chat so listeners can send their own
   // text, photos or audio to the DJ.
   const wa = waLink(host.whatsapp);
@@ -126,9 +129,9 @@ export default function HostHero({ host, stationName, stationTagline }) {
               {host.name}
             </h1>
 
-            {host.show_name && (
+            {liveShow && (
               <p className="mt-3 sm:mt-4 text-xl sm:text-2xl lg:text-3xl font-extrabold text-amber-300 tracking-tight">
-                “{host.show_name}”
+                “{liveShow}”
               </p>
             )}
 
@@ -279,7 +282,7 @@ export default function HostHero({ host, stationName, stationTagline }) {
                         {lang === "es" ? "Ahora suena" : "On air"}
                       </p>
                       <p className="font-extrabold text-sm text-slate-900">
-                        {host.show_name || host.name}
+                        {liveShow || host.name}
                       </p>
                     </div>
                   </div>

@@ -48,7 +48,7 @@ export default function AdminHostForm({ initial, onCancel, onSaved }) {
   const addSlot = () =>
     set("schedule", [
       ...form.schedule,
-      { day_of_week: 0, start_time: "09:00", end_time: "12:00" },
+      { day_of_week: 0, start_time: "09:00", end_time: "12:00", program: "" },
     ]);
   const removeSlot = (i) => set("schedule", form.schedule.filter((_, idx) => idx !== i));
   const updateSlot = (i, k, v) =>
@@ -67,6 +67,7 @@ export default function AdminHostForm({ initial, onCancel, onSaved }) {
           day_of_week: Number(s.day_of_week),
           start_time: s.start_time,
           end_time: s.end_time,
+          program: (s.program || "").trim(),
         })),
       };
       if (isEdit) {
@@ -165,7 +166,8 @@ export default function AdminHostForm({ initial, onCancel, onSaved }) {
             </div>
             <div className="space-y-2">
               {form.schedule.map((s, i) => (
-                <div key={i} className="flex flex-wrap items-center gap-2 bg-slate-50 rounded-xl p-2">
+                <div key={i} className="bg-slate-50 rounded-xl p-2">
+                  <div className="flex flex-wrap items-center gap-2">
                   <select
                     data-testid={`host-slot-day-${i}`}
                     value={s.day_of_week}
@@ -201,6 +203,14 @@ export default function AdminHostForm({ initial, onCancel, onSaved }) {
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
+                  </div>
+                  <input
+                    data-testid={`host-slot-program-${i}`}
+                    value={s.program || ""}
+                    onChange={(e) => updateSlot(i, "program", e.target.value)}
+                    placeholder='Programa de esta franja (ej. "Cuenta tu Chisme")'
+                    className="mt-2 w-full px-3 py-2 rounded-lg border-2 border-slate-200 bg-white focus:border-orange-500 focus:outline-none text-sm font-semibold"
+                  />
                 </div>
               ))}
               {form.schedule.length === 0 && (

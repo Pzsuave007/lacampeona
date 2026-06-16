@@ -193,6 +193,19 @@ Cada plantilla incluye su `SUGGESTION_PROMPT` ajustado al Pacífico NW (Dallas/S
 ### Mundial: "Añadir TODOS los partidos de tu selección" (Jun 15 2026)
 - En `Mundial.jsx`: tarjeta verde con `<select>` (`team-select`, 48 selecciones de fase de grupos) + botón `add-team-matches-btn`. Genera UN `.ics` con todos los partidos de la selección elegida (recordatorio 30 min + link a la app). Helpers refactorizados: `matchVevent()` + `downloadIcs()` reutilizables; `addTeamMatchesToCalendar(team)`; constante `SELECTION_TEAMS`. Horarios ya en formato 12h AM/PM. Verificado: descarga `<slug>-mundial2026.ics` + toast con conteo.
 
+### DJ Self-Service: Hero + Programas por día (Jun 16 2026)
+- **Nueva pestaña "Mi Perfil"** en el DJ Studio (`/dj/perfil`, `DjProfilePage.jsx`). Cada DJ ve/edita SOLO su propio locutor (resuelto por `host_slug`). El **nombre del locutor y la asignación siguen siendo admin-only**.
+- **Campos editables por el DJ**: foto (subida vía nuevo `POST /api/dj/upload`), nombre del programa general (`show_name`), eslogan, bio, teléfono, WhatsApp, Facebook, Instagram, color.
+- **Programas por franja**: se agregó el campo `program` a `HostScheduleSlot`. Cada franja (día + hora) tiene su propio nombre de programa (ej. Lunes "Top 40 con la Jarochita", Martes "Cuenta tu Chisme"). El DJ agrega/edita/borra franjas en `/dj/perfil`.
+- **Hero dinámico**: `resolve_live_host` inyecta `current_program` (programa de la franja que cubre la hora actual, tz de la estación). `HostHero.jsx` muestra `current_program || show_name`, así el hero cambia solo según día/hora. En vivo: StationContext hace polling de `/live-host` cada 30s + `loadLiveHost()` al guardar.
+- **Endpoints nuevos**: `GET /api/dj/host`, `PUT /api/dj/host` (payload restringido `DjHostUpdate`, sin name/slug), `POST /api/dj/upload`. Refactor: `_save_upload()` compartido admin+DJ.
+- **Paridad admin**: `AdminHostForm` también edita `program` por franja; `WeeklyScheduleGrid` muestra el programa de cada franja.
+- Verificado: GET/PUT host por curl; hero en vivo muestra "Top 40 con la Jarochita" (Lun 18:00–20:00); flujo editar+guardar+persistir por screenshot. Build de prod recompilado.
+
+### Fix deploy prod: feedparser faltaba (Jun 16 2026)
+- `feedparser` estaba solo en `backend/requirements.txt`, pero prod instala desde `deploy/requirements.prod.txt` → `ModuleNotFoundError` en el servidor. Agregado `feedparser` a `deploy/requirements.prod.txt` (el cambio de hash hace que `fix.sh` reinstale deps).
+
+
 ### Compartir nativo + Plantilla "Noticia" con búsqueda real (Jun 16 2026)
 - **Fix OG de Blog Posts (P0)**: en `Post.jsx` los botones WhatsApp/Facebook usaban `publicUrl` (URL SPA genérica) en vez de `ogShareUrl`. Ahora apuntan a `/api/posts/og/{slug}` → Facebook/WhatsApp muestran título, extracto e imagen del post. Verificado por curl (UA facebookexternalhit) + screenshot.
 - **Botón "Compartir" nativo (`navigator.share`)**: nuevo helper `frontend/src/lib/share.js` (`sharePost`) que comparte la URL OG con fallback a copiar al portapapeles. Añadido a: tarjetas del Blog (`blog-share-{slug}`), nueva sección "Lo último del blog" en Home (`home-blog-teaser` + `home-blog-share-{slug}`), y botón `post-share-native` en la página del post. En móvil abre el menú nativo (WhatsApp/IG Stories), en escritorio copia el link.

@@ -192,7 +192,7 @@ export default function WeeklyScheduleGrid({ hosts, onEditHost, timezone }) {
                         {s.raw.start_time}–{s.raw.end_time}
                       </p>
                       <p className="text-xs font-extrabold truncate leading-tight mt-0.5">
-                        {s.host.show_name || s.host.name}
+                        {s.raw.program || s.host.show_name || s.host.name}
                       </p>
                       {heightPx > 50 && (
                         <p className="text-[10px] opacity-90 truncate leading-tight mt-0.5">

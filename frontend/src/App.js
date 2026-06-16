@@ -22,6 +22,7 @@ import EventoLanding from "@/pages/EventoLanding";
 import ReportePublic from "@/pages/ReportePublic";
 import DjStudio from "@/pages/DjStudio";
 import DjComposerPage from "@/pages/DjComposerPage";
+import DjProfilePage from "@/pages/DjProfilePage";
 import Blog from "@/pages/Blog";
 import Quiniela from "@/pages/Quiniela";
 import QuinielaLeaderboard from "@/pages/QuinielaLeaderboard";
@@ -60,6 +61,7 @@ function App() {
                   <Route path="/dj" element={<DjStudio />} />
                   <Route path="/dj/nuevo" element={<DjComposerPage mode="new" />} />
                   <Route path="/dj/editar/:id" element={<DjComposerPage mode="edit" />} />
+                  <Route path="/dj/perfil" element={<DjProfilePage />} />
                   <Route path="/super" element={<SuperAdmin />} />
                   <Route path="/p/:slug" element={<Post />} />
                 </Routes>

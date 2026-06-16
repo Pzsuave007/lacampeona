@@ -341,6 +341,7 @@ class HostScheduleSlot(BaseModel):
     day_of_week: int = Field(..., ge=0, le=6)
     start_time: str  # "HH:MM"
     end_time: str
+    program: Optional[str] = ""  # nombre del programa de esa franja (ej. "Top 40 con la Jarochita")
 
 
 class HostIn(BaseModel):
@@ -571,19 +572,29 @@ def is_event_eligible_for_cta(event: dict, now: datetime) -> bool:
     return True
 
 
+def _current_program(host: dict, now) -> str:
+    """Name of the program scheduled for `now` (per-slot), if any."""
+    for slot in host.get("schedule") or []:
+        if time_in_slot(now, slot):
+            return (slot.get("program") or "").strip()
+    return ""
+
+
 async def resolve_live_host() -> Optional[dict]:
     settings = await get_settings_doc()
     hid = (settings.get("active_host_id") or "").strip()
+    now = await station_now()
     if hid and hid != "AUTO":
         h = await db.hosts.find_one({"id": hid}, {"_id": 0})
         if h:
+            h["current_program"] = _current_program(h, now)
             return h
     if hid == "AUTO":
-        now = await station_now()
         cursor = db.hosts.find({}, {"_id": 0})
         async for h in cursor:
             for slot in h.get("schedule") or []:
                 if time_in_slot(now, slot):
+                    h["current_program"] = (slot.get("program") or "").strip()
                     return h
     return None
 
@@ -1097,8 +1108,7 @@ async def admin_delete_event(eid: str, _: dict = Depends(get_admin)):
     return {"ok": True}
 
 
-@api.post("/admin/upload")
-async def admin_upload(file: UploadFile = File(...), _: dict = Depends(get_admin)):
+async def _save_upload(file: UploadFile) -> dict:
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing filename")
     ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "bin"
@@ -1120,6 +1130,11 @@ async def admin_upload(file: UploadFile = File(...), _: dict = Depends(get_admin
         "created_at": now_iso(),
     })
     return {"path": final_path, "url": f"/api/files/{final_path}"}
+
+
+@api.post("/admin/upload")
+async def admin_upload(file: UploadFile = File(...), _: dict = Depends(get_admin)):
+    return await _save_upload(file)
 
 # ---------------------- Content Studio (DJ) ---------------------- #
 # 8 transformative templates for safe-repost / original DJ content.
@@ -1677,6 +1692,51 @@ async def dj_me(user: dict = Depends(get_dj)):
         "host_slug": slug,
         "host": host,
     }
+
+
+class DjHostUpdate(BaseModel):
+    """Fields a DJ may edit on THEIR OWN host. Name + assignment stay admin-only."""
+    show_name: Optional[str] = ""
+    tagline: Optional[str] = ""
+    bio: Optional[str] = ""
+    photo_path: Optional[str] = ""
+    phone: Optional[str] = ""
+    whatsapp: Optional[str] = ""
+    facebook: Optional[str] = ""
+    instagram: Optional[str] = ""
+    color: Optional[str] = "#7F1D1D"
+    schedule: List[HostScheduleSlot] = []
+
+
+@api.get("/dj/host")
+async def dj_get_host(user: dict = Depends(get_dj)):
+    """The host profile assigned to the logged-in DJ (None if not assigned)."""
+    slug = (user.get("host_slug") or "").strip()
+    if not slug:
+        return {"host": None}
+    h = await db.hosts.find_one({"slug": slug}, {"_id": 0})
+    return {"host": h}
+
+
+@api.put("/dj/host")
+async def dj_update_host(payload: DjHostUpdate, user: dict = Depends(get_dj)):
+    """A DJ updates their own hero/profile + per-slot programs. Cannot change
+    their name, slug or assignment (admin-only)."""
+    slug = (user.get("host_slug") or "").strip()
+    if not slug:
+        raise HTTPException(status_code=400, detail="No tienes un locutor asignado. Pídele al administrador que te asigne uno.")
+    existing = await db.hosts.find_one({"slug": slug})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Locutor no encontrado")
+    update = payload.model_dump()
+    update["updated_at"] = now_iso()
+    await db.hosts.update_one({"slug": slug}, {"$set": update})
+    return await db.hosts.find_one({"slug": slug}, {"_id": 0})
+
+
+@api.post("/dj/upload")
+async def dj_upload(file: UploadFile = File(...), _: dict = Depends(get_dj)):
+    return await _save_upload(file)
 
 
 @api.post("/dj/generate")

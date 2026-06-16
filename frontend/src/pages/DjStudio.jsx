@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, Image as ImageIcon, RefreshCw, Newspaper, Search } from "lucide-react";
+import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, Image as ImageIcon, RefreshCw, Newspaper, Search, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { api, bannerUrl } from "../lib/api";
@@ -147,6 +147,13 @@ export default function DjStudio() {
             className={`px-4 py-2 rounded-full text-sm font-bold transition ${view === "calendar" ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"}`}
           >
             <CalendarIcon className="w-4 h-4 inline mr-1" /> Calendario
+          </button>
+          <button
+            data-testid="dj-my-profile-btn"
+            onClick={() => navigate("/dj/perfil")}
+            className="px-4 py-2 rounded-full text-sm font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+          >
+            <UserCog className="w-4 h-4 inline mr-1" /> Mi Perfil
           </button>
           <button
             data-testid="dj-new-draft-btn"

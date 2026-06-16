@@ -9,6 +9,10 @@ import re
 import uuid
 import logging
 import requests
+import asyncio
+import html as html_lib
+import urllib.parse
+import feedparser
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 
@@ -1306,6 +1310,18 @@ CONTENT_TEMPLATES: dict = {
         ],
         "instruction": "Crea un post celebrando al jugador latinoamericano {player} ({club_country}) por: {achievement}. Tono de ORGULLO LATINO — la audiencia se identifica fuertísimo con que 'uno de los nuestros' brille en el extranjero. Si es mexicano, usa expresiones como 'Mi México', 'paisano', 'el orgullo verde'. Cierra invitando a compartir el éxito con la familia y a sintonizar la radio para más noticias del deporte latino.",
     },
+    # ----- NOTICIA (búsqueda de noticias reales - Jun 2026) -----
+    "news_repost": {
+        "label": "Noticia",
+        "emoji": "📰",
+        "description": "Comparte una noticia importante (local, internacional o farándula). Busca noticias reales y crea el post. Sin política ni religión.",
+        "fields": [
+            {"key": "headline", "label": "Titular de la noticia", "placeholder": "Ej: Shakira anuncia nueva gira por Estados Unidos", "required": True},
+            {"key": "source", "label": "Fuente (opcional)", "placeholder": "Univision, AP, El Universal…", "required": False},
+            {"key": "angle", "label": "Ángulo o por qué importa (opcional)", "placeholder": "A la comunidad le encanta su música; pasará cerca de Oregon…", "required": False},
+        ],
+        "instruction": "Crea un post de redes sociales comentando esta NOTICIA: '{headline}'. Fuente: {source}. Ángulo/relevancia: {angle}. REGLAS CRÍTICAS:\n- Resume la noticia con TUS PROPIAS palabras de forma breve y clara (no la copies textual). NO inventes datos que no estén en el titular; si falta información, mantente general.\n- ESTRICTAMENTE PROHIBIDO: política, partidos, candidatos, elecciones, inmigración (ICE, deportaciones, frontera) y temas religiosos polémicos. Si el titular toca esto, reformula hacia el ángulo cultural/humano o evítalo.\n- Temas ideales: farándula y espectáculos (cantantes, novelas, actores latinos), música, cultura, deportes, curiosidades, salud y bienestar, y la comunidad local de Oregon.\n- Tono cercano y conversador, como el DJ contándole la noticia a la comadre. Cierra con una pregunta o invitación a comentar y a sintonizar la radio.",
+    },
 }
 
 
@@ -1552,6 +1568,91 @@ async def dj_suggest(payload: SuggestIn, user: dict = Depends(get_dj)):
         raise HTTPException(status_code=502, detail="La IA no devolvió ideas válidas. Inténtalo de nuevo.")
 
     return {"suggestions": out, "template_type": payload.template_type}
+
+
+# ---------------------- DJ News Search (plantilla Noticia) ---------------------- #
+NEWS_CATEGORY_QUERIES: dict = {
+    "farandula": "farándula espectáculos celebridades artistas latinos",
+    "musica": "música latina regional mexicano cantantes conciertos",
+    "deportes": "fútbol Liga MX selección mexicana boxeo deportes",
+    "local": "Oregon Salem Woodburn Dallas Oregon comunidad latina",
+    "internacional": "México Latinoamérica noticias",
+    "entretenimiento": "novelas series cine televisión entretenimiento latino",
+}
+
+# Línea editorial del dueño: sin política, inmigración ni temas religiosos/violentos.
+NEWS_BLOCKLIST: tuple = (
+    "trump", "biden", "harris", "kamala", "desantis", "newsom", "elecc", "electora",
+    "político", "politica", "partido", "demócrat", "republican", "congreso", "senado",
+    "casa blanca", "white house", "gobierno federal",
+    " ice ", "deportac", "inmigra", "migrant", "frontera", "border", "asilo",
+    "redada", "uscis", "daca", " visa", "aborto",
+    "guerra", "tirote", "balacera", "asesinat", "violación", "narco", "cártel", "cartel",
+    "homicid", "feminicid", "secuestr",
+)
+
+
+def _fetch_google_news(query: str) -> list:
+    """Synchronous Google News RSS fetch + parse. Run in a thread."""
+    rss_q = urllib.parse.quote(f"{query} when:7d")
+    url = f"https://news.google.com/rss/search?q={rss_q}&hl=es-419&gl=US&ceid=US:es"
+    resp = requests.get(
+        url, timeout=10,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; LaCampeonaBot/1.0)"},
+    )
+    resp.raise_for_status()
+    feed = feedparser.parse(resp.content)
+    items: list = []
+    for entry in feed.entries:
+        raw_title = html_lib.unescape((entry.get("title") or "").strip())
+        if not raw_title:
+            continue
+        source = ""
+        src = entry.get("source")
+        if src is not None:
+            source = (getattr(src, "get", lambda *_: "")("title") if hasattr(src, "get") else "") or getattr(src, "title", "") or ""
+        title = raw_title
+        # Google News appends " - Source" to titles. Strip it (whether or not
+        # the feed gave us an explicit <source>) so we don't show it twice.
+        if " - " in raw_title:
+            head, tail = raw_title.rsplit(" - ", 1)
+            tail = tail.strip()
+            if not source and 2 <= len(tail) <= 45:
+                title, source = head.strip(), tail
+            elif source and tail.lower() == source.strip().lower():
+                title = head.strip()
+        low = (title + " " + source).lower()
+        if any(b in low for b in NEWS_BLOCKLIST):
+            continue
+        items.append({
+            "title": title,
+            "source": source,
+            "link": entry.get("link") or "",
+            "published": entry.get("published") or "",
+        })
+        if len(items) >= 12:
+            break
+    return items
+
+
+class NewsSearchIn(BaseModel):
+    query: str = ""
+    category: str = ""
+
+
+@api.post("/dj/news-search")
+async def dj_news_search(payload: NewsSearchIn, _: dict = Depends(get_dj)):
+    """Busca noticias recientes (últimos 7 días) en español vía Google News RSS,
+    filtradas contra una lista editorial (sin política/inmigración/violencia)."""
+    q = (payload.query or "").strip()
+    if not q:
+        q = NEWS_CATEGORY_QUERIES.get(payload.category, "espectáculos farándula música latina")
+    try:
+        items = await asyncio.to_thread(_fetch_google_news, q)
+    except Exception as e:
+        logger.error(f"news-search failed for '{q}': {e}")
+        raise HTTPException(status_code=502, detail="No se pudo buscar noticias. Intenta de nuevo.")
+    return {"results": items, "query": q}
 
 
 @api.get("/dj/templates")

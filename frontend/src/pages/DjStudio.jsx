@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, Image as ImageIcon, RefreshCw, Newspaper, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { api, bannerUrl } from "../lib/api";
@@ -401,6 +401,43 @@ export function Composer({ mode, initial, templates, onClose, onSaved }) {
   const [variantTone, setVariantTone] = useState("");
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [newsQuery, setNewsQuery] = useState("");
+  const [newsResults, setNewsResults] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const isNews = tmpl?.key === "news_repost";
+
+  const searchNews = async (category = "") => {
+    setNewsLoading(true);
+    try {
+      const { data } = await api.post("/dj/news-search", { query: newsQuery, category });
+      setNewsResults(data.results || []);
+      if (!data.results?.length) toast.error("No se encontraron noticias. Prueba otra búsqueda.");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Error al buscar noticias");
+    } finally {
+      setNewsLoading(false);
+    }
+  };
+
+  const pickNews = async (item) => {
+    const ni = { headline: item.title, source: item.source || "", angle: "" };
+    setInputs(ni);
+    setGenerating(true);
+    try {
+      const { data } = await api.post("/dj/generate", {
+        template_type: tmpl.key,
+        inputs: ni,
+        platform,
+        save: false,
+      });
+      setText(data.text);
+      setStep("edit");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Generación falló");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const fetchSuggestions = async () => {
     setSuggesting(true);
@@ -518,7 +555,84 @@ export function Composer({ mode, initial, templates, onClose, onSaved }) {
           <div className="p-5 space-y-4" data-testid="dj-inputs-form">
             <p className="text-sm text-slate-600">{tmpl.description}</p>
 
+            {/* News search panel — only for the Noticia template */}
+            {isNews && (
+              <div className="rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/60 p-4" data-testid="dj-news-panel">
+                <div className="flex items-center gap-2 mb-1">
+                  <Newspaper className="w-5 h-5 text-sky-600" />
+                  <span className="font-bold text-sky-900">Buscar noticias reales (últimos 7 días)</span>
+                </div>
+                <p className="text-[11px] text-sky-700 mb-3">Farándula, música, deportes y comunidad. Sin política, inmigración ni temas religiosos polémicos.</p>
+                <div className="flex flex-wrap gap-1.5 mb-3" data-testid="dj-news-categories">
+                  {[
+                    { key: "farandula", label: "🌟 Farándula" },
+                    { key: "musica", label: "🎵 Música" },
+                    { key: "deportes", label: "⚽ Deportes" },
+                    { key: "local", label: "🏘️ Oregon local" },
+                    { key: "internacional", label: "🌎 Internacional" },
+                    { key: "entretenimiento", label: "🎬 Entretenimiento" },
+                  ].map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      data-testid={`dj-news-cat-${c.key}`}
+                      onClick={() => { setNewsQuery(""); searchNews(c.key); }}
+                      disabled={newsLoading || generating}
+                      className="text-xs font-bold px-3 py-1.5 rounded-full bg-white border border-sky-200 text-sky-700 hover:bg-sky-100 transition disabled:opacity-50"
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    data-testid="dj-news-query"
+                    value={newsQuery}
+                    onChange={(e) => setNewsQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") searchNews(); }}
+                    placeholder="Ej: Shakira, concierto en Salem, Liga MX…"
+                    className="flex-1 px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-sky-500 focus:outline-none transition text-sm"
+                  />
+                  <button
+                    type="button"
+                    data-testid="dj-news-search-btn"
+                    onClick={() => searchNews()}
+                    disabled={newsLoading || generating}
+                    className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl px-4 py-2.5 transition active:scale-95"
+                  >
+                    {newsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    Buscar
+                  </button>
+                </div>
+                {newsResults.length > 0 && (
+                  <div className="mt-3 space-y-2 max-h-80 overflow-y-auto pr-1" data-testid="dj-news-results">
+                    {newsResults.map((n, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        data-testid={`dj-news-result-${i}`}
+                        onClick={() => pickNews(n)}
+                        disabled={generating}
+                        className="w-full text-left bg-white hover:bg-sky-50 border border-sky-200 hover:border-sky-400 rounded-xl p-3 transition disabled:opacity-50 group"
+                      >
+                        <div className="flex items-start gap-2">
+                          <Newspaper className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-sm text-slate-900 leading-snug">{n.title}</div>
+                            {n.source && <div className="text-[11px] text-slate-500 mt-0.5">{n.source}</div>}
+                          </div>
+                          <Wand2 className="w-4 h-4 text-sky-500 opacity-0 group-hover:opacity-100 transition shrink-0 mt-0.5" />
+                        </div>
+                      </button>
+                    ))}
+                    <p className="text-[11px] text-sky-700 text-center pt-1">Toca una noticia para generar el post al instante</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* AI suggestions panel */}
+            {!isNews && (
             <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 p-4" data-testid="dj-suggestions-panel">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
@@ -561,8 +675,9 @@ export function Composer({ mode, initial, templates, onClose, onSaved }) {
                 </div>
               )}
             </div>
+            )}
 
-            <div className="text-center text-xs font-bold uppercase tracking-[0.2em] text-slate-400 py-1">— o llena los campos manualmente —</div>
+            <div className="text-center text-xs font-bold uppercase tracking-[0.2em] text-slate-400 py-1">{isNews ? "— o escribe la noticia manualmente —" : "— o llena los campos manualmente —"}</div>
 
             {tmpl.fields.map((f) => (
               <div key={f.key}>

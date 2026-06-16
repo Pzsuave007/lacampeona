@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, Calendar, ArrowRight, Newspaper } from "lucide-react";
+import { Eye, Calendar, ArrowRight, Newspaper, Share2 } from "lucide-react";
 import { api, bannerUrl } from "../lib/api";
+import { sharePost } from "../lib/share";
 import { useLanguage } from "../contexts/LanguageContext";
 
 // Strip the AI section labels [CAPTION]/[HASHTAGS]/[CTA] before showing
@@ -20,6 +21,7 @@ function captionPreview(text) {
 // The categories shown as filter chips on the blog. Ordered for the UI.
 const CATEGORIES = [
   { key: "all",       label: "Todo",         emoji: "📰", templates: null },
+  { key: "noticias",  label: "Noticias",     emoji: "🗞️", templates: ["news_repost"] },
   { key: "musica",    label: "Música",       emoji: "🎵", templates: ["throwback", "musical_recommendation", "today_in_history", "hot_take"] },
   { key: "deportes",  label: "Deportes",     emoji: "⚽", templates: ["mexican_soccer", "world_cup_2026", "latinos_abroad"] },
   { key: "comunidad", label: "Comunidad",    emoji: "🏘️", templates: ["community_alert", "farm_voice", "local_business"] },
@@ -187,6 +189,20 @@ function PostCard({ post, lang }) {
             <span>{cat.label}</span>
           </span>
         )}
+        <button
+          type="button"
+          data-testid={`blog-share-${post.slug}`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            sharePost({ slug: post.slug, title, text: preview });
+          }}
+          aria-label="Compartir"
+          title="Compartir"
+          className="absolute top-3 right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/95 backdrop-blur text-slate-700 shadow hover:bg-orange-600 hover:text-white transition active:scale-90"
+        >
+          <Share2 className="w-4 h-4" />
+        </button>
       </div>
       <div className="p-5 flex flex-col flex-1">
         <h3 className="text-lg font-black text-slate-900 leading-snug line-clamp-3 group-hover:text-orange-600 transition">

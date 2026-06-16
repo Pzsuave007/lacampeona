@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Phone,
@@ -11,11 +11,15 @@ import {
   Radio as RadioIcon,
   Disc3,
   Mic2,
+  Newspaper,
+  Share2,
+  Eye,
 } from "lucide-react";
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAdvertisers } from "../hooks/useAdvertisers";
-import { bannerUrl, telLink, waLink, mapsLink } from "../lib/api";
+import { api, bannerUrl, telLink, waLink, mapsLink } from "../lib/api";
+import { sharePost } from "../lib/share";
 import MarqueeStrip from "../components/MarqueeStrip";
 import HostHero from "../components/HostHero";
 import FeaturedShow from "../components/FeaturedShow";
@@ -188,6 +192,9 @@ export default function Home() {
 
       {/* Upcoming events teaser */}
       {events && events.length > 0 && <EventsTeaser events={events} lang={lang} />}
+
+      {/* Latest from the blog */}
+      <BlogTeaser lang={lang} />
 
       {/* Community CTA */}
       <CommunitySection
@@ -636,6 +643,114 @@ function EventsTeaser({ events, lang }) {
             );
           })}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* --------------------- Blog teaser --------------------- */
+function blogPreview(text) {
+  if (!text) return "";
+  const m = text.match(/\[CAPTION\]\s*([\s\S]*?)(?=\n\s*\[(?:HASHTAGS|CTA)\]|$)/i);
+  return (m ? m[1] : text)
+    .replace(/\[(CAPTION|HASHTAGS|CTA)\]\s*:?/gi, "")
+    .trim();
+}
+
+function BlogTeaser({ lang }) {
+  const [posts, setPosts] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/posts/recent?limit=3")
+      .then(({ data }) => { if (!cancelled) setPosts(data || []); })
+      .catch(() => { if (!cancelled) setPosts([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!posts.length) return null;
+
+  return (
+    <section
+      data-testid="home-blog-teaser"
+      className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-orange-600 mb-2 inline-flex items-center gap-2">
+            <Newspaper className="w-4 h-4" /> {lang === "es" ? "El Blog" : "The Blog"}
+          </p>
+          <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter">
+            {lang === "es" ? "Lo último de " : "Latest from "}
+            <span className="font-script font-normal italic text-orange-600 text-5xl sm:text-6xl">
+              {lang === "es" ? "nuestra gente" : "our people"}
+            </span>
+          </h2>
+        </div>
+        <Link
+          to="/blog"
+          data-testid="home-blog-cta"
+          className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-5 py-3 transition active:scale-95 shadow-[0_10px_30px_rgba(234,88,12,0.35)] hover:-translate-y-0.5 whitespace-nowrap"
+        >
+          {lang === "es" ? "Ver el blog" : "See the blog"}
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="home-blog-grid">
+        {posts.map((p) => {
+          const cover = p.cover_image ? bannerUrl(p.cover_image) : null;
+          const preview = blogPreview(p.text);
+          const title = p.title || preview.split("\n")[0]?.slice(0, 100) || "Post";
+          return (
+            <Link
+              key={p.slug}
+              to={`/p/${p.slug}`}
+              data-testid={`home-blog-card-${p.slug}`}
+              className="group bg-white rounded-3xl overflow-hidden border border-slate-200 hover:border-orange-300 hover:shadow-xl transition flex flex-col"
+            >
+              <div className="relative">
+                {cover ? (
+                  <div className="aspect-video overflow-hidden bg-slate-100">
+                    <img src={cover} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-gradient-to-br from-orange-100 to-rose-100 flex items-center justify-center">
+                    <Newspaper className="w-12 h-12 text-orange-400" />
+                  </div>
+                )}
+                <button
+                  type="button"
+                  data-testid={`home-blog-share-${p.slug}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sharePost({ slug: p.slug, title, text: preview });
+                  }}
+                  aria-label="Compartir"
+                  title="Compartir"
+                  className="absolute top-3 right-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/95 backdrop-blur text-slate-700 shadow hover:bg-orange-600 hover:text-white transition active:scale-90"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-5 flex flex-col flex-1">
+                <h3 className="text-lg font-black text-slate-900 leading-snug line-clamp-3 group-hover:text-orange-600 transition">
+                  {title}
+                </h3>
+                <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-500">
+                  <span className="inline-flex items-center gap-1.5 font-bold text-orange-600 group-hover:gap-2 transition-all">
+                    {lang === "es" ? "Leer" : "Read"} <ArrowRight className="w-4 h-4" />
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5" />
+                    {(p.views_count || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, API, bannerUrl, waLink } from "../lib/api";
+import { sharePost } from "../lib/share";
 import { useStation } from "../contexts/StationContext";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -214,6 +215,14 @@ export default function Post() {
           <span className="text-sm font-bold text-slate-600 mr-1 inline-flex items-center gap-1.5">
             <Share2 className="w-4 h-4" /> Compartir:
           </span>
+          <button
+            type="button"
+            onClick={() => sharePost({ slug, title, text: parsed.caption })}
+            data-testid="post-share-native"
+            className="inline-flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold rounded-full px-4 py-2 transition active:scale-95"
+          >
+            <Share2 className="w-4 h-4" /> Compartir
+          </button>
           {shareWa && (
             <a
               href={shareWa}

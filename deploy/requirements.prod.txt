@@ -19,3 +19,4 @@ tzdata
 python-jose
 emergentintegrations==0.1.0
 Pillow
+feedparser

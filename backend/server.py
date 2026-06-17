@@ -2156,21 +2156,26 @@ async def build_image_scene(topic_text: str) -> str:
         "concert stage; food -> the dish; a place -> that place; an object -> that object.\n"
         "- Do NOT default to a generic crowd of people watching TV or a 'latino community' scene "
         "unless the post is literally about that.\n"
-        "- Do NOT name or depict real celebrities' faces; describe them generically (e.g., 'a soccer "
-        "player in a blue jersey celebrating a goal').\n"
+        "- If the post is about a specific real person (singer, athlete, actor, public figure), NAME "
+        "that person explicitly so the image depicts THEM, in a recognizable context "
+        "(e.g., 'Kylian Mbappé in the France national team jersey celebrating a goal in a packed "
+        "World Cup stadium', or 'Peso Pluma singing on a concert stage with bright lights').\n"
         "- No text, no letters, no logos, no watermarks.\n"
         "- Return ONLY the visual description, nothing else."
     )
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"imgscene-{uuid.uuid4().hex[:8]}",
-            system_message=sys,
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-        scene = await chat.send_message(UserMessage(text=f'Post:\n"""\n{topic_text}\n"""'))
-        scene = (scene or "").strip()
-        return scene or topic_text
+        for attempt in range(2):
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"imgscene-{uuid.uuid4().hex[:8]}",
+                system_message=sys,
+            ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+            scene = await chat.send_message(UserMessage(text=f'Post:\n"""\n{topic_text}\n"""'))
+            scene = (scene or "").strip()
+            if scene:
+                return scene
+        return topic_text
     except Exception as e:
         logger.error(f"build_image_scene failed: {e}")
         return topic_text

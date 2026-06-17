@@ -2140,6 +2140,42 @@ class GenerateImageIn(BaseModel):
     style: Optional[str] = "illustration"  # "illustration" or "realistic"
 
 
+async def build_image_scene(topic_text: str) -> str:
+    """Use Claude to turn a post into a concrete, literal visual scene focused on
+    the post's MAIN subject, so the generated image matches the content instead
+    of defaulting to a generic 'latino community' scene."""
+    api_key = os.getenv("EMERGENT_LLM_KEY")
+    if not api_key:
+        return topic_text
+    sys = (
+        "You are an art director for a radio station. Read a Spanish-language post and write ONE "
+        "concise ENGLISH visual description (max 40 words) of an image that LITERALLY depicts the "
+        "MAIN SUBJECT of the post.\n"
+        "Rules:\n"
+        "- Focus on the actual topic: if it's sports, show the sport action / stadium; a singer -> a "
+        "concert stage; food -> the dish; a place -> that place; an object -> that object.\n"
+        "- Do NOT default to a generic crowd of people watching TV or a 'latino community' scene "
+        "unless the post is literally about that.\n"
+        "- Do NOT name or depict real celebrities' faces; describe them generically (e.g., 'a soccer "
+        "player in a blue jersey celebrating a goal').\n"
+        "- No text, no letters, no logos, no watermarks.\n"
+        "- Return ONLY the visual description, nothing else."
+    )
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"imgscene-{uuid.uuid4().hex[:8]}",
+            system_message=sys,
+        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+        scene = await chat.send_message(UserMessage(text=f'Post:\n"""\n{topic_text}\n"""'))
+        scene = (scene or "").strip()
+        return scene or topic_text
+    except Exception as e:
+        logger.error(f"build_image_scene failed: {e}")
+        return topic_text
+
+
 @api.post("/dj/generate-image")
 async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_dj)):
     """Generates a unique cover image for a post using Gemini Nano Banana."""
@@ -2147,6 +2183,7 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
     from emergentintegrations.llm.chat import LlmChat, UserMessage
 
     # Resolve prompt: explicit, or derive from draft's text
+    explicit = bool((payload.prompt or "").strip())
     prompt_text = (payload.prompt or "").strip()
     draft = None
     if payload.draft_id:
@@ -2155,9 +2192,10 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
             raise HTTPException(status_code=404, detail="Draft no encontrado")
         if user.get("role") == "dj" and draft.get("host_slug") != dj_host_slug(user):
             raise HTTPException(status_code=403, detail="No es tu borrador")
-        if not prompt_text:
-            base_text = (draft.get("title") or draft.get("text") or "").strip()
-            prompt_text = base_text
+        if not explicit:
+            title = (draft.get("title") or "").strip()
+            body = caption_only(draft.get("text") or "") or (draft.get("text") or "")
+            prompt_text = (f"{title}. {body}" if title else body).strip()
 
     if not prompt_text:
         raise HTTPException(status_code=400, detail="Falta prompt o draft con texto")
@@ -2170,20 +2208,22 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
 
     if (payload.style or "illustration") == "realistic":
         style_hint = (
-            "photorealistic editorial photography, real people and real scenes, natural lighting, "
-            "shot on a DSLR camera, sharp focus, high detail, candid latin community lifestyle"
+            "photorealistic editorial photography, natural lighting, shot on a DSLR camera, "
+            "sharp focus, high detail, professional color grading"
         )
     else:
         style_hint = (
-            "vibrant photo-illustration, editorial magazine illustration style, latin culture friendly, "
-            "warm red/orange/amber palette"
+            "vibrant editorial magazine illustration, bold clean composition, rich colors"
         )
 
+    # Analyze the post first so the image matches its MAIN subject (unless the
+    # DJ typed an explicit custom prompt, which we respect as-is).
+    scene = prompt_text if explicit else await build_image_scene(prompt_text)
+
     full_prompt = (
-        f"Cover image for a Spanish-language radio station post by 'La Campeona 880 AM' "
-        f"(KWIP, Dallas Oregon). Topic: {prompt_text}\n\n"
-        f"Style: {style_hint}, high quality, ready for Facebook/Instagram sharing. "
-        f"{aspect_hint}. No text or letters in the image."
+        f"{scene}\n\n"
+        f"Style: {style_hint}, high-quality social media cover image, ready for Facebook/Instagram sharing. "
+        f"{aspect_hint}. Absolutely NO text, words, letters, captions, logos or watermarks in the image."
     )
 
     api_key = os.getenv("EMERGENT_LLM_KEY")
@@ -2235,7 +2275,7 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
             {"$set": {"cover_image": final_path, "updated_at": now_iso()}},
         )
 
-    return {"path": final_path, "url": f"/api/files/{final_path}"}
+    return {"path": final_path, "url": f"/api/files/{final_path}", "scene": scene}
 
 
 # ============================================================

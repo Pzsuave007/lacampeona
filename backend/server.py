@@ -1611,6 +1611,7 @@ class ContentDraftIn(BaseModel):
     scheduled_at: Optional[str] = ""  # ISO date "YYYY-MM-DD" or full ISO datetime
     fb_post_url: Optional[str] = ""  # original FB post URL for comment embed
     cover_image: Optional[str] = ""  # optional image URL for the public page
+    article_body: Optional[str] = ""  # versión larga para la web (markdown simple)
 
 
 class ContentDraftPatch(BaseModel):
@@ -1621,6 +1622,7 @@ class ContentDraftPatch(BaseModel):
     scheduled_at: Optional[str] = None
     fb_post_url: Optional[str] = None
     cover_image: Optional[str] = None
+    article_body: Optional[str] = None
 
 
 # ---------- Slugify helper (defined earlier near LoginIn) ----------
@@ -1971,6 +1973,7 @@ async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
             "views_count": 0,
             "fb_post_url": "",
             "cover_image": "",
+            "article_body": "",
             "created_at": now,
             "updated_at": now,
         }
@@ -1978,6 +1981,89 @@ async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
         result["draft"] = {k: v for k, v in doc.items() if k != "_id"}
 
     return result
+
+
+class ExpandArticleIn(BaseModel):
+    draft_id: Optional[str] = None
+    text: Optional[str] = ""  # source caption if no draft_id
+
+
+def build_article_system_message(station_name: str, host_name: str) -> str:
+    return (
+        f"Eres redactor del sitio web de '{station_name}', una radio regional mexicana en Oregon "
+        f"para la comunidad latina de 40+ años. Conviertes un post corto de redes en un ARTÍCULO WEB "
+        f"más completo, para que la gente visite la web a aprender más sobre el tema.\n\n"
+        f"REGLAS:\n"
+        f"- Escribe en español, cálido y cercano, como {host_name} le habla a su gente.\n"
+        f"- 3 a 5 párrafos CORTOS (la gente no lee mucho: frases claras y directas).\n"
+        f"- Incluye 1 o 2 subtítulos con el formato EXACTO '## Subtítulo' al inicio de la línea.\n"
+        f"- Amplía con contexto, datos útiles, curiosidades y por qué le importa a la comunidad. "
+        f"NO inventes hechos falsos, fechas ni cifras dudosas; si no sabes un dato, habla en general.\n"
+        f"- PROHIBIDO: política, partidos, elecciones, inmigración (ICE, deportaciones, frontera) y "
+        f"temas religiosos polémicos.\n"
+        f"- NO uses hashtags, NO uses etiquetas como [CAPTION]/[CTA], NO pongas un título principal.\n"
+        f"- Devuelve SOLO el cuerpo del artículo en texto con markdown simple (## para subtítulos)."
+    )
+
+
+@api.post("/dj/expand-article")
+async def dj_expand_article(payload: ExpandArticleIn, user: dict = Depends(get_dj)):
+    """Generate a longer web article from a short social post. Saves it to the
+    draft's `article_body` when a draft_id is provided."""
+    if not EMERGENT_KEY:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no configurado")
+
+    draft = None
+    source = (payload.text or "").strip()
+    if payload.draft_id:
+        draft = await db.content_drafts.find_one({"id": payload.draft_id}, {"_id": 0})
+        if not draft:
+            raise HTTPException(status_code=404, detail="Borrador no encontrado")
+        if user.get("role") == "dj" and draft.get("host_slug") != dj_host_slug(user):
+            raise HTTPException(status_code=403, detail="No es tu borrador")
+        if not source:
+            source = caption_only(draft.get("text") or "") or (draft.get("text") or "")
+    if not source.strip():
+        raise HTTPException(status_code=400, detail="No hay contenido para expandir")
+
+    settings = await get_settings_doc()
+    station_name = settings.get("station_name") or "La Campeona"
+    host_name = user.get("name") or "el DJ"
+    hslug = (draft.get("host_slug") if draft else "") or dj_host_slug(user)
+    if hslug and hslug != "__admin__":
+        h = await db.hosts.find_one({"slug": hslug}, {"_id": 0, "name": 1, "show_name": 1})
+        if h:
+            host_name = h.get("show_name") or h.get("name") or host_name
+
+    title = (draft.get("title") if draft else "") or ""
+    user_msg = (
+        f'Post corto de redes:\n"""\n{source}\n"""\n\n'
+        + (f"Título del artículo: {title}\n\n" if title else "")
+        + "Escribe el artículo web ampliado siguiendo todas las reglas."
+    )
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = (
+            LlmChat(
+                api_key=EMERGENT_KEY,
+                session_id=f"dj-article-{user['id']}-{uuid.uuid4().hex[:8]}",
+                system_message=build_article_system_message(station_name, host_name),
+            )
+            .with_model("anthropic", "claude-sonnet-4-5-20250929")
+        )
+        article = await chat.send_message(UserMessage(text=user_msg))
+    except Exception as e:
+        logger.exception("DJ article expansion failed")
+        raise HTTPException(status_code=502, detail=f"Expansión falló: {e}")
+
+    article = (article or "").strip()
+    if payload.draft_id:
+        await db.content_drafts.update_one(
+            {"id": payload.draft_id},
+            {"$set": {"article_body": article, "updated_at": now_iso()}},
+        )
+    return {"article_body": article}
 
 
 @api.get("/dj/drafts")

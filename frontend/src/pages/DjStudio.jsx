@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, RefreshCw, Newspaper, Search, UserCog } from "lucide-react";
+import { Sparkles, Plus, Trash2, Copy, Pencil, Calendar as CalendarIcon, Save, X, Loader2, ListChecks, Wand2, ChevronLeft, ChevronRight, Lightbulb, RefreshCw, Newspaper, Search, UserCog, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { api, bannerUrl } from "../lib/api";
@@ -222,6 +222,9 @@ function DraftsList({ drafts, templates, onEdit, onDelete, onCopy, onSetStatus, 
           {/* Cover image */}
           <DraftCoverImage draft={d} onGenerateImage={onGenerateImage} />
 
+          {/* Expanded web article */}
+          <DraftWebArticle draft={d} />
+
           {/* Public landing link (drives social → web traffic) */}
           {d.slug && (
             <div className="mt-3 flex items-center gap-2 flex-wrap text-xs bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl px-3 py-2">
@@ -264,6 +267,99 @@ function DraftsList({ drafts, templates, onEdit, onDelete, onCopy, onSetStatus, 
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function DraftWebArticle({ draft }) {
+  const [article, setArticle] = useState(draft.article_body || "");
+  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  const expand = async () => {
+    setBusy(true);
+    try {
+      const { data } = await api.post("/dj/expand-article", { draft_id: draft.id });
+      setArticle(data.article_body || "");
+      setDirty(false);
+      toast.success("Artículo web generado — revísalo y edítalo si quieres");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "No se pudo expandir el artículo");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/dj/drafts/${draft.id}`, { article_body: article });
+      setDirty(false);
+      toast.success("Artículo guardado");
+    } catch {
+      toast.error("No se pudo guardar el artículo");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!article) {
+    return (
+      <div className="mt-3">
+        <button
+          data-testid={`dj-draft-expand-${draft.id}`}
+          onClick={expand}
+          disabled={busy}
+          className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-dashed border-indigo-300 hover:border-indigo-500 text-indigo-700 font-bold rounded-xl py-3 transition disabled:opacity-60"
+        >
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          {busy ? "Generando artículo..." : "📄 Expandir para la web (versión larga)"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 border border-indigo-200 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between gap-2 bg-indigo-50 px-3 py-2">
+        <span className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider inline-flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5" /> Artículo para la web
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            data-testid={`dj-draft-regen-article-${draft.id}`}
+            onClick={expand}
+            disabled={busy}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:bg-indigo-100 rounded-full px-2.5 py-1 transition disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Regenerar
+          </button>
+          {dirty && (
+            <button
+              data-testid={`dj-draft-savearticle-${draft.id}`}
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center gap-1 text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-2.5 py-1 transition disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              Guardar
+            </button>
+          )}
+        </div>
+      </div>
+      <textarea
+        data-testid={`dj-draft-article-${draft.id}`}
+        value={article}
+        onChange={(e) => { setArticle(e.target.value); setDirty(true); }}
+        rows={8}
+        placeholder="Artículo largo para la web (usa ## para subtítulos)…"
+        className="w-full px-3 py-2 text-sm text-slate-700 focus:outline-none resize-y font-sans"
+      />
+      <p className="text-[10px] text-slate-400 px-3 pb-2">
+        Usa "## " al inicio de una línea para subtítulos. Esto es lo que verá la gente en la página web del post.
+      </p>
     </div>
   );
 }

@@ -159,9 +159,18 @@ export default function Post() {
           />
         )}
 
-        <article className="prose prose-lg max-w-none text-slate-800 leading-relaxed whitespace-pre-line" data-testid="post-body">
-          {parsed.caption}
-        </article>
+        {post?.article_body ? (
+          <div className="max-w-none text-slate-800 leading-relaxed" data-testid="post-body">
+            <p className="text-xl text-slate-500 font-medium mb-6 whitespace-pre-line border-l-4 border-orange-400 pl-4">
+              {parsed.caption}
+            </p>
+            <ArticleBody text={post.article_body} />
+          </div>
+        ) : (
+          <article className="prose prose-lg max-w-none text-slate-800 leading-relaxed whitespace-pre-line" data-testid="post-body">
+            {parsed.caption}
+          </article>
+        )}
 
         {parsed.cta && (
           <div
@@ -296,6 +305,33 @@ export default function Post() {
         {/* Related posts */}
         <RelatedPosts currentSlug={slug} />
       </main>
+    </div>
+  );
+}
+
+function ArticleBody({ text }) {
+  const blocks = [];
+  let para = [];
+  const flush = () => {
+    if (para.length) { blocks.push({ type: "p", text: para.join(" ") }); para = []; }
+  };
+  (text || "").split("\n").forEach((ln) => {
+    const t = ln.trim();
+    if (!t) { flush(); return; }
+    if (t.startsWith("## ")) { flush(); blocks.push({ type: "h2", text: t.slice(3).trim() }); }
+    else if (t.startsWith("# ")) { flush(); blocks.push({ type: "h2", text: t.slice(2).trim() }); }
+    else { para.push(t.replace(/\*\*/g, "")); }
+  });
+  flush();
+  return (
+    <div data-testid="post-article-body" className="text-lg leading-relaxed">
+      {blocks.map((b, i) =>
+        b.type === "h2" ? (
+          <h2 key={i} className="text-2xl sm:text-3xl font-black text-slate-900 mt-8 mb-3">{b.text}</h2>
+        ) : (
+          <p key={i} className="mb-4 text-slate-700">{b.text}</p>
+        ),
+      )}
     </div>
   );
 }

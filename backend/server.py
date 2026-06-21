@@ -2612,18 +2612,20 @@ WORLD_CUP_2026_TEAMS = [
 # Placeholder group draw for World Cup 2026 (editable by admin later).
 # 12 groups of 4 teams. Reflects strong nations + the 3 hosts as #1 seeds.
 WORLD_CUP_2026_GROUPS = {
-    "A": ["México", "Polonia", "Arabia Saudita", "Ecuador"],
-    "B": ["Estados Unidos", "Países Bajos", "Australia", "Costa Rica"],
-    "C": ["Canadá", "Croacia", "Marruecos", "Bélgica"],
-    "D": ["Argentina", "Senegal", "Irlanda", "Honduras"],
-    "E": ["España", "Inglaterra", "Ghana", "Catar"],
-    "F": ["Francia", "Uruguay", "Camerún", "Trinidad y Tobago"],
-    "G": ["Brasil", "Suiza", "Serbia", "Panamá"],
-    "H": ["Portugal", "Corea del Sur", "Egipto", "Jamaica"],
-    "I": ["Alemania", "Japón", "Túnez", "Guatemala"],
-    "J": ["Italia", "Colombia", "Nigeria", "El Salvador"],
-    "K": ["Países Bajos" if False else "Dinamarca", "Perú", "Argelia", "Paraguay"],
-    "L": ["Chile", "Sudáfrica", "Irán", "Venezuela"],
+    # Sorteo oficial FIFA (dic 2025) con ganadores de repechaje ya resueltos.
+    # Idéntico al calendario (worldCupMatches.js). Equipo cabeza de grupo primero.
+    "A": ["México", "Sudáfrica", "Corea del Sur", "Chequia"],
+    "B": ["Canadá", "Bosnia", "Catar", "Suiza"],
+    "C": ["Brasil", "Marruecos", "Haití", "Escocia"],
+    "D": ["USA", "Paraguay", "Australia", "Türkiye"],
+    "E": ["Alemania", "Curazao", "Costa de Marfil", "Ecuador"],
+    "F": ["Países Bajos", "Japón", "Suecia", "Túnez"],
+    "G": ["Bélgica", "Egipto", "Irán", "Nueva Zelanda"],
+    "H": ["España", "Cabo Verde", "Arabia Saudita", "Uruguay"],
+    "I": ["Francia", "Senegal", "Irak", "Noruega"],
+    "J": ["Argentina", "Argelia", "Austria", "Jordania"],
+    "K": ["Portugal", "Rep. del Congo", "Uzbekistán", "Colombia"],
+    "L": ["Inglaterra", "Croacia", "Ghana", "Panamá"],
 }
 
 # Popular forwards likely to be Pichichi candidates in 2026.

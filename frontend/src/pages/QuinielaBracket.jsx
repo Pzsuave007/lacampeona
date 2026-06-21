@@ -24,7 +24,7 @@ const STEPS = [
 
 const STORAGE_KEY = "lc_bracket_progress";
 
-const EMPTY_FINAL = {
+export const EMPTY_FINAL = {
   champion: "", runner_up: "", third_place_winner: "",
   final_score_home: "", final_score_away: "",
   top_scorer: "", mexico_to_quarters: "",
@@ -73,7 +73,7 @@ const R32_SLOTS = [
 ];
 
 const seedLabel = (spec) => (spec.t === "w" ? `1${spec.g}` : spec.t === "r" ? `2${spec.g}` : "3°");
-const R32_LABELS = R32_SLOTS.map(([h, a]) => [seedLabel(h), seedLabel(a)]);
+export const R32_LABELS = R32_SLOTS.map(([h, a]) => [seedLabel(h), seedLabel(a)]);
 
 // Assign the 8 chosen best-thirds to the 8 "third" slots respecting each slot's
 // allowed groups (FIFA rule: a third can only land in specific bracket slots).
@@ -108,7 +108,7 @@ function matchThirdsToSlots(thirds, slots) {
 
 // Build the 16 R32 matchups (pairs of resolved team names) from the user's
 // group standings and chosen best-thirds.
-function buildR32Matchups(groupPositions, bestThirds) {
+export function buildR32Matchups(groupPositions, bestThirds) {
   const groupOfThird = {};
   const validThirds = new Set();
   for (const [g, teams] of Object.entries(groupPositions)) {
@@ -558,7 +558,7 @@ function renderHalf(round, idx, mirror, mc) {
 
 // ---------- Step: Bracket (the visual tree) ----------
 
-function StepBracket({ getParts, getWinner, getLabels, pickWinner, finalPicks, setFinalPicks, qf, sf, pichi }) {
+export function StepBracket({ getParts, getWinner, getLabels, pickWinner, finalPicks, setFinalPicks, qf, sf, pichi }) {
   const mc = { getParts, getWinner, getLabels, pickWinner };
   const isDesktop = useIsDesktop();
   return (
@@ -702,7 +702,7 @@ function StepInfo({ info, setInfo }) {
   );
 }
 
-function StepGroups({ groupPositions, moveTeam }) {
+export function StepGroups({ groupPositions, moveTeam }) {
   return (
     <div data-testid="step-groups-content">
       <h2 className="text-2xl font-black text-slate-900 mb-2">Fase de Grupos</h2>
@@ -741,7 +741,7 @@ function StepGroups({ groupPositions, moveTeam }) {
   );
 }
 
-function StepThirds({ thirdPlaceTeams, bestThirds, toggleBestThird }) {
+export function StepThirds({ thirdPlaceTeams, bestThirds, toggleBestThird }) {
   return (
     <div data-testid="step-thirds-content">
       <h2 className="text-2xl font-black text-slate-900 mb-2">Mejores 8 Terceros</h2>

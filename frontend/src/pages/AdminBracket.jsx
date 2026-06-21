@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Trophy, Loader2, Lock, Unlock, Sparkles } from "lucide
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
+import AdminResultsBracket from "./AdminResultsBracket";
 
 const STATUS_LABELS = {
   open: "🟢 Abierta (acepta predicciones)",
@@ -25,6 +26,7 @@ export default function AdminBracket() {
   });
   const [advertisers, setAdvertisers] = useState([]);
   const [predictions, setPredictions] = useState([]);
+  const [meta, setMeta] = useState(null);
 
   useEffect(() => {
     if (user === null) navigate("/login");
@@ -37,45 +39,32 @@ export default function AdminBracket() {
       api.get("/bracket/settings"),
       api.get("/advertisers"),
       api.get("/bracket/admin/predictions"),
+      api.get("/bracket/meta"),
     ])
-      .then(([r, s, a, p]) => {
+      .then(([r, s, a, p, m]) => {
         setResults({ ...emptyResults(), ...(r.data || {}) });
         setSettings({ ...settings, ...(s.data || {}) });
         setAdvertisers(a.data || []);
         setPredictions(p.data || []);
+        setMeta(m.data || null);
       })
       .catch(() => toast.error("Error al cargar"))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  const reloadPredictions = async () => {
+    try {
+      const p = await api.get("/bracket/admin/predictions");
+      setPredictions(p.data || []);
+    } catch { /* ignore */ }
+  };
+
   const saveSettings = async () => {
     setSaving(true);
     try {
       await api.put("/bracket/admin/settings", settings);
       toast.success("Configuración guardada");
-    } catch (e) {
-      toast.error(e?.response?.data?.detail || "Error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveResults = async () => {
-    setSaving(true);
-    try {
-      const payload = {
-        ...results,
-        final_score_home: results.final_score_home === "" ? null : Number(results.final_score_home),
-        final_score_away: results.final_score_away === "" ? null : Number(results.final_score_away),
-        mexico_to_quarters: results.mexico_to_quarters === "" ? null : results.mexico_to_quarters === "true" || results.mexico_to_quarters === true,
-        semi_finalists: (results.semi_finalists || []).filter(Boolean),
-      };
-      await api.put("/bracket/admin/results", payload);
-      toast.success("Resultados guardados — puntajes recalculados");
-      // Reload predictions to see new scores
-      const p = await api.get("/bracket/admin/predictions");
-      setPredictions(p.data || []);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Error");
     } finally {
@@ -90,7 +79,6 @@ export default function AdminBracket() {
     return <div className="min-h-screen flex items-center justify-center text-slate-500"><Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando…</div>;
   }
 
-  const setR = (k, v) => setResults((r) => ({ ...r, [k]: v }));
   const setS = (k, v) => setSettings((s) => ({ ...s, [k]: v }));
 
   return (
@@ -137,41 +125,8 @@ export default function AdminBracket() {
         </div>
       </section>
 
-      {/* Official Results */}
-      <section className="mt-8 bg-white rounded-3xl border border-slate-200 p-6">
-        <h2 className="font-black text-xl text-slate-900 inline-flex items-center gap-2 mb-1">
-          <Trophy className="w-5 h-5 text-amber-500" /> Resultados oficiales
-        </h2>
-        <p className="text-sm text-slate-500 mb-5">Conforme se vayan jugando los partidos, actualiza estos campos. Al guardar, todos los puntajes se recalculan en automático.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Text testid="admin-r-champion" label="🥇 Campeón" value={results.champion} onChange={(v) => setR("champion", v)} />
-          <Text testid="admin-r-runner" label="🥈 Subcampeón" value={results.runner_up} onChange={(v) => setR("runner_up", v)} />
-          <Text testid="admin-r-semi1" label="🥉 Semifinalista #1 (no campeón ni subcampeón)" value={results.semi_finalists[0] || ""} onChange={(v) => setR("semi_finalists", [v, results.semi_finalists[1] || ""])} />
-          <Text testid="admin-r-semi2" label="🥉 Semifinalista #2" value={results.semi_finalists[1] || ""} onChange={(v) => setR("semi_finalists", [results.semi_finalists[0] || "", v])} />
-          <Text testid="admin-r-pichichi" label="⚽ Goleador del torneo" value={results.top_scorer} onChange={(v) => setR("top_scorer", v)} wide />
-          <div>
-            <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">📊 Marcador final</label>
-            <div className="flex items-center gap-2 mt-1">
-              <input data-testid="admin-r-fh" type="number" value={results.final_score_home} onChange={(e) => setR("final_score_home", e.target.value)} className="w-20 px-3 py-2 rounded-xl border-2 border-slate-200 text-center text-2xl font-black" />
-              <span className="font-black text-2xl text-slate-400">-</span>
-              <input data-testid="admin-r-fa" type="number" value={results.final_score_away} onChange={(e) => setR("final_score_away", e.target.value)} className="w-20 px-3 py-2 rounded-xl border-2 border-slate-200 text-center text-2xl font-black" />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">🇲🇽 ¿México pasó a cuartos?</label>
-            <select data-testid="admin-r-mxqf" value={results.mexico_to_quarters === null || results.mexico_to_quarters === undefined ? "" : String(results.mexico_to_quarters)} onChange={(e) => setR("mexico_to_quarters", e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-slate-200 bg-white">
-              <option value="">— No definido —</option>
-              <option value="true">Sí</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-        </div>
-        <div className="mt-5 flex justify-end">
-          <button onClick={saveResults} disabled={saving} data-testid="admin-save-results" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-full px-5 py-2.5 transition active:scale-95 shadow-md">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar y recalcular
-          </button>
-        </div>
-      </section>
+      {/* Official Results — visual bracket builder */}
+      <AdminResultsBracket meta={meta} initialResults={results} onSaved={reloadPredictions} />
 
       {/* Participants table */}
       <section className="mt-8 bg-white rounded-3xl border border-slate-200 overflow-hidden">
@@ -223,13 +178,4 @@ function emptyResults() {
     final_score_away: "",
     mexico_to_quarters: "",
   };
-}
-
-function Text({ label, value, onChange, wide, testid }) {
-  return (
-    <div className={wide ? "md:col-span-2" : ""}>
-      <label className="text-xs font-bold uppercase tracking-[0.15em] text-slate-600">{label}</label>
-      <input data-testid={testid} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-slate-200 focus:border-orange-400 focus:outline-none" />
-    </div>
-  );
 }

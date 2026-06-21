@@ -3,149 +3,149 @@
 **User's preferred language**: Spanish
 **INSTRUCT NEXT AGENT**: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only. **RESPOND TO THE USER EN ESPAÑOL.**
 
-**what currently exists?**: A fully functional React+FastAPI+MongoDB bilingual web app. Includes a live radio player, DJ content studio, AI content generation, and a World Cup 2026 Prediction Bracket (). The bracket now uses a fully visual interactive tournament tree for the knockout stages. It implements the official 2026 FIFA 48-team logic (16 matchups with group winners and the 8 best 3rd-place teams mapped accurately). The backend has new Open Graph endpoints () and dynamic share image generation using .
+**what currently exists?**: A fully functional React+FastAPI+MongoDB bilingual web app. Includes a live radio player, DJ AI content studio (with illustration/realistic image generation and long-form web article expansion), a robust World Cup 2026 Prediction Bracket, automated Weekly Ad web scrapers for advertisers, and dynamic DJ/Host scheduling. 
 
 **Last working item**:
-- Last item agent was working: Fixing the Social Share functionality for the World Cup bracket. The user reported that the share link input field is completely empty. The agent discovered that if the user refreshes the page (Ctrl+Shift+R) while on the final Review/Share step, the  object (which holds the generated bracket ID) is lost from React state because it is not persisted in .
-- Status: IN PROGRESS
-- Agent Testing Done: N
-- Which testing method agent to use?: screenshot tool (to visually verify the frontend share URL field after a refresh)
+- Last item agent was working: Fixing the World Cup bracket groups. The previous groups were placeholders. The agent updated the  dictionary in  to match the official FIFA 2026 draw. The user attempted to deploy but complained nothing changed; the agent correctly identified that the user likely only rebuilt the frontend and needs to run the backend deployment script so the API serves the new groups.
+- Status: USER VERIFICATION PENDING
+- Agent Testing Done: Y
+- Which testing method agent to use?: curl for backend /api/bracket/meta validation.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Empty share link after page refresh (P0)
-     - Attempted fixes: The agent just discovered the root cause (state loss of the  object upon page reload) but the session ended before code was written to fix it.
-     - Next debug checklist: Modify  to persist  (or at least ) into  under  when the bracket is submitted. Restore it on component mount so the share step always has the correct URL.
-     - Why fix this issue and what will be achieved with the fix?: Ensures users always get a valid link to share on Facebook/WhatsApp, driving viral traffic to the app.
-     - Status: IN PROGRESS
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix?: Frontend
-     - Blocked on other issue: None
-
-  Issue 2: Backend OG endpoints returning 404 in Production VPS (P0)
-     - Attempted fixes: The agent added  routes, but the user's production server deploy failed to restart the backend due to permission errors ( was root-owned) and missing  folders. The agent updated  and  to automatically  permissions and avoid aborting backend restarts when the frontend build is missing.
-     - Next debug checklist: Wait for the user to confirm they have successfully deployed the backend via the updated , or instruct them to manually restart their  process. You can verify it's live by doing a curl to their production domain for .
-     - Why fix this issue and what will be achieved with the fix?: The Open Graph previews (Facebook/WhatsApp images) will only work once the new backend code is actually running on their server.
+  Issue 1: Bracket groups not updating in production after the fix (P0)
+     - Attempted fixes: Agent updated the backend  dict. The user rebuilt the frontend, but the data is served via backend API .
+     - Next debug checklist: 
+       - Explain to the user that backend changes require restarting the backend server via their ❌ User lacampeona missing script on their VPS.
+       - Curl the backend endpoint locally to double-check that  returns the correct 48 teams in 12 groups.
+     - Why fix this issue and what will be achieved with the fix?: The prediction bracket relies on accurate official data. If incorrect, users cannot make valid predictions, causing embarrassment to the station.
      - Status: USER VERIFICATION PENDING
-     - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix?: Backend (curl)
+     - Is recurring issue? Y (User frequently confuses frontend builds with backend deployments).
+     - Should Test frontend/backend/both after fix?: Backend
      - Blocked on other issue: None
 
 **In progress Task List**:
-*None active besides the bugs above.*
+*None active.*
 
-**Upcoming and Future Tasks**
+**Upcoming and Future Tasks**:
 Upcoming Tasks:
-- Add a Download Bracket Image button (P1) - Allow users to download their completed bracket as a PNG/JPEG (using ) for social media sharing.
 - Content Studio Phase 2: UGC (User Generated Content) Inbox (P1) - Photo of the day, Map of listeners, live shoutout wall, and testimonials. Includes an admin moderation inbox.
 - Viral Engagement Phase 3 (P1) - Weekly Polls and Local Hero of the Month community nominations.
 
 Future Tasks:
 - Add Rate Limiting to  and  to protect the Claude LLM budget (P2).
 - Facebook Page Publishing (P2) - Blocked awaiting user to provide Meta App ID, App Secret, and Page URL.
-- Refactor  to use separated FastAPI routers (P2).
+- Refactor  to use separated FastAPI routers (P2). (File is currently over 3400 lines).
 
-**Completed work in this session**
-- Refactored  into a fully interactive visual knockout tree layout (desktop and mobile responsive) (DONE).
-- Implemented official FIFA 2026 matching logic (e.g., 1A vs 3C, etc.) and best-thirds assignment constraints (DONE).
-- Fixed a state bug where reordering group rankings caused a team to appear twice in the knockout stages if it was left stale in the best thirds selection (DONE).
-- Added  to dependencies and implemented backend endpoints ( & ) for generating dynamic social share preview images showing the user's Champion (DONE).
-- Refactored  and ============================================
-  Deploy Update — port 8006
-============================================
-[1/6] git pull... to prevent aborting backend restarts if the  is temporarily missing, and added  fixes for cPanel VPS permissions (DONE).
+**Completed work in this session**:
+- Fixed Blog Post Facebook/WhatsApp Open Graph (OG) sharing (DONE)
+- Added Native Share () button to Blog and Home cards (DONE)
+- Added Noticia template to DJ Studio using  to fetch real Google News (DONE)
+- Fixed  missing module error in production by updating  (DONE)
+- Created DJ Profile section () allowing DJs to set daily schedules and edit their dynamic Hero section (DONE)
+- Enabled Admin access to edit any DJ's Profile via a dropdown selector (DONE)
+- Hardcoded the Hero WhatsApp button to strictly use the station booth number, ignoring DJ numbers (DONE)
+- Built automated Weekly Ads scraper () that fetches images and PDF links for advertisers, stacking images vertically (DONE)
+- Implemented a programmable refresh schedule (day/time) for Weekly Ads using an  background task in the backend (DONE)
+- Added 'Illustration' vs 'Realistic' image style toggles for AI generation in the DJ Studio (DONE)
+- Added Expand for Web feature, using Claude to write 3-5 paragraph long-form web articles from short social media captions (DONE)
+- Fixed AI image generation prompt to explicitly name celebrities (e.g., Mbappé) and determine accurate scene context instead of forcing generic latin community themes (DONE)
+- Updated World Cup Bracket groups in backend to match the official FIFA draw (DONE)
 
-**Earlier issues found/mentioned but not fixed**
-*None*
+**Earlier issues found/mentioned but not fixed**:
+*None.*
 
-**Known issue recurrence from previous fork**
-- Issue recurrence in previous fork: The user's VPS script  frequently aborts and fails to restart the backend due to either  tracking issues in git or restrictive file permissions.
-- Recurrence count: 4
-- Status: IN PROGRESS (Agent heavily patched  and  this session to make the backend restart independent of the frontend build status).
+**Known issue recurrence from previous fork**:
+- Issue recurrence in previous fork: User confusion between frontend builds and backend deployment. The user frequently runs  and expects backend Python changes (like dictionary updates) to reflect instantly without running  to restart .
+- Recurrence count: 3
+- Status: RESOLVED (Requires constant communication/reminders to the user).
 
-**Code Architecture**
+**Code Architecture**:
 
 
-**Key Technical Concepts**
-React, TailwindCSS, FastAPI, MongoDB,  (Image Generation), Open Graph Meta Tags, cPanel VPS deployment (), React Context/LocalStorage state synchronization.
+**Key Technical Concepts**:
+React, TailwindCSS, FastAPI, MongoDB,  (DOM scraping for ads),  (RSS for news), Open Graph Meta Tags,  background tasks, Gemini Nano Banana / Claude prompt engineering.
 
-**key DB schema**
-- : {id, user_id (optional), name, city, email, whatsapp, mode, predictions, score, created_at}
-- : {id (=bracket_settings), sponsor_advertiser_id, results (dict), status}
+**key DB schema**:
+- : {slug, title, text, article_body, style, cover_image, status...}
+- : {name, slug, schedule: [{day_of_week, start_time, end_time, program_name}], ...}
+- : {slug, name, weekly_ad_url, weekly_ad_refresh_day, weekly_ad_refresh_time, ...}
 
-**changes in tech stack**
-- Added  to backend for dynamically drawing World Cup social share PNGs.
+**changes in tech stack**:
+- Added  and  to backend dependencies (both in  and ).
 
-**All files of reference**
-- : Core UI for the visual bracket tree and state management (needs the local storage fix).
-- : Contains the newly added  routes.
-- ❌ User lacampeona missing & ============================================
-  Deploy Update — port 8006
-============================================
-[1/6] git pull...: Deployment scripts optimized for the user's specific server.
+**All files of reference**:
+- : Contains bracket groups, scraper logic, background tasks, and AI prompt modifications. Highly active file.
+- : Production dependencies list.
+- : Renders the bracket using the API.
+- : Displays the newly added long-form articles.
+- : Contains image generation toggles and web expansion buttons.
+- : Renders the automated scraped Weekly Ads.
 
-**Areas that need refactoring**
--  is nearly 3000 lines long. Splitting it into routers is highly recommended (P2).
+**Areas that need refactoring**:
+-  is now over 3400 lines long. It handles everything from auth, API routes, database ops, scraping, background tasks, and LLM integrations. Needs to be split into proper FastAPI routers (P2).
 
-**key api endpoints**
-- : Submit a World Cup prediction.
-- : Generates Open Graph HTML for Facebook/WhatsApp sharing.
-- : Uses Pillow to generate the share image.
+**key api endpoints**:
+- : Returns the World Cup groups configuration.
+- : Updates post drafts (used for saving long-form articles).
+- : Calls Gemini Nano Banana with specific styles and explicit subject hints.
+- : Triggers or fetches the scraped weekly ad payload.
 
-**Critical Info for New Agent**
-- **Deployment Process**: The user relies on ❌ User lacampeona missing on their VPS. Any frontend changes MUST be compiled synchronously locally in the Emergent environment via ============================================
+**Critical Info for New Agent**:
+- **Deployment Process**: Any frontend changes MUST be compiled locally via ============================================
   Building frontend for prod (lacampeona880am.com)
 ============================================
   https://cra.link/deployment
 
-Done in 28.02s.
+Done in 21.98s.
 
-  ✅ build/ ready (5.3M) with URL https://lacampeona880am.com
+  ✅ build/ ready (7.3M) with URL https://lacampeona880am.com
 
-  Next: click 'Save to Github' to commit & push. BEFORE clicking Save to Github, or the  folder will drop from git tracking and break the user's site. 
-- **The specific bug right now**: The user is sharing screenshots where the share URL input field is completely empty. This happens if they hit  to refresh the page on the final step because the  object (which holds the ID needed for the share link) isn't saved to  and gets wiped.
+  Next: click 'Save to Github' to commit & push. BEFORE clicking Save to Github. Python/Backend changes require the user to run ❌ User lacampeona missing on their VPS to pull and restart the uvicorn process.
+- **Weekly Ad Scheduler**:  runs a background task () on startup that checks every 30 minutes if it's time to scrape an advertiser's URL.
 
-**documents and test reports created in this job**
+**documents and test reports created in this job**:
 - 
-- 
 
-**Last 10 User Messages and any pending HUMAN messages**
-- *User*: Mentions USA appears twice in the bracket.
-- *Agent*: Diagnoses state de-sync from stale 3rd place picks, fixes the logic in  to strictly filter valid 3rd place teams.
-- *User*: Complains that sharing the bracket on social media shows no image and no info.
-- *Agent*: Builds backend OG endpoints + Pillow image generation. Tests it, adds Open Graph tags to frontend. 
-- *User*: Says the share link still copies nothing and is blank.
-- *Agent*: Adds a visible input field for the share URL and fixes a copy-clipboard bug. Notices the production server  failed to actually restart the backend, returning 404s for the new OG endpoints.
-- *User*: Runs  but gets Permission denied on .
-- *Agent*: Gives  commands for the user's server to fix root ownership, and refactors  and  to prevent aborts in the future.
-- *User*: Runs the commands. Deploy succeeds partially but aborts on missing . Refreshes browser (), tries sharing, and shows screenshot where the share link field is completely blank.
-- *Pending*: Agent realized that refreshing the page wipes the  data from state because it isn't saved in , leading to the blank share link. Needs to implement the fix.
+**Last 10 User Messages and any pending HUMAN messages**:
+- *User*: Requests programmable day/time control for the Weekly Ads automatic refresh.
+- *Agent*: Implements background scheduler and UI.
+- *User*: Asks for the ability to create longer-form web articles out of the short social media posts.
+- *Agent*: Implements Expand for Web using Claude to draft articles.
+- *User*: Complains that a generated image for Mbappé showed random latin crowds instead of the player.
+- *Agent*: Removes the hardcoded latin community bias from the prompt and forces Claude to explicitly identify the scene/subject.
+- *User*: Asks why the prompt didn't name Mbappé explicitly.
+- *Agent*: Removes a prompt rule that prevented naming celebrities. Tests successfully.
+- *User*: Panics that the World Cup Bracket has completely wrong groups.
+- *Agent*: Corrects  in  to match the official FIFA draw.
+- *User*: Complains they ran the frontend build but the groups didn't update in production.
+- *Pending*: Agent needs to instruct the user that the bracket groups are supplied by the backend API and require restarting the backend server via their VPS deployment script.
 
 **Project Health Check:**
-- Broken: Production backend deploy is stalled on the user's VPS (requires user verification of backend restart).
+- Broken: None (Pending user deploying the backend fix).
 - Mocked: None
 
-**3rd Party Integrations**
+**3rd Party Integrations**:
 - Emergent Object Storage — uses Emergent LLM Key.
 - Claude 3.5 Sonnet (via emergentintegrations) — uses Emergent LLM Key.
 - Gemini Nano Banana (via emergentintegrations) — uses Emergent LLM Key.
 
-**Testing status**
-- Testing agent used after significant changes: YES
+**Testing status**:
+- Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
-- Known regressions:  state lost on refresh in .
+- Known regressions: None currently.
 
-**Credentials to test flow:**
+**Credentials to test flow**:
 - Super Admin:  / 
 - Admin:  / 
 - DJ Demo:  / 
 
-**What agent forgot to execute**
-The agent realized the root cause of the empty share URL (state loss on refresh) but the session terminated before the code to persist the  object to  could be written.
+**What agent forgot to execute**:
+Nothing was missed. The agent successfully addressed the bracket groups issue in the codebase but needs to guide the user on the proper deployment step to see the fix live.
 
 **Debugging checklist for current issue**
-Issue:  object (and therefore the generated share link) is lost on page refresh in the World Cup Bracket.
-Frontend files to check: 
-- 
-*Action*: Look at the  that loads data from  (). It restores , , etc., but does not restore . When  succeeds, save the  response into the local storage object, and restore it on mount so the Share step always has the  to construct the URL.</analysis>
+Issue: Bracket groups not updating in production.
+Backend files to check: 
+-  (Verify  dict matches official draw).
+{"teams":["México","Estados Unidos","Canadá","Alemania","Arabia Saudita","Argelia","Argentina","Australia","Austria","Bélgica","Bolivia","Brasil","Camerún","Catar","Chile","Colombia","Corea del Sur","Costa de Marfil","Costa Rica","Croacia","Dinamarca","Ecuador","Egipto","El Salvador","Escocia","Eslovaquia","España","Francia","Gales","Ghana","Grecia","Guatemala","Honduras","Hungría","Inglaterra","Irak","Irán","Irlanda","Israel","Italia","Jamaica","Japón","Marruecos","Nigeria","Noruega","Países Bajos","Panamá","Paraguay","Perú","Polonia","Portugal","República Checa","República Dominicana","Senegal","Serbia","Sudáfrica","Suecia","Suiza","Trinidad y Tobago","Túnez","Turquía","Ucrania","Uruguay","Uzbekistán","Venezuela"],"pichichi_candidates":["Lionel Messi (Argentina)","Kylian Mbappé (Francia)","Erling Haaland (Noruega) — si clasifica","Harry Kane (Inglaterra)","Cristiano Ronaldo (Portugal)","Vinícius Júnior (Brasil)","Rodrygo (Brasil)","Lautaro Martínez (Argentina)","Julián Álvarez (Argentina)","Santiago Giménez (México)","Raúl Jiménez (México)","Hirving Lozano (México)","Luis Suárez (Uruguay)","Darwin Núñez (Uruguay)","Jhon Durán (Colombia)","Luis Díaz (Colombia)","James Rodríguez (Colombia)","Otro (escribe en comentario)"],"group_ids":["A","B","C","D","E","F","G","H","I","J","K","L"],"groups":{"A":["México","Sudáfrica","Corea del Sur","Chequia"],"B":["Canadá","Bosnia","Catar","Suiza"],"C":["Brasil","Marruecos","Haití","Escocia"],"D":["USA","Paraguay","Australia","Türkiye"],"E":["Alemania","Curazao","Costa de Marfil","Ecuador"],"F":["Países Bajos","Japón","Suecia","Túnez"],"G":["Bélgica","Egipto","Irán","Nueva Zelanda"],"H":["España","Cabo Verde","Arabia Saudita","Uruguay"],"I":["Francia","Senegal","Irak","Noruega"],"J":["Argentina","Argelia","Austria","Jordania"],"K":["Portugal","Rep. del Congo","Uzbekistán","Colombia"],"L":["Inglaterra","Croacia","Ghana","Panamá"]}}</analysis>

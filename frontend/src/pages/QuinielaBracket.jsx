@@ -175,11 +175,27 @@ export default function QuinielaBracket() {
   useEffect(() => {
     api.get("/bracket/meta").then(({ data }) => {
       setMeta(data);
-      // Only seed default group order when the user has no saved progress yet.
-      if (!saved.groupPositions) {
-        const init = {};
-        for (const [gid, teams] of Object.entries(data.groups || {})) init[gid] = [...teams];
+      const init = {};
+      for (const [gid, teams] of Object.entries(data.groups || {})) init[gid] = [...teams];
+      // Compare the OFFICIAL group memberships (team sets per group, order-agnostic)
+      // against any progress saved in this browser. If the official draw changed
+      // since the user last played (e.g. the bracket was corrected), their saved
+      // groups are stale → reset to the official draw and clear downstream picks.
+      const sig = (groups) =>
+        Object.entries(groups || {})
+          .map(([g, teams]) => `${g}:${[...teams].sort().join("|")}`)
+          .sort()
+          .join("||");
+      const savedGP = saved.groupPositions;
+      const stale = !savedGP || sig(savedGP) !== sig(data.groups);
+      if (stale) {
         setGroupPositions(init);
+        setBestThirds([]);
+        setR32([]);
+        setR16([]);
+        setQf([]);
+        setSf([]);
+        setFinalPicks(EMPTY_FINAL);
       }
     }).catch(() => toast.error("No se pudo cargar")).finally(() => setLoading(false));
   }, [saved]);

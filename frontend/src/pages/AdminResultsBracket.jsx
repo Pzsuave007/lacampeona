@@ -254,7 +254,7 @@ export default function AdminResultsBracket({ meta, initialResults, onSaved }) {
         />
       )}
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex items-center justify-between gap-2">
         <button
           onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
           disabled={stepIdx === 0}
@@ -263,24 +263,25 @@ export default function AdminResultsBracket({ meta, initialResults, onSaved }) {
         >
           <ChevronLeft className="w-4 h-4" /> Atrás
         </button>
-        {stepIdx < STEPS.length - 1 ? (
-          <button
-            onClick={() => setStepIdx((i) => Math.min(STEPS.length - 1, i + 1))}
-            data-testid="admin-bracket-next"
-            className="inline-flex items-center gap-1 px-6 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-white font-bold transition shadow-md"
-          >
-            Siguiente <ChevronRight className="w-4 h-4" />
-          </button>
-        ) : (
+        <div className="flex items-center gap-2">
           <button
             onClick={save}
             disabled={saving}
             data-testid="admin-bracket-save-bottom"
             className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-full px-6 py-2.5 transition active:scale-95 shadow-md"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Guardar y recalcular
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Actualizar bracket
           </button>
-        )}
+          {stepIdx < STEPS.length - 1 && (
+            <button
+              onClick={() => setStepIdx((i) => Math.min(STEPS.length - 1, i + 1))}
+              data-testid="admin-bracket-next"
+              className="inline-flex items-center gap-1 px-5 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white font-bold transition shadow-md"
+            >
+              Siguiente <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );

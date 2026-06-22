@@ -120,7 +120,7 @@ export default function LiveBracket() {
             <div>
               <div className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-300 mb-3">Lado izquierdo del cuadro</div>
               <div className="overflow-x-auto pb-2">
-                <div className="min-w-max">
+                <div className="flex justify-center min-w-max">
                   {renderHalf("sf", 0, false, { getParts, getWinner, getSeed })}
                 </div>
               </div>
@@ -128,7 +128,7 @@ export default function LiveBracket() {
             <div>
               <div className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-300 mb-3">Lado derecho del cuadro</div>
               <div className="overflow-x-auto pb-2">
-                <div className="min-w-max">
+                <div className="flex justify-center min-w-max">
                   {renderHalf("sf", 1, false, { getParts, getWinner, getSeed })}
                 </div>
               </div>

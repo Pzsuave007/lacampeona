@@ -359,7 +359,7 @@ export default function Mundial() {
 
       {/* Live official bracket (read-only, auto-updates) */}
       <section className="bg-gradient-to-b from-[#0a0a0a] via-[#141414] to-[#0a0a0a] py-14 md:py-20" data-testid="mundial-live-bracket-section">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <LiveBracket />
         </div>
       </section>

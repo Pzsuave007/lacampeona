@@ -116,14 +116,30 @@ export default function LiveBracket() {
       {/* Bracket tree */}
       <div className="mt-8">
         {isDesktop ? (
-          <div className="overflow-x-auto pb-4">
-            <div className="flex items-stretch justify-center gap-2 min-w-max">
-              {renderHalf("sf", 0, false, { getParts, getWinner, getSeed })}
-              <div className="flex flex-col items-center justify-center px-3" style={{ minWidth: 190 }}>
-                <div className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-400 mb-2">Final</div>
+          <div className="space-y-10">
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-300 mb-3">Lado izquierdo del cuadro</div>
+              <div className="overflow-x-auto pb-2">
+                <div className="min-w-max">
+                  {renderHalf("sf", 0, false, { getParts, getWinner, getSeed })}
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-300 mb-3">Lado derecho del cuadro</div>
+              <div className="overflow-x-auto pb-2">
+                <div className="min-w-max">
+                  {renderHalf("sf", 1, false, { getParts, getWinner, getSeed })}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-center pt-2">
+              <div className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-400 mb-2 flex items-center gap-1.5">
+                <Trophy className="w-4 h-4" /> Final
+              </div>
+              <div style={{ minWidth: 200 }}>
                 <MatchBox round="final" idx={0} gold getParts={getParts} getWinner={getWinner} getSeed={getSeed} />
               </div>
-              {renderHalf("sf", 1, true, { getParts, getWinner, getSeed })}
             </div>
           </div>
         ) : (

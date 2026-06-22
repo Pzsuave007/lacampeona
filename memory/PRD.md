@@ -216,6 +216,12 @@ Cada plantilla incluye su `SUGGESTION_PROMPT` ajustado al Pacífico NW (Dallas/S
 - `feedparser` estaba solo en `backend/requirements.txt`, pero prod instala desde `deploy/requirements.prod.txt` → `ModuleNotFoundError` en el servidor. Agregado `feedparser` a `deploy/requirements.prod.txt` (el cambio de hash hace que `fix.sh` reinstale deps).
 
 
+### Importar/pegar tabla de posiciones en el admin (Jun 22 2026)
+- **Pedido**: el usuario saca los marcadores de un sitio (imágenes) y no quiere teclear 144 números a mano; propuso mandar imágenes y que el agente actualice. Aclarado que el agente NO puede escribir en la DB de producción del VPS, así que se construyó una herramienta de importación para que el propio usuario pegue y aplique.
+- `AdminResultsBracket.jsx`: nuevo `ImportBox` (textarea + "Rellenar campos") en la pestaña Fase de grupos. `parseStandings()` acepta filas completas de la web (pos equipo MP W D L GF GA GD Pts → toma últimos 4 = GF/GA/GD/Pts) o formato simple "Equipo Pts GF GC". `applyImport()` mapea cada equipo con un diccionario `ALIASES` (inglés→español) + matching por prefijo/normalización, llena `groupStats` y avisa cuántos llenó / cuáles no reconoció. Testids: `import-box/import-toggle/import-textarea/import-apply`.
+- Verificado: pegada la tabla completa del Mundial (48 equipos, nombres en inglés) → llenó los 48 correctamente y ordenó los grupos. Build prod `main.ed42410a.js`.
+- Flujo acordado: usuario manda imágenes → agente devuelve texto listo → usuario pega → "Rellenar campos" → "Actualizar bracket". Tras desplegar el botón, las actualizaciones de datos NO requieren redeploy.
+
 ### Fase de grupos con puntos/goles + 8 mejores terceros automáticos (Jun 22 2026)
 - **Pedido**: que el admin pueda capturar puntos y goles reales en la fase de grupos para que el sistema ordene los grupos y calcule solo a los 8 mejores terceros (criterios FIFA).
 - **Backend**: nuevo campo `group_stats: dict` en `BracketOfficialResults` ({ gid: { team: {pts, gf, ga} } }) + expuesto en `GET /api/bracket/official`.

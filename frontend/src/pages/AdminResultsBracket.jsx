@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Save, Loader2, Trophy, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, XCircle } from "lucide-react";
+import { Save, Loader2, Trophy, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, XCircle, ClipboardPaste } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../lib/api";
 import { StepBracket, buildR32Matchups, R32_LABELS, EMPTY_FINAL } from "./QuinielaBracket";
@@ -11,6 +11,50 @@ const STEPS = [
 ];
 
 const ZERO = { pts: 0, gf: 0, ga: 0 };
+
+const norm = (s) =>
+  (s || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
+// English (and common variants) -> canonical Spanish name used in the groups.
+const ALIASES = {
+  mexico: "México", southkorea: "Corea del Sur", korearepublic: "Corea del Sur", czechia: "Chequia", czechrepublic: "Chequia", southafrica: "Sudáfrica",
+  canada: "Canadá", switzerland: "Suiza", bosniaandherzegovina: "Bosnia", bosnia: "Bosnia", qatar: "Catar",
+  brazil: "Brasil", morocco: "Marruecos", scotland: "Escocia", haiti: "Haití",
+  usa: "USA", unitedstates: "USA", paraguay: "Paraguay", australia: "Australia", turkiye: "Türkiye", turkey: "Türkiye",
+  germany: "Alemania", curacao: "Curazao", cotedivoire: "Costa de Marfil", ivorycoast: "Costa de Marfil", ecuador: "Ecuador",
+  netherlands: "Países Bajos", japan: "Japón", sweden: "Suecia", tunisia: "Túnez",
+  belgium: "Bélgica", egypt: "Egipto", iran: "Irán", newzealand: "Nueva Zelanda",
+  spain: "España", capeverde: "Cabo Verde", caboverde: "Cabo Verde", saudiarabia: "Arabia Saudita", uruguay: "Uruguay",
+  france: "Francia", senegal: "Senegal", iraq: "Irak", norway: "Noruega",
+  argentina: "Argentina", algeria: "Argelia", austria: "Austria", jordan: "Jordania",
+  portugal: "Portugal", drcongo: "Rep. del Congo", democraticrepublicofcongo: "Rep. del Congo", congo: "Rep. del Congo", uzbekistan: "Uzbekistán", colombia: "Colombia",
+  england: "Inglaterra", croatia: "Croacia", ghana: "Ghana", panama: "Panamá",
+};
+
+// Parse a pasted standings table. Accepts full website rows
+// (pos team MP W D L GF GA GD Pts) or simple "Team Pts GF GA" lines.
+// Returns [{name, pts, gf, ga}].
+function parseStandings(text) {
+  const rows = [];
+  for (const raw of (text || "").split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = line.match(/^(.*?)[\s|]+(-?\d+(?:[\s|]+-?\d+)*)\s*$/);
+    if (!m) continue;
+    let name = m[1].replace(/^\d+\s+/, "").replace(/[#.]/g, "").trim();
+    const nums = (m[2].match(/-?\d+/g) || []).map(Number);
+    if (!name || nums.length < 3) continue;
+    let pts, gf, ga;
+    if (nums.length >= 4) { gf = nums[nums.length - 4]; ga = nums[nums.length - 3]; pts = nums[nums.length - 1]; }
+    else { pts = nums[0]; gf = nums[1]; ga = nums[2]; }
+    rows.push({ name, pts, gf, ga });
+  }
+  return rows;
+}
 
 // Sort a list of teams by FIFA criteria: points, goal difference, goals for.
 function sortByCriteria(teams, statOf) {
@@ -165,6 +209,44 @@ export default function AdminResultsBracket({ meta, initialResults, onSaved }) {
     }));
   };
 
+  // Match parsed rows to canonical teams and fill the stats.
+  const applyImport = (text) => {
+    const rows = parseStandings(text);
+    if (!rows.length) { toast.error("No pude leer datos. Pega la tabla con nombre y números."); return; }
+    // Build lookups
+    const teamToGroup = {};
+    const canonByNorm = {};
+    for (const [gid, teams] of Object.entries(meta.groups || {})) {
+      for (const t of teams) { teamToGroup[t] = gid; canonByNorm[norm(t)] = t; }
+    }
+    const resolve = (name) => {
+      const n = norm(name);
+      if (canonByNorm[n]) return canonByNorm[n];
+      if (ALIASES[n]) return ALIASES[n];
+      // prefix / contains fallback
+      for (const [k, v] of Object.entries(ALIASES)) {
+        if (n.length >= 4 && (n.startsWith(k) || k.startsWith(n))) return v;
+      }
+      for (const [k, v] of Object.entries(canonByNorm)) {
+        if (n.length >= 4 && (n.startsWith(k) || k.startsWith(n))) return v;
+      }
+      return null;
+    };
+    const next = JSON.parse(JSON.stringify(groupStats));
+    let matched = 0; const missed = [];
+    for (const r of rows) {
+      const team = resolve(r.name);
+      const gid = team && teamToGroup[team];
+      if (!gid) { missed.push(r.name); continue; }
+      next[gid] = next[gid] || {};
+      next[gid][team] = { pts: Math.max(0, r.pts || 0), gf: Math.max(0, r.gf || 0), ga: Math.max(0, r.ga || 0) };
+      matched++;
+    }
+    setGroupStats(next);
+    if (missed.length) toast.warning(`Llené ${matched} equipos. No reconocí: ${missed.slice(0, 4).join(", ")}${missed.length > 4 ? "…" : ""}`);
+    else toast.success(`¡Listo! Llené ${matched} equipos. Revisa y dale "Actualizar bracket".`);
+  };
+
   const resetAll = () => {
     const stats = {};
     for (const [gid, teams] of Object.entries(meta?.groups || {})) {
@@ -245,7 +327,12 @@ export default function AdminResultsBracket({ meta, initialResults, onSaved }) {
         ))}
       </div>
 
-      {step.id === "groups" && <GroupStatsEditor meta={meta} groupPositions={groupPositions} statOf={statOf} setStat={setStat} />}
+      {step.id === "groups" && (
+        <>
+          <ImportBox onApply={applyImport} />
+          <GroupStatsEditor meta={meta} groupPositions={groupPositions} statOf={statOf} setStat={setStat} />
+        </>
+      )}
       {step.id === "thirds" && <ThirdsRanking ranking={thirdsRanking} />}
       {step.id === "bracket" && (
         <StepBracket getParts={getParts} getWinner={getWinner} getLabels={getLabels} pickWinner={pickWinner} finalPicks={finalPicks} setFinalPicks={setFinalPicks} qf={qf} sf={sf} pichi={meta?.pichichi_candidates || []} />
@@ -280,6 +367,45 @@ function StatInput({ value, onChange, testid }) {
       data-testid={testid}
       className="w-12 px-1 py-1 rounded-lg border border-slate-200 text-center text-sm font-bold focus:border-orange-400 focus:outline-none"
     />
+  );
+}
+
+function ImportBox({ onApply }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  return (
+    <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50/60 p-3" data-testid="import-box">
+      <button onClick={() => setOpen((o) => !o)} data-testid="import-toggle" className="w-full flex items-center justify-between text-left">
+        <span className="font-black text-slate-800 text-sm inline-flex items-center gap-2">
+          <ClipboardPaste className="w-4 h-4 text-orange-600" /> Importar / pegar tabla de posiciones
+        </span>
+        <span className="text-xs font-bold text-orange-600">{open ? "Ocultar" : "Abrir"}</span>
+      </button>
+      {open && (
+        <div className="mt-3">
+          <p className="text-xs text-slate-500 mb-2">
+            Pega los datos (un equipo por línea). Funciona con <b>"Equipo Pts GF GC"</b> (ej. <code>México 6 3 0</code>) o con la fila completa de la web. Luego clic en <b>Rellenar campos</b>.
+          </p>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            data-testid="import-textarea"
+            rows={6}
+            placeholder={"México 6 3 0\nCorea del Sur 3 2 2\nChequia 1 2 3\n…"}
+            className="w-full px-3 py-2 rounded-xl border-2 border-slate-200 text-sm font-mono focus:border-orange-400 focus:outline-none"
+          />
+          <div className="mt-2 flex justify-end">
+            <button
+              onClick={() => onApply(text)}
+              data-testid="import-apply"
+              className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-full px-5 py-2 transition active:scale-95 shadow-md"
+            >
+              <ClipboardPaste className="w-4 h-4" /> Rellenar campos
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

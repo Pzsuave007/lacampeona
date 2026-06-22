@@ -1,0 +1,242 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { Trophy, Loader2 } from "lucide-react";
+import { api } from "../lib/api";
+import { WORLD_CUP_MATCHES } from "../data/staticContent";
+import { buildR32Matchups, R32_SLOTS, useIsDesktop } from "../pages/QuinielaBracket";
+
+// name -> flag emoji, derived from the schedule data.
+const FLAGS = (() => {
+  const map = {};
+  for (const m of WORLD_CUP_MATCHES) {
+    if (m.home?.name && m.home?.flag) map[m.home.name] = m.home.flag;
+    if (m.away?.name && m.away?.flag) map[m.away.name] = m.away.flag;
+  }
+  return map;
+})();
+
+const PREV = { sf: "qf", qf: "r16", r16: "r32" };
+const ROUND_LABEL = { r32: "16vos", r16: "Octavos", qf: "Cuartos", sf: "Semis" };
+const ROUND_COUNT = { r32: 16, r16: 8, qf: 4, sf: 2 };
+
+function seedText(spec) {
+  if (!spec) return "";
+  if (spec.t === "w") return `1${spec.g}`;
+  if (spec.t === "r") return `2${spec.g}`;
+  return `3 ${(spec.groups || []).join("")}`;
+}
+
+export default function LiveBracket() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const isDesktop = useIsDesktop();
+
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      api.get("/bracket/official").then(({ data }) => { if (alive) setData(data); }).catch(() => {}).finally(() => { if (alive) setLoading(false); });
+    load();
+    const t = setInterval(load, 60000); // refresh every minute (live)
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+
+  const groups = data?.groups || {};
+  const results = data?.results || {};
+
+  const groupPositions = useMemo(() => {
+    const gp = results.group_positions;
+    return gp && Object.keys(gp).length ? gp : {};
+  }, [results]);
+
+  const r32Matchups = useMemo(
+    () => buildR32Matchups(Object.keys(groupPositions).length ? groupPositions : groups, results.best_thirds || []),
+    [groupPositions, groups, results]
+  );
+
+  const r32 = results.r32_winners || [];
+  const r16 = results.r16_winners || [];
+  const qf = results.qf_winners || [];
+  const sf = results.sf_winners || [];
+  const champion = results.champion || "";
+
+  const getParts = (round, idx) => {
+    if (round === "r32") return r32Matchups[idx] || [undefined, undefined];
+    if (round === "r16") return [r32[idx * 2], r32[idx * 2 + 1]];
+    if (round === "qf") return [r16[idx * 2], r16[idx * 2 + 1]];
+    if (round === "sf") return [qf[idx * 2], qf[idx * 2 + 1]];
+    return [sf[0], sf[1]];
+  };
+  const getWinner = (round, idx) => {
+    if (round === "r32") return r32[idx];
+    if (round === "r16") return r16[idx];
+    if (round === "qf") return qf[idx];
+    if (round === "sf") return sf[idx];
+    return champion;
+  };
+  const getSeed = (round, idx) => (round === "r32" ? (R32_SLOTS[idx] || []).map(seedText) : null);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-amber-200/70" data-testid="live-bracket-loading">
+        <Loader2 className="w-6 h-6 animate-spin mr-2" /> Cargando bracket…
+      </div>
+    );
+  }
+
+  const hasAny = champion || r32.some(Boolean) || Object.keys(groupPositions).length;
+
+  return (
+    <div data-testid="live-bracket">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 text-[10px] font-black uppercase tracking-[0.3em] mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Al momento
+        </div>
+        <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center justify-center gap-3">
+          <Trophy className="w-8 h-8 text-amber-400" /> Bracket en vivo
+        </h3>
+        <p className="text-amber-100/60 text-sm mt-1">El árbol del Mundial, actualizado conforme avanzan los partidos.</p>
+        {champion && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white px-5 py-2.5 shadow-lg" data-testid="live-bracket-champion">
+            <Trophy className="w-5 h-5" />
+            <span className="text-xs font-extrabold uppercase tracking-[0.2em]">Campeón</span>
+            <span className="text-xl font-black">{FLAGS[champion] || ""} {champion}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Group cards (top 6 + bottom 6) */}
+      <GroupCards groups={groups} />
+
+      {!hasAny && (
+        <p className="text-center text-amber-100/50 text-sm my-8" data-testid="live-bracket-empty">
+          El bracket se irá llenando cuando empiecen las eliminatorias. ¡Vuelve pronto! 🏆
+        </p>
+      )}
+
+      {/* Bracket tree */}
+      <div className="mt-8">
+        {isDesktop ? (
+          <div className="overflow-x-auto pb-4">
+            <div className="flex items-stretch justify-center gap-2 min-w-max">
+              {renderHalf("sf", 0, false, { getParts, getWinner, getSeed })}
+              <div className="flex flex-col items-center justify-center px-3" style={{ minWidth: 190 }}>
+                <div className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-400 mb-2">Final</div>
+                <MatchBox round="final" idx={0} gold getParts={getParts} getWinner={getWinner} getSeed={getSeed} />
+              </div>
+              {renderHalf("sf", 1, true, { getParts, getWinner, getSeed })}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {["r32", "r16", "qf", "sf"].map((round) => (
+              <div key={round}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">{ROUND_LABEL[round]}</span>
+                  <span className="text-xs text-amber-100/40">({ROUND_COUNT[round]})</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {Array.from({ length: ROUND_COUNT[round] }).map((_, i) => (
+                    <MatchBox key={i} round={round} idx={i} getParts={getParts} getWinner={getWinner} getSeed={getSeed} />
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-amber-400 mb-2 flex items-center gap-1.5">
+                <Trophy className="w-4 h-4" /> Final
+              </div>
+              <MatchBox round="final" idx={0} gold getParts={getParts} getWinner={getWinner} getSeed={getSeed} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GroupCards({ groups }) {
+  const ids = Object.keys(groups);
+  if (!ids.length) return null;
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5" data-testid="live-bracket-groups">
+      {ids.map((gid) => (
+        <div key={gid} className="rounded-xl bg-white/[0.04] border border-white/10 p-3" data-testid={`live-group-${gid}`}>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300 mb-2 text-center">Grupo {gid}</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {(groups[gid] || []).map((team) => (
+              <div key={team} className="flex items-center gap-1.5 min-w-0">
+                <span className="text-base leading-none shrink-0">{FLAGS[team] || "🏳️"}</span>
+                <span className="text-[11px] font-semibold text-white/80 truncate">{team}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MatchBox({ round, idx, gold, getParts, getWinner, getSeed }) {
+  const [a, b] = getParts(round, idx);
+  const winner = getWinner(round, idx);
+  const seeds = getSeed ? getSeed(round, idx) : null;
+  return (
+    <div
+      className={`rounded-lg overflow-hidden border w-full ${gold ? "border-amber-400/70" : "border-white/10"} bg-white/[0.04]`}
+      style={{ minWidth: 150 }}
+      data-testid={`live-${round}-${idx}`}
+    >
+      {[a, b].map((team, ti) => {
+        const isWin = winner && winner === team;
+        const label = team || (seeds ? seeds[ti] : "Por definir");
+        return (
+          <div
+            key={ti}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-bold ${ti === 0 ? "border-b border-white/10" : ""} ${
+              isWin
+                ? gold ? "bg-amber-400 text-slate-900" : "bg-emerald-500/90 text-white"
+                : team ? "text-white/85" : "text-white/35"
+            }`}
+          >
+            <span className="text-base leading-none shrink-0">{team ? (FLAGS[team] || "🏳️") : ""}</span>
+            <span className="truncate">{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Connector({ mirror }) {
+  return (
+    <div className="relative self-stretch w-6 shrink-0">
+      <div className={`absolute top-1/4 h-0.5 bg-white/20 -translate-y-1/2 ${mirror ? "right-0 left-1/2" : "left-0 right-1/2"}`} />
+      <div className={`absolute bottom-1/4 h-0.5 bg-white/20 translate-y-1/2 ${mirror ? "right-0 left-1/2" : "left-0 right-1/2"}`} />
+      <div className={`absolute top-1/4 bottom-1/4 w-0.5 bg-white/20 ${mirror ? "left-1/2" : "right-1/2"}`} />
+      <div className={`absolute top-1/2 w-1/2 h-0.5 bg-white/20 -translate-y-1/2 ${mirror ? "left-0" : "right-0"}`} />
+    </div>
+  );
+}
+
+function renderHalf(round, idx, mirror, mc) {
+  if (round === "r32") {
+    return (
+      <div className="flex items-center" style={{ minWidth: 150 }} key={`r32-${idx}`}>
+        <MatchBox round="r32" idx={idx} {...mc} />
+      </div>
+    );
+  }
+  const prev = PREV[round];
+  return (
+    <div className={`flex items-center ${mirror ? "flex-row-reverse" : ""}`} key={`${round}-${idx}`}>
+      <div className="flex flex-col justify-center gap-3">
+        {renderHalf(prev, idx * 2, mirror, mc)}
+        {renderHalf(prev, idx * 2 + 1, mirror, mc)}
+      </div>
+      <Connector mirror={mirror} />
+      <div className="flex items-center" style={{ minWidth: 150 }}>
+        <MatchBox round={round} idx={idx} {...mc} />
+      </div>
+    </div>
+  );
+}

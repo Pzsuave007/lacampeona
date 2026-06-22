@@ -2884,6 +2884,23 @@ async def bracket_settings_public():
     return s
 
 
+@api.get("/bracket/official")
+async def bracket_official_public():
+    """Public read-only view of the OFFICIAL tournament bracket (what the admin
+    has filled in so far). Used by the live bracket on the Mundial page."""
+    settings = await _get_bracket_settings()
+    groups = settings.get("groups_override") or WORLD_CUP_2026_GROUPS
+    results = await _get_bracket_results()
+    keep = (
+        "group_positions", "best_thirds", "r32_winners", "r16_winners",
+        "qf_winners", "sf_winners", "champion", "runner_up", "semi_finalists",
+        "third_place_winner", "top_scorer", "final_score_home", "final_score_away",
+        "updated_at",
+    )
+    public_results = {k: results.get(k) for k in keep if k in results}
+    return {"groups": groups, "results": public_results}
+
+
 @api.post("/bracket/submit")
 async def bracket_submit(payload: BracketSubmitIn, request: Request):
     if not payload.accept_rules:

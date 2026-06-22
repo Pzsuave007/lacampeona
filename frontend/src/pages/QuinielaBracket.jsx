@@ -53,7 +53,7 @@ const W = (g) => ({ t: "w", g });
 const R = (g) => ({ t: "r", g });
 const T = (groups) => ({ t: "t", groups });
 
-const R32_SLOTS = [
+export const R32_SLOTS = [
   [W("E"), T(["A", "B", "C", "D", "F"])], // 1E vs 3(ABCDF)
   [W("I"), T(["C", "D", "F", "G", "H"])], // 1I vs 3(CDFGH)
   [W("A"), T(["C", "E", "F", "H", "I"])], // 1A vs 3(CEFHI)
@@ -137,7 +137,7 @@ export function buildR32Matchups(groupPositions, bestThirds) {
 
 // Render only one bracket layout (desktop tree OR mobile stack) instead of
 // mounting both and CSS-hiding one — avoids duplicated DOM + duplicated testids.
-function useIsDesktop() {
+export function useIsDesktop() {
   const query = "(min-width: 1024px)";
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== "undefined" && window.matchMedia(query).matches

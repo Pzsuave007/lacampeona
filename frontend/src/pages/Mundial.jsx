@@ -14,6 +14,7 @@ import { useStation } from "../contexts/StationContext";
 import { toast } from "sonner";
 import { WORLD_CUP_INFO, WORLD_CUP_MATCHES } from "../data/staticContent";
 import { waLink } from "../lib/api";
+import LiveBracket from "../components/LiveBracket";
 
 const TZ = "America/Los_Angeles"; // Oregon / Pacific — match times shown in PDT
 
@@ -354,6 +355,13 @@ export default function Mundial() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Live official bracket (read-only, auto-updates) */}
+      <section className="bg-gradient-to-b from-[#0a0a0a] via-[#141414] to-[#0a0a0a] py-14 md:py-20" data-testid="mundial-live-bracket-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <LiveBracket />
+        </div>
       </section>
 
       {/* Quiniela / Bracket section (moved here from the main menu) */}

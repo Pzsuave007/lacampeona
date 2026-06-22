@@ -53,9 +53,9 @@ const ROUND_COUNT = { r32: 16, r16: 8, qf: 4, sf: 2 };
 
 function seedText(spec) {
   if (!spec) return "";
-  if (spec.t === "w") return `1${spec.g}`;
-  if (spec.t === "r") return `2${spec.g}`;
-  return `3 ${(spec.groups || []).join("")}`;
+  if (spec.t === "w") return `1º ${spec.g}`;
+  if (spec.t === "r") return `2º ${spec.g}`;
+  return `3º · ${(spec.groups || []).join("·")}`;
 }
 
 export default function LiveBracket() {
@@ -145,6 +145,12 @@ export default function LiveBracket() {
           El bracket se irá llenando cuando empiecen las eliminatorias. ¡Vuelve pronto! 🏆
         </p>
       )}
+
+      {/* Legend: how the 8 best third-placed teams work */}
+      <div className="mt-6 rounded-2xl bg-amber-400/[0.07] border border-amber-400/20 p-4 text-sm text-amber-100/80 leading-relaxed" data-testid="live-bracket-thirds-legend">
+        <span className="font-black text-amber-300">¿Cómo entran los 8 mejores terceros?</span>{" "}
+        De los 12 grupos avanzan los <b>8 mejores terceros lugares</b>, ordenados por <b>puntos</b>, luego <b>diferencia de goles</b> y <b>goles a favor</b> (regla oficial FIFA). Cada uno se coloca en un espacio marcado <span className="font-bold text-white">"3º · A·B·C…"</span> según de qué grupo proviene. En cuanto se definan, aquí aparecerán con su bandera y nombre. 🌎
+      </div>
 
       {/* Bracket tree */}
       <div className="mt-8">

@@ -2703,6 +2703,8 @@ class BracketOfficialResults(BaseModel):
     # Pro mode — full bracket
     group_positions: dict = Field(default_factory=dict)
     best_thirds: List[str] = Field(default_factory=list)
+    # Per-team group-stage stats: { gid: { team: {pts, gf, ga} } }
+    group_stats: dict = Field(default_factory=dict)
     r32_winners: List[str] = Field(default_factory=list)
     r16_winners: List[str] = Field(default_factory=list)
     qf_winners: List[str] = Field(default_factory=list)
@@ -2892,7 +2894,7 @@ async def bracket_official_public():
     groups = settings.get("groups_override") or WORLD_CUP_2026_GROUPS
     results = await _get_bracket_results()
     keep = (
-        "group_positions", "best_thirds", "r32_winners", "r16_winners",
+        "group_positions", "best_thirds", "group_stats", "r32_winners", "r16_winners",
         "qf_winners", "sf_winners", "champion", "runner_up", "semi_finalists",
         "third_place_winner", "top_scorer", "final_score_home", "final_score_away",
         "updated_at",

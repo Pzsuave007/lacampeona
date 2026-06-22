@@ -216,6 +216,17 @@ Cada plantilla incluye su `SUGGESTION_PROMPT` ajustado al Pacífico NW (Dallas/S
 - `feedparser` estaba solo en `backend/requirements.txt`, pero prod instala desde `deploy/requirements.prod.txt` → `ModuleNotFoundError` en el servidor. Agregado `feedparser` a `deploy/requirements.prod.txt` (el cambio de hash hace que `fix.sh` reinstale deps).
 
 
+### Fase de grupos con puntos/goles + 8 mejores terceros automáticos (Jun 22 2026)
+- **Pedido**: que el admin pueda capturar puntos y goles reales en la fase de grupos para que el sistema ordene los grupos y calcule solo a los 8 mejores terceros (criterios FIFA).
+- **Backend**: nuevo campo `group_stats: dict` en `BracketOfficialResults` ({ gid: { team: {pts, gf, ga} } }) + expuesto en `GET /api/bracket/official`.
+- **Frontend** (`AdminResultsBracket.jsx` reescrito): la pestaña "Fase de grupos" ahora tiene inputs PTS/GF/GC por equipo. El componente DERIVA en vivo: (1) standings de cada grupo ordenados 1º→4º por puntos→diferencia de goles→goles a favor; (2) ranking de los 12 terceros y selección automática de los 8 mejores (`bestThirds`); (3) `r32Matchups` vía `buildR32Matchups`. La pestaña "Mejores 3os" muestra el ranking de terceros con badge "Clasifica/Eliminado". Las eliminatorias siguen marcándose a mano. Un `useEffect` re-sanea los picks de eliminatorias cuando cambian las posiciones. Al guardar, envía group_stats + group_positions (derivado) + best_thirds (derivado), así el scoring no cambia. Testids: `group-stats-{gid}`, `stat-{gid}-{team}-{pts|gf|ga}`, `third-rank-{i}`.
+- Verificado end-to-end: capturar stats reordena el grupo (Chequia 9pts → 1º), calcula los 8 mejores terceros, guarda y persiste en `/bracket/official`. Build prod `main.e9114381.js`.
+
+### Banderas reales + leyenda de terceros en el bracket en vivo (Jun 22 2026)
+- Reemplazados los emojis de bandera por imágenes reales (flagcdn) con bandera→nombre (se ven igual en Windows). Mapa `ISO` nombre→código en `LiveBracket.jsx`.
+- Etiquetas de siembra más legibles: `1º E`, `2º C`, `3º · A·B·C·D·F`. Leyenda explicativa "¿Cómo entran los 8 mejores terceros?" (criterios FIFA).
+- Layout del bracket apilado (Lado izquierdo arriba, Lado derecho abajo, Final al final) y ancho alineado a `max-w-6xl` para que el anuncio flotante no tape los partidos. Sin auto-refresh (carga al entrar) por petición del usuario.
+
 ### Bracket EN VIVO público en la página del Mundial (Jun 22 2026)
 - **Pedido del usuario**: un bracket visual (estilo Mediotiempo, tema oscuro con banderas) en la sección del Mundial que muestre EN VIVO lo que el admin va marcando, para que los oyentes lo vean actualizado.
 - **Backend**: nuevo endpoint público `GET /api/bracket/official` → `{groups, results}` con los resultados oficiales (group_positions, best_thirds, r32/r16/qf/sf_winners, champion, runner_up, semi_finalists, third_place_winner, top_scorer, marcador). Solo lectura, sin auth.

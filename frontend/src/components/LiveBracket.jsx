@@ -32,11 +32,11 @@ export default function LiveBracket() {
 
   useEffect(() => {
     let alive = true;
-    const load = () =>
-      api.get("/bracket/official").then(({ data }) => { if (alive) setData(data); }).catch(() => {}).finally(() => { if (alive) setLoading(false); });
-    load();
-    const t = setInterval(load, 60000); // refresh every minute (live)
-    return () => { alive = false; clearInterval(t); };
+    api.get("/bracket/official")
+      .then(({ data }) => { if (alive) setData(data); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, []);
 
   const groups = data?.groups || {};

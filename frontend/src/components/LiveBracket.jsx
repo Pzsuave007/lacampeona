@@ -14,6 +14,39 @@ const FLAGS = (() => {
   return map;
 })();
 
+// name -> ISO code for flagcdn.com (real flag images — render the same on every
+// device, unlike flag emoji which Windows shows as 2-letter codes).
+const ISO = {
+  "México": "mx", "Sudáfrica": "za", "Corea del Sur": "kr", "Chequia": "cz",
+  "Canadá": "ca", "Bosnia": "ba", "Catar": "qa", "Suiza": "ch",
+  "Brasil": "br", "Marruecos": "ma", "Haití": "ht", "Escocia": "gb-sct",
+  "USA": "us", "Paraguay": "py", "Australia": "au", "Türkiye": "tr",
+  "Alemania": "de", "Curazao": "cw", "Costa de Marfil": "ci", "Ecuador": "ec",
+  "Países Bajos": "nl", "Japón": "jp", "Suecia": "se", "Túnez": "tn",
+  "Bélgica": "be", "Egipto": "eg", "Irán": "ir", "Nueva Zelanda": "nz",
+  "España": "es", "Cabo Verde": "cv", "Arabia Saudita": "sa", "Uruguay": "uy",
+  "Francia": "fr", "Senegal": "sn", "Irak": "iq", "Noruega": "no",
+  "Argentina": "ar", "Argelia": "dz", "Austria": "at", "Jordania": "jo",
+  "Portugal": "pt", "Rep. del Congo": "cg", "Uzbekistán": "uz", "Colombia": "co",
+  "Inglaterra": "gb-eng", "Croacia": "hr", "Ghana": "gh", "Panamá": "pa",
+};
+
+function Flag({ team, className = "w-5 h-[15px]" }) {
+  const code = ISO[team];
+  if (!code) {
+    return <span className="text-base leading-none shrink-0">{FLAGS[team] || "🏳️"}</span>;
+  }
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${code}.png`}
+      srcSet={`https://flagcdn.com/w80/${code}.png 2x`}
+      alt={team}
+      loading="lazy"
+      className={`${className} object-cover rounded-[2px] shrink-0 ring-1 ring-black/20`}
+    />
+  );
+}
+
 const PREV = { sf: "qf", qf: "r16", r16: "r32" };
 const ROUND_LABEL = { r32: "16vos", r16: "Octavos", qf: "Cuartos", sf: "Semis" };
 const ROUND_COUNT = { r32: 16, r16: 8, qf: 4, sf: 2 };
@@ -99,7 +132,7 @@ export default function LiveBracket() {
           <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white px-5 py-2.5 shadow-lg" data-testid="live-bracket-champion">
             <Trophy className="w-5 h-5" />
             <span className="text-xs font-extrabold uppercase tracking-[0.2em]">Campeón</span>
-            <span className="text-xl font-black">{FLAGS[champion] || ""} {champion}</span>
+            <span className="text-xl font-black inline-flex items-center gap-2"><Flag team={champion} className="w-6 h-[18px]" /> {champion}</span>
           </div>
         )}
       </div>
@@ -181,7 +214,7 @@ function GroupCards({ groups }) {
           <div className="grid grid-cols-2 gap-1.5">
             {(groups[gid] || []).map((team) => (
               <div key={team} className="flex items-center gap-1.5 min-w-0">
-                <span className="text-base leading-none shrink-0">{FLAGS[team] || "🏳️"}</span>
+                <Flag team={team} className="w-4 h-3" />
                 <span className="text-[11px] font-semibold text-white/80 truncate">{team}</span>
               </div>
             ))}
@@ -214,7 +247,7 @@ function MatchBox({ round, idx, gold, getParts, getWinner, getSeed }) {
                 : team ? "text-white/85" : "text-white/35"
             }`}
           >
-            <span className="text-base leading-none shrink-0">{team ? (FLAGS[team] || "🏳️") : ""}</span>
+            {team && <Flag team={team} className="w-5 h-[15px]" />}
             <span className="truncate">{label}</span>
           </div>
         );

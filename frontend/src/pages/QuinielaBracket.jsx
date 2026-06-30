@@ -53,23 +53,50 @@ const W = (g) => ({ t: "w", g });
 const R = (g) => ({ t: "r", g });
 const T = (groups) => ({ t: "t", groups });
 
+// Ordered as the OFFICIAL FIFA 2026 knockout tree (verified vs Wikipedia
+// "2026 FIFA World Cup knockout stage" + Fox/Google bracket). r16[i] is the
+// winner of r32[2i] vs r32[2i+1], cascading up to the Final — so this leaf
+// order reproduces the real bracket exactly.
 export const R32_SLOTS = [
-  [W("E"), T(["A", "B", "C", "D", "F"])], // 1E vs 3(ABCDF)
-  [W("I"), T(["C", "D", "F", "G", "H"])], // 1I vs 3(CDFGH)
-  [W("A"), T(["C", "E", "F", "H", "I"])], // 1A vs 3(CEFHI)
-  [W("F"), R("C")],                        // 1F vs 2C
-  [W("B"), T(["E", "F", "G", "I", "J"])], // 1B vs 3(EFGIJ)
-  [R("K"), R("L")],                        // 2K vs 2L
-  [W("D"), T(["B", "E", "F", "I", "J"])], // 1D vs 3(BEFIJ)
-  [W("L"), T(["E", "H", "I", "J", "K"])], // 1L vs 3(EHIJK)
-  [R("A"), R("B")],                        // 2A vs 2B
-  [W("C"), R("F")],                        // 1C vs 2F
-  [W("G"), T(["A", "E", "H", "I", "J"])], // 1G vs 3(AEHIJ)
-  [R("E"), R("I")],                        // 2E vs 2I
-  [W("K"), T(["D", "E", "I", "J", "L"])], // 1K vs 3(DEIJL)
-  [R("D"), R("G")],                        // 2D vs 2G
-  [W("J"), R("H")],                        // 1J vs 2H
-  [W("H"), R("J")],                        // 1H vs 2J
+  [W("E"), T(["A", "B", "C", "D", "F"])], // M74 · 1E vs 3(ABCDF)
+  [W("I"), T(["C", "D", "F", "G", "H"])], // M77 · 1I vs 3(CDFGH)
+  [R("A"), R("B")],                        // M73 · 2A vs 2B
+  [W("F"), R("C")],                        // M75 · 1F vs 2C
+  [R("K"), R("L")],                        // M83 · 2K vs 2L
+  [W("H"), R("J")],                        // M84 · 1H vs 2J
+  [W("D"), T(["B", "E", "F", "I", "J"])], // M81 · 1D vs 3(BEFIJ)
+  [W("G"), T(["A", "E", "H", "I", "J"])], // M82 · 1G vs 3(AEHIJ)
+  [W("C"), R("F")],                        // M76 · 1C vs 2F
+  [R("E"), R("I")],                        // M78 · 2E vs 2I
+  [W("A"), T(["C", "E", "F", "H", "I"])], // M79 · 1A vs 3(CEFHI)
+  [W("L"), T(["E", "H", "I", "J", "K"])], // M80 · 1L vs 3(EHIJK)
+  [W("J"), R("H")],                        // M86 · 1J vs 2H
+  [R("D"), R("G")],                        // M88 · 2D vs 2G
+  [W("B"), T(["E", "F", "G", "I", "J"])], // M85 · 1B vs 3(EFGIJ)
+  [W("K"), T(["D", "E", "I", "J", "L"])], // M87 · 1K vs 3(DEIJL)
+];
+
+// REAL Round-of-32 matchups now that the group stage is over (June 2026),
+// in the same TREE ORDER as R32_SLOTS above. Team names match the canonical
+// Spanish names used in WORLD_CUP_2026_GROUPS. Used by the public live bracket,
+// the admin results bracket, and the Mundial schedule resolver.
+export const R32_ACTUAL = [
+  ["Alemania", "Paraguay"],         // M74 · 1E vs 3D
+  ["Francia", "Suecia"],            // M77 · 1I vs 3F
+  ["Sudáfrica", "Canadá"],          // M73 · 2A vs 2B
+  ["Países Bajos", "Marruecos"],    // M75 · 1F vs 2C
+  ["Portugal", "Croacia"],          // M83 · 2K vs 2L
+  ["España", "Austria"],            // M84 · 1H vs 2J
+  ["USA", "Bosnia"],                // M81 · 1D vs 3B
+  ["Bélgica", "Senegal"],           // M82 · 1G vs 3I
+  ["Brasil", "Japón"],              // M76 · 1C vs 2F
+  ["Costa de Marfil", "Noruega"],   // M78 · 2E vs 2I
+  ["México", "Ecuador"],            // M79 · 1A vs 3E
+  ["Inglaterra", "Rep. del Congo"], // M80 · 1L vs 3K
+  ["Australia", "Egipto"],          // M86 · 1J vs 2H
+  ["Argentina", "Cabo Verde"],      // M88 · 2D vs 2G
+  ["Suiza", "Argelia"],             // M85 · 1B vs 3J
+  ["Colombia", "Ghana"],            // M87 · 1K vs 3L
 ];
 
 const seedLabel = (spec) => (spec.t === "w" ? `1${spec.g}` : spec.t === "r" ? `2${spec.g}` : "3°");

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Trophy,
@@ -13,10 +13,21 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useStation } from "../contexts/StationContext";
 import { toast } from "sonner";
 import { WORLD_CUP_INFO, WORLD_CUP_MATCHES } from "../data/staticContent";
-import { waLink } from "../lib/api";
+import { waLink, api } from "../lib/api";
+import { applyKnockoutResults } from "../lib/bracketSchedule";
 import LiveBracket from "../components/LiveBracket";
 
 const TZ = "America/Los_Angeles"; // Oregon / Pacific — match times shown in PDT
+
+// name -> emoji flag, derived from the schedule (covers all 32 knockout teams).
+const FLAG_BY_NAME = (() => {
+  const map = {};
+  for (const m of WORLD_CUP_MATCHES) {
+    if (m.home?.name) map[m.home.name] = m.home.flag;
+    if (m.away?.name) map[m.away.name] = m.away.flag;
+  }
+  return map;
+})();
 
 function fmtDate(iso, lang) {
   const d = new Date(iso);
@@ -147,9 +158,22 @@ export default function Mundial() {
   const { settings } = useStation();
   const [showAll, setShowAll] = useState(false);
   const [selTeam, setSelTeam] = useState("");
+  const [officialResults, setOfficialResults] = useState(null);
+
+  // Pull the official results so the knockout schedule shows the teams that
+  // advance as the admin marks winners in /admin/bracket.
+  useEffect(() => {
+    let alive = true;
+    api.get("/bracket/official")
+      .then(({ data }) => { if (alive) setOfficialResults(data?.results || null); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const allMatches = applyKnockoutResults(WORLD_CUP_MATCHES, officialResults, (n) => FLAG_BY_NAME[n]);
   const grouped = showAll
-    ? groupByDay(WORLD_CUP_MATCHES, lang)
-    : groupByDay(filterUpcoming(WORLD_CUP_MATCHES, 4), lang);
+    ? groupByDay(allMatches, lang)
+    : groupByDay(filterUpcoming(allMatches, 4), lang);
   const stationWa = waLink(
     settings?.station_whatsapp,
     lang === "es"

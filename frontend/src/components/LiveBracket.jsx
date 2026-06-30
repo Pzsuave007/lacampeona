@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Trophy, Loader2 } from "lucide-react";
 import { api } from "../lib/api";
 import { WORLD_CUP_MATCHES } from "../data/staticContent";
-import { buildR32Matchups, R32_SLOTS, useIsDesktop } from "../pages/QuinielaBracket";
+import { R32_ACTUAL, R32_SLOTS, useIsDesktop } from "../pages/QuinielaBracket";
 
 // name -> flag emoji, derived from the schedule data.
 const FLAGS = (() => {
@@ -80,10 +80,8 @@ export default function LiveBracket() {
     return gp && Object.keys(gp).length ? gp : {};
   }, [results]);
 
-  const r32Matchups = useMemo(
-    () => buildR32Matchups(Object.keys(groupPositions).length ? groupPositions : groups, results.best_thirds || []),
-    [groupPositions, groups, results]
-  );
+  // Group stage is over — the Round-of-32 matchups are the real, known teams.
+  const r32Matchups = R32_ACTUAL;
 
   const r32 = results.r32_winners || [];
   const r16 = results.r16_winners || [];

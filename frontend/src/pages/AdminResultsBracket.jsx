@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Save, Loader2, Trophy, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, XCircle, ClipboardPaste } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../lib/api";
-import { StepBracket, buildR32Matchups, R32_LABELS, EMPTY_FINAL } from "./QuinielaBracket";
+import { StepBracket, R32_ACTUAL, R32_LABELS, EMPTY_FINAL } from "./QuinielaBracket";
 
 const STEPS = [
   { id: "groups", label: "Fase de grupos (puntos y goles)" },
@@ -140,10 +140,9 @@ export default function AdminResultsBracket({ meta, initialResults, onSaved }) {
 
   const bestThirds = useMemo(() => thirdsRanking.slice(0, 8).map((t) => t.team), [thirdsRanking]);
 
-  const r32Matchups = useMemo(
-    () => buildR32Matchups(groupPositions, bestThirds),
-    [groupPositions, bestThirds]
-  );
+  // Group stage is over — the Round-of-32 matchups are the real, known teams
+  // (FIFA 2026 official bracket). The admin just marks who wins each match.
+  const r32Matchups = R32_ACTUAL;
 
   const getParts = (round, idx) => {
     if (round === "r32") return r32Matchups[idx] || [undefined, undefined];
@@ -274,10 +273,13 @@ export default function AdminResultsBracket({ meta, initialResults, onSaved }) {
         group_positions: groupPositions,
         best_thirds: bestThirds,
         group_stats: groupStats,
-        r32_winners: r32.filter(Boolean),
-        r16_winners: r16.filter(Boolean),
-        qf_winners: qf.filter(Boolean),
-        sf_winners: sf.filter(Boolean),
+        // Send POSITIONAL arrays (empty string for unset) so the public live
+        // bracket + Mundial schedule can map each winner to its bracket slot.
+        // Backend scoring filters out empties, so this is safe.
+        r32_winners: Array.from({ length: 16 }, (_, i) => r32[i] || ""),
+        r16_winners: Array.from({ length: 8 }, (_, i) => r16[i] || ""),
+        qf_winners: Array.from({ length: 4 }, (_, i) => qf[i] || ""),
+        sf_winners: Array.from({ length: 2 }, (_, i) => sf[i] || ""),
         third_place_winner: finalPicks.third_place_winner,
       };
       await api.put("/bracket/admin/results", payload);

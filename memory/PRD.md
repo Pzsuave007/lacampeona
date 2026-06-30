@@ -6,6 +6,12 @@ Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanis
 ## User Language
 **Spanish (es)** — all UI copy and agent communication in Spanish.
 
+## ⚠️ USER PREFERENCE — TESTING AGENT (IMPORTANTE)
+**NO llamar al `testing_agent` automáticamente. El usuario paga créditos por cada llamada.**
+- SIEMPRE preguntar primero ("¿Quieres que use el testing agent o lo pruebas tú mismo?") y solo invocarlo si el usuario lo pide explícitamente.
+- Para verificar cambios usa métodos sin costo: curl/API, `node`, screenshots, o pedir al usuario que valide.
+- Esta preferencia aplica a TODAS las tareas futuras (features, bugs, todo). (Solicitado el 30 jun 2026.)
+
 ## Core Architecture
 - **Frontend**: React + Tailwind + Shadcn UI + Recharts (mobile-first)
 - **Backend**: FastAPI on `/api/*`
@@ -115,6 +121,18 @@ Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanis
 
 ## Test Credentials
 See `/app/memory/test_credentials.md` (admin@radiolatina.fm / admin123).
+
+## Changelog — Jun 30, 2026
+
+### Bracket R32 corregido al OFICIAL FIFA + schedule auto-actualizable
+- **Problema (P0)**: el bracket generado (32avos) no coincidía con el bracket oficial de Google/FIFA — ni los cruces 1º/2º ni los 8 mejores terceros caían en su lugar; además el orden del árbol estaba mal, así que en Octavos/Cuartos se enfrentaban equipos incorrectos.
+- **Decisión (acordada con el usuario)**: como la fase de grupos YA terminó y los cruces reales se conocen, NO se generó la tabla de 495 combinaciones. En su lugar se fijaron los 16 cruces reales en el orden correcto del árbol.
+- `QuinielaBracket.jsx`: `R32_SLOTS` reordenado al árbol oficial (verificado vs Wikipedia "2026 FIFA World Cup knockout stage" + capturas de Google del usuario). Nuevo export `R32_ACTUAL` = los 16 cruces reales (nombres en español) en orden de árbol.
+- `LiveBracket.jsx` y `AdminResultsBracket.jsx`: usan `R32_ACTUAL` para los 32avos (en lugar de derivar de grupos). El admin marca ganadores ronda por ronda; el bracket público en vivo refleja lo guardado.
+- **Fix de persistencia**: `AdminResultsBracket.save()` ahora envía arrays POSICIONALES (`Array.from length 16/8/4/2`, "" en vacíos) en vez de `.filter(Boolean)` — antes se compactaban los índices y rompían la alineación del árbol. El scoring backend filtra los "" (sin cambios).
+- **Schedule auto-actualizable**: `worldCupMatches.js` ahora tiene los equipos reales en los 32avos (wc-073..088). Nuevo `lib/bracketSchedule.js` (`KO_FEEDERS` + `resolveKnockoutTeams` + `applyKnockoutResults`) mapea cada partido de eliminatoria (wc-089..104) a sus alimentadores del árbol. `Mundial.jsx` hace fetch de `/bracket/official` y rellena los nombres de los equipos que avanzan conforme el admin marca ganadores (Octavos→Final + 3er lugar). R32 fijos; R16+ dinámicos.
+- Verificado por el usuario contra el bracket de Google (coincidencia 100% en los 16 cruces; R16 resuelve "Canadá vs Marruecos" igual que Google).
+
 
 ## Changelog — Feb 22, 2026
 

@@ -18,6 +18,7 @@ requests
 tzdata
 python-jose
 emergentintegrations==0.1.0
+openai
 Pillow
 feedparser
 beautifulsoup4

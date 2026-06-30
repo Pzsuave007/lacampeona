@@ -122,6 +122,17 @@ Modern, mobile-first web app for KWIP La Campeona (880 AM / 103.9 FM) — Spanis
 ## Test Credentials
 See `/app/memory/test_credentials.md` (admin@radiolatina.fm / admin123).
 
+## Changelog — Jun 30, 2026 (parte 2)
+
+### DJ Studio migrado a la OpenAI key propia de la estación
+- Todas las funciones de IA del DJ Studio ahora usan la **API key propia de OpenAI** (SDK oficial `openai`), reemplazando Claude (texto) y Gemini (imágenes).
+- `server.py`: nuevo cliente `AsyncOpenAI` + helpers `openai_text()` y `openai_image()`. Migrados: `/dj/suggest`, `/dj/generate`, expansión de noticias y `build_image_scene` → texto con `OPENAI_TEXT_MODEL` (default `gpt-4o`); `/dj/generate-image` → `gpt-image-1` (square=1024x1024, wide=1536x1024).
+- `emergentintegrations` ya NO se usa para LLM (solo el object storage sigue con `EMERGENT_LLM_KEY`).
+- Env nuevas en `backend/.env`: `OPENAI_API_KEY`, `OPENAI_TEXT_MODEL`, `OPENAI_IMAGE_MODEL`. Añadidas también a `deploy/backend.env.production.example` y `openai` a `deploy/requirements.prod.txt`.
+- openai fijado a 1.99.9 (paridad con prod Python 3.9 / emergentintegrations). Verificado vía curl: texto, 10 ideas, e imagen (PNG servida OK).
+- **Pendiente del usuario**: agregar `OPENAI_API_KEY` al `.env` de producción (`/opt/lacampeona/backend/.env`) antes de correr `deploy.sh`.
+
+
 ## Changelog — Jun 30, 2026
 
 ### Bracket R32 corregido al OFICIAL FIFA + schedule auto-actualizable

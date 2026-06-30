@@ -159,6 +159,51 @@ def get_object(path: str):
     r.raise_for_status()
     return r.content, r.headers.get("Content-Type", "application/octet-stream")
 
+# ---------------------- OpenAI (user's own key) ---------------------- #
+# All DJ Studio AI runs on the station's OWN OpenAI key (set in backend .env).
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_TEXT_MODEL = os.environ.get("OPENAI_TEXT_MODEL", "gpt-4o")
+OPENAI_IMAGE_MODEL = os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-1")
+_openai_client = None
+
+def get_openai():
+    """Lazily build a single shared AsyncOpenAI client."""
+    global _openai_client
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada")
+    if _openai_client is None:
+        from openai import AsyncOpenAI
+        _openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+    return _openai_client
+
+async def openai_text(system_msg: str, user_msg: str, temperature: float = 0.8) -> str:
+    """Chat completion -> plain text, using the station's OpenAI key."""
+    client = get_openai()
+    resp = await client.chat.completions.create(
+        model=OPENAI_TEXT_MODEL,
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg},
+        ],
+        temperature=temperature,
+    )
+    return (resp.choices[0].message.content or "").strip()
+
+async def openai_image(prompt: str, size: str = "1024x1024") -> tuple:
+    """gpt-image-1 -> (bytes, content_type). Returns base64-decoded PNG."""
+    import base64 as _b64
+    client = get_openai()
+    result = await client.images.generate(
+        model=OPENAI_IMAGE_MODEL,
+        prompt=prompt,
+        size=size,
+    )
+    b64 = result.data[0].b64_json
+    if not b64:
+        raise HTTPException(status_code=502, detail="OpenAI no devolvió imagen")
+    return _b64.b64decode(b64), "image/png"
+
+
 MIME = {
     "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
     "gif": "image/gif", "webp": "image/webp",
@@ -1666,8 +1711,8 @@ async def dj_suggest(payload: SuggestIn, user: dict = Depends(get_dj)):
 
     if payload.template_type not in CONTENT_TEMPLATES:
         raise HTTPException(status_code=400, detail="Plantilla inválida")
-    if not EMERGENT_KEY:
-        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no configurado")
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada")
 
     settings = await get_settings_doc()
     station_name = settings.get("station_name") or "La Campeona"
@@ -1694,16 +1739,7 @@ async def dj_suggest(payload: SuggestIn, user: dict = Depends(get_dj)):
     )
 
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = (
-            LlmChat(
-                api_key=EMERGENT_KEY,
-                session_id=f"dj-sg-{user['id']}-{uuid.uuid4().hex[:8]}",
-                system_message=system_msg,
-            )
-            .with_model("anthropic", "claude-sonnet-4-5-20250929")
-        )
-        raw = await chat.send_message(UserMessage(text=base_prompt))
+        raw = await openai_text(system_msg, base_prompt)
     except Exception as e:
         logger.exception("DJ suggest failed")
         raise HTTPException(status_code=502, detail=f"Sugerencia falló: {e}")
@@ -1911,8 +1947,8 @@ async def dj_upload(file: UploadFile = File(...), _: dict = Depends(get_dj)):
 async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
     if payload.template_type not in CONTENT_TEMPLATES:
         raise HTTPException(status_code=400, detail="Plantilla inválida")
-    if not EMERGENT_KEY:
-        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no configurado")
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada")
 
     settings = await get_settings_doc()
     station_name = settings.get("station_name") or "La Campeona"
@@ -1927,16 +1963,7 @@ async def dj_generate(payload: GenerateDraftIn, user: dict = Depends(get_dj)):
     user_msg = build_dj_user_message(payload.template_type, payload.inputs, station_name)
 
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = (
-            LlmChat(
-                api_key=EMERGENT_KEY,
-                session_id=f"dj-{user['id']}-{uuid.uuid4().hex[:8]}",
-                system_message=system_msg,
-            )
-            .with_model("anthropic", "claude-sonnet-4-5-20250929")
-        )
-        text = await chat.send_message(UserMessage(text=user_msg))
+        text = await openai_text(system_msg, user_msg)
     except Exception as e:
         logger.exception("DJ generation failed")
         raise HTTPException(status_code=502, detail=f"Generación falló: {e}")
@@ -2010,8 +2037,8 @@ def build_article_system_message(station_name: str, host_name: str) -> str:
 async def dj_expand_article(payload: ExpandArticleIn, user: dict = Depends(get_dj)):
     """Generate a longer web article from a short social post. Saves it to the
     draft's `article_body` when a draft_id is provided."""
-    if not EMERGENT_KEY:
-        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no configurado")
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada")
 
     draft = None
     source = (payload.text or "").strip()
@@ -2043,16 +2070,7 @@ async def dj_expand_article(payload: ExpandArticleIn, user: dict = Depends(get_d
     )
 
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = (
-            LlmChat(
-                api_key=EMERGENT_KEY,
-                session_id=f"dj-article-{user['id']}-{uuid.uuid4().hex[:8]}",
-                system_message=build_article_system_message(station_name, host_name),
-            )
-            .with_model("anthropic", "claude-sonnet-4-5-20250929")
-        )
-        article = await chat.send_message(UserMessage(text=user_msg))
+        article = await openai_text(build_article_system_message(station_name, host_name), user_msg, temperature=0.7)
     except Exception as e:
         logger.exception("DJ article expansion failed")
         raise HTTPException(status_code=502, detail=f"Expansión falló: {e}")
@@ -2144,8 +2162,7 @@ async def build_image_scene(topic_text: str) -> str:
     """Use Claude to turn a post into a concrete, literal visual scene focused on
     the post's MAIN subject, so the generated image matches the content instead
     of defaulting to a generic 'latino community' scene."""
-    api_key = os.getenv("EMERGENT_LLM_KEY")
-    if not api_key:
+    if not OPENAI_API_KEY:
         return topic_text
     sys = (
         "You are an art director for a radio station. Read a Spanish-language post and write ONE "
@@ -2164,15 +2181,8 @@ async def build_image_scene(topic_text: str) -> str:
         "- Return ONLY the visual description, nothing else."
     )
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        for attempt in range(2):
-            chat = LlmChat(
-                api_key=api_key,
-                session_id=f"imgscene-{uuid.uuid4().hex[:8]}",
-                system_message=sys,
-            ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-            scene = await chat.send_message(UserMessage(text=f'Post:\n"""\n{topic_text}\n"""'))
-            scene = (scene or "").strip()
+        for _ in range(2):
+            scene = await openai_text(sys, f'Post:\n"""\n{topic_text}\n"""', temperature=0.7)
             if scene:
                 return scene
         return topic_text
@@ -2183,9 +2193,8 @@ async def build_image_scene(topic_text: str) -> str:
 
 @api.post("/dj/generate-image")
 async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_dj)):
-    """Generates a unique cover image for a post using Gemini Nano Banana."""
+    """Generates a unique cover image for a post using OpenAI gpt-image-1."""
     import base64 as _b64
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
 
     # Resolve prompt: explicit, or derive from draft's text
     explicit = bool((payload.prompt or "").strip())
@@ -2231,32 +2240,20 @@ async def dj_generate_image(payload: GenerateImageIn, user: dict = Depends(get_d
         f"{aspect_hint}. Absolutely NO text, words, letters, captions, logos or watermarks in the image."
     )
 
-    api_key = os.getenv("EMERGENT_LLM_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY no está configurada")
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada")
 
+    # gpt-image-1 sizes: square 1024x1024, wide landscape 1536x1024.
+    img_size = "1024x1024" if (payload.aspect == "square") else "1536x1024"
     try:
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"img-{uuid.uuid4()}",
-            system_message="You generate eye-catching cover images for a Spanish-language radio station.",
-        )
-        chat.with_model("gemini", "gemini-3.1-flash-image-preview").with_params(
-            modalities=["image", "text"]
-        )
-        msg = UserMessage(text=full_prompt)
-        _, images = await chat.send_message_multimodal_response(msg)
+        image_bytes, content_type = await openai_image(full_prompt, size=img_size)
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Gemini image generation failed: %s", e)
-        raise HTTPException(status_code=502, detail=f"Error al generar imagen: {str(e)[:120]}")
+        logger.error("OpenAI image generation failed: %s", e)
+        raise HTTPException(status_code=502, detail=f"Error al generar imagen: {str(e)[:160]}")
 
-    if not images:
-        raise HTTPException(status_code=502, detail="No se recibió imagen del modelo")
-
-    img = images[0]
-    image_bytes = _b64.b64decode(img["data"])
-    content_type = img.get("mime_type") or "image/png"
-    ext = "png" if "png" in content_type else "jpg"
+    ext = "png"
 
     # Store in Emergent Object Storage (same path scheme as /admin/upload)
     storage_path = f"{APP_NAME}/banners/{uuid.uuid4()}.{ext}"

@@ -3,25 +3,26 @@
 **User's preferred language**: Spanish
 **INSTRUCT NEXT AGENT**: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only. **RESPOND TO THE USER EN ESPAÑOL.**
 
-**what currently exists?**: A fully functional React+FastAPI+MongoDB bilingual web app. Includes a live radio player, DJ AI content studio (with illustration/realistic image generation and long-form web article expansion), a robust World Cup 2026 Prediction Bracket, automated Weekly Ad web scrapers for advertisers, and dynamic DJ/Host scheduling. 
+**what currently exists?**: A fully functional React+FastAPI+MongoDB bilingual web app. Includes a live radio player, DJ AI content studio, automated Weekly Ad web scrapers for advertisers, dynamic DJ/Host scheduling, and a robust World Cup 2026 Prediction Bracket. The bracket now includes a visual Admin Results editor, auto-calculation of Group Stage standings based on Points/GF/GC, an importer tool for bulk-updating standings, and a public read-only Live Bracket.
 
 **Last working item**:
-- Last item agent was working: Fixing the World Cup bracket groups. The previous groups were placeholders. The agent updated the  dictionary in  to match the official FIFA 2026 draw. The user attempted to deploy but complained nothing changed; the agent correctly identified that the user likely only rebuilt the frontend and needs to run the backend deployment script so the API serves the new groups.
-- Status: USER VERIFICATION PENDING
-- Agent Testing Done: Y
-- Which testing method agent to use?: curl for backend /api/bracket/meta validation.
-- User Testing Done: N
+- **Last item agent was working**: Fixing the World Cup 2026 Round of 32 bracket matchups to strictly match the official FIFA 2026 rules. The user noted that the generated matchups (both 1st/2nd place teams and the 8 best 3rd-place allocations) did not match the official Google/FIFA brackets. The agent used the  to fetch the 2026 FIFA World Cup knockout stage Wikipedia page to get the exact allocation table.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: Frontend testing agent / Backend testing agent (depending on where the mapping logic is housed). Ensure comprehensive unit testing of the 3rd place allocation combinations.
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Bracket groups not updating in production after the fix (P0)
-     - Attempted fixes: Agent updated the backend  dict. The user rebuilt the frontend, but the data is served via backend API .
+  - Issue 1: World Cup Round of 32 structure and 3rd-place allocations do not match official FIFA bracket (P0)
+     - Attempted fixes: The agent previously used a simplified logic to place 1st, 2nd, and 3rd place teams into the bracket. This failed to replicate FIFA's strict, predetermined matching table for the 48-team format.
      - Next debug checklist: 
-       - Explain to the user that backend changes require restarting the backend server via their ❌ User lacampeona missing script on their VPS.
-       - Curl the backend endpoint locally to double-check that  returns the correct 48 teams in 12 groups.
-     - Why fix this issue and what will be achieved with the fix?: The prediction bracket relies on accurate official data. If incorrect, users cannot make valid predictions, causing embarrassment to the station.
-     - Status: USER VERIFICATION PENDING
-     - Is recurring issue? Y (User frequently confuses frontend builds with backend deployments).
-     - Should Test frontend/backend/both after fix?: Backend
+       - Read the crawled Wikipedia data (or do another targeted search for the FIFA 48-team knockout bracket and 3rd-place allocation table).
+       - Update the mapping logic (likely  and  functions in  and corresponding backend validation if applicable) to map exactly to Matches 73-88.
+       - Implement the official 15-combination table for assigning the 8 best 3rd-place teams to their respective Round of 32 matches.
+     - Why fix this issue and what will be achieved with the fix?: The bracket is fundamentally broken if it predicts the wrong match-ups. Fixing this ensures the app aligns with reality, preserving the radio station's credibility and the users' predictions.
+     - Status: IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix?: Both
      - Blocked on other issue: None
 
 **In progress Task List**:
@@ -35,94 +36,84 @@ Upcoming Tasks:
 Future Tasks:
 - Add Rate Limiting to  and  to protect the Claude LLM budget (P2).
 - Facebook Page Publishing (P2) - Blocked awaiting user to provide Meta App ID, App Secret, and Page URL.
-- Refactor  to use separated FastAPI routers (P2). (File is currently over 3400 lines).
+- Refactor  to use separated FastAPI routers (P2). (File is extremely large).
 
 **Completed work in this session**:
-- Fixed Blog Post Facebook/WhatsApp Open Graph (OG) sharing (DONE)
-- Added Native Share () button to Blog and Home cards (DONE)
-- Added Noticia template to DJ Studio using  to fetch real Google News (DONE)
-- Fixed  missing module error in production by updating  (DONE)
-- Created DJ Profile section () allowing DJs to set daily schedules and edit their dynamic Hero section (DONE)
-- Enabled Admin access to edit any DJ's Profile via a dropdown selector (DONE)
-- Hardcoded the Hero WhatsApp button to strictly use the station booth number, ignoring DJ numbers (DONE)
-- Built automated Weekly Ads scraper () that fetches images and PDF links for advertisers, stacking images vertically (DONE)
-- Implemented a programmable refresh schedule (day/time) for Weekly Ads using an  background task in the backend (DONE)
-- Added 'Illustration' vs 'Realistic' image style toggles for AI generation in the DJ Studio (DONE)
-- Added Expand for Web feature, using Claude to write 3-5 paragraph long-form web articles from short social media captions (DONE)
-- Fixed AI image generation prompt to explicitly name celebrities (e.g., Mbappé) and determine accurate scene context instead of forcing generic latin community themes (DONE)
-- Updated World Cup Bracket groups in backend to match the official FIFA draw (DONE)
+- Fixed  bug in  so users' saved brackets automatically reset if official groups change (DONE).
+- Created a visual Admin Results Bracket () allowing the admin to set winners round-by-round instead of just final results (DONE).
+- Created a read-only Live Bracket () on the  page to show the audience the current state of the tournament (DONE).
+- Optimized Live Bracket UI: removed 60s polling, stacked the left/right sides to remove horizontal scrolling, and constrained width to match site layout (DONE).
+- Updated the bracket UI to use actual flag images () instead of emojis (DONE).
+- Added  (Points, Goals For, Goals Against) to the backend  model to automatically calculate group standings and the 8 best 3rd-place teams (DONE).
+- Built a bulk Paste table importer in the Admin Bracket to easily update all 48 teams' stats at once (DONE).
 
 **Earlier issues found/mentioned but not fixed**:
 *None.*
 
 **Known issue recurrence from previous fork**:
-- Issue recurrence in previous fork: User confusion between frontend builds and backend deployment. The user frequently runs  and expects backend Python changes (like dictionary updates) to reflect instantly without running  to restart .
-- Recurrence count: 3
-- Status: RESOLVED (Requires constant communication/reminders to the user).
+- Issue recurrence in previous fork: User confusion between frontend builds and backend deployment. The user frequently runs  and expects backend Python changes to reflect instantly without running . (Agent has been guiding user, but keep in mind for instructions).
+- Recurrence count: 4
+- Status: RESOLVED (Requires constant communication/reminders to the user to run ❌ User lacampeona missing).
 
 **Code Architecture**:
 
 
 **Key Technical Concepts**:
-React, TailwindCSS, FastAPI, MongoDB,  (DOM scraping for ads),  (RSS for news), Open Graph Meta Tags,  background tasks, Gemini Nano Banana / Claude prompt engineering.
+React, TailwindCSS, FastAPI, MongoDB, , ,  background tasks, tournament bracket generation algorithms.
 
 **key DB schema**:
-- : {slug, title, text, article_body, style, cover_image, status...}
-- : {name, slug, schedule: [{day_of_week, start_time, end_time, program_name}], ...}
-- : {slug, name, weekly_ad_url, weekly_ad_refresh_day, weekly_ad_refresh_time, ...}
+- : {id, accept_predictions, ...}
+- : {id: official_results, group_positions, group_stats, best_thirds, r32_winners, ...}
 
 **changes in tech stack**:
-- Added  and  to backend dependencies (both in  and ).
+- None in this session.
 
 **All files of reference**:
-- : Contains bracket groups, scraper logic, background tasks, and AI prompt modifications. Highly active file.
-- : Production dependencies list.
-- : Renders the bracket using the API.
-- : Displays the newly added long-form articles.
-- : Contains image generation toggles and web expansion buttons.
-- : Renders the automated scraped Weekly Ads.
+- : Contains endpoints for bracket logic (, , ).
+- : Renders the user-facing prediction bracket. Contains the R32 mapping logic that currently needs a rewrite.
+- : New visual admin tool for setting results and stats.
+- : New component displaying the public read-only live bracket.
+- : Hosts the .
 
 **Areas that need refactoring**:
--  is now over 3400 lines long. It handles everything from auth, API routes, database ops, scraping, background tasks, and LLM integrations. Needs to be split into proper FastAPI routers (P2).
+-  is huge (~3500 lines) and handles all routes, DB, background tasks, and AI. Needs splitting into routers (P2).
+- The bracket components (, , ) share a lot of duplicate helper functions (, , etc.) that should be extracted into a shared utility file.
 
 **key api endpoints**:
-- : Returns the World Cup groups configuration.
-- : Updates post drafts (used for saving long-form articles).
-- : Calls Gemini Nano Banana with specific styles and explicit subject hints.
-- : Triggers or fetches the scraped weekly ad payload.
+- : Returns bracket configurations.
+- : Returns the current official tournament results.
+- : Updates official results, recalculating user prediction scores automatically.
 
 **Critical Info for New Agent**:
+- **Tournament Bracket Rules**: The 2026 World Cup uses a 48-team format. The Round of 32 matchups are explicitly predefined by FIFA, especially the complex mapping for which 3rd-place teams play which group winners. DO NOT GUESS this mapping. Implement the strict 15-scenario allocation table.
 - **Deployment Process**: Any frontend changes MUST be compiled locally via ============================================
   Building frontend for prod (lacampeona880am.com)
 ============================================
   https://cra.link/deployment
 
-Done in 21.98s.
+Done in 28.45s.
 
-  ✅ build/ ready (7.3M) with URL https://lacampeona880am.com
+  ✅ build/ ready (7.4M) with URL https://lacampeona880am.com
 
-  Next: click 'Save to Github' to commit & push. BEFORE clicking Save to Github. Python/Backend changes require the user to run ❌ User lacampeona missing on their VPS to pull and restart the uvicorn process.
-- **Weekly Ad Scheduler**:  runs a background task () on startup that checks every 30 minutes if it's time to scrape an advertiser's URL.
+  Next: click 'Save to Github' to commit & push. BEFORE clicking Save to Github. Tell the user to run ❌ User lacampeona missing on their VPS to deploy.
 
 **documents and test reports created in this job**:
+-  (Contains product requirements)
 - 
 
 **Last 10 User Messages and any pending HUMAN messages**:
-- *User*: Requests programmable day/time control for the Weekly Ads automatic refresh.
-- *Agent*: Implements background scheduler and UI.
-- *User*: Asks for the ability to create longer-form web articles out of the short social media posts.
-- *Agent*: Implements Expand for Web using Claude to draft articles.
-- *User*: Complains that a generated image for Mbappé showed random latin crowds instead of the player.
-- *Agent*: Removes the hardcoded latin community bias from the prompt and forces Claude to explicitly identify the scene/subject.
-- *User*: Asks why the prompt didn't name Mbappé explicitly.
-- *Agent*: Removes a prompt rule that prevented naming celebrities. Tests successfully.
-- *User*: Panics that the World Cup Bracket has completely wrong groups.
-- *Agent*: Corrects  in  to match the official FIFA draw.
-- *User*: Complains they ran the frontend build but the groups didn't update in production.
-- *Pending*: Agent needs to instruct the user that the bracket groups are supplied by the backend API and require restarting the backend server via their VPS deployment script.
+- *User*: Asks for the updated points text to paste into the importer.
+- *Agent*: Provides the text block.
+- *User*: Mentions the bracket is incorrect.
+- *Agent*: Explains it's because groups haven't finished.
+- *User*: Provides final group stage screenshots.
+- *Agent*: Provides the final text block for the importer.
+- *User*: States that the bracket generated does not match Google's bracket (the 3rd place teams and team positions are entirely wrong).
+- *Agent*: Acknowledges that the simplistic 3rd-place allocation doesn't match FIFA's strict deterministic table. Crawls Wikipedia to find the exact rules.
+- *Pending*: Agent needs to analyze the Wikipedia data, rewrite the R32 bracket matchup logic (both for 1st/2nd place and the 8 best 3rds), apply the changes, and verify it perfectly matches the official FIFA 2026 bracket.
 
 **Project Health Check:**
-- Broken: None (Pending user deploying the backend fix).
+- Broken: The Round of 32 logic in / produces incorrect matchups.
 - Mocked: None
 
 **3rd Party Integrations**:
@@ -131,10 +122,10 @@ Done in 21.98s.
 - Gemini Nano Banana (via emergentintegrations) — uses Emergent LLM Key.
 
 **Testing status**:
-- Testing agent used after significant changes: NO
+- Testing agent used after significant changes: YES (Iteration 8)
 - Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None
-- Known regressions: None currently.
+- Test files created: 
+- Known regressions: R32 Matchup logic is historically inaccurate to FIFA 2026 rules.
 
 **Credentials to test flow**:
 - Super Admin:  / 
@@ -142,10 +133,15 @@ Done in 21.98s.
 - DJ Demo:  / 
 
 **What agent forgot to execute**:
-Nothing was missed. The agent successfully addressed the bracket groups issue in the codebase but needs to guide the user on the proper deployment step to see the fix live.
+The agent stopped right after running the web crawl tool. They need to extract the FIFA 2026 knockout rules from the Wikipedia markdown and actually write the mapping code in the frontend/backend files.
 
-**Debugging checklist for current issue**
-Issue: Bracket groups not updating in production.
-Backend files to check: 
--  (Verify  dict matches official draw).
-{"teams":["México","Estados Unidos","Canadá","Alemania","Arabia Saudita","Argelia","Argentina","Australia","Austria","Bélgica","Bolivia","Brasil","Camerún","Catar","Chile","Colombia","Corea del Sur","Costa de Marfil","Costa Rica","Croacia","Dinamarca","Ecuador","Egipto","El Salvador","Escocia","Eslovaquia","España","Francia","Gales","Ghana","Grecia","Guatemala","Honduras","Hungría","Inglaterra","Irak","Irán","Irlanda","Israel","Italia","Jamaica","Japón","Marruecos","Nigeria","Noruega","Países Bajos","Panamá","Paraguay","Perú","Polonia","Portugal","República Checa","República Dominicana","Senegal","Serbia","Sudáfrica","Suecia","Suiza","Trinidad y Tobago","Túnez","Turquía","Ucrania","Uruguay","Uzbekistán","Venezuela"],"pichichi_candidates":["Lionel Messi (Argentina)","Kylian Mbappé (Francia)","Erling Haaland (Noruega) — si clasifica","Harry Kane (Inglaterra)","Cristiano Ronaldo (Portugal)","Vinícius Júnior (Brasil)","Rodrygo (Brasil)","Lautaro Martínez (Argentina)","Julián Álvarez (Argentina)","Santiago Giménez (México)","Raúl Jiménez (México)","Hirving Lozano (México)","Luis Suárez (Uruguay)","Darwin Núñez (Uruguay)","Jhon Durán (Colombia)","Luis Díaz (Colombia)","James Rodríguez (Colombia)","Otro (escribe en comentario)"],"group_ids":["A","B","C","D","E","F","G","H","I","J","K","L"],"groups":{"A":["México","Sudáfrica","Corea del Sur","Chequia"],"B":["Canadá","Bosnia","Catar","Suiza"],"C":["Brasil","Marruecos","Haití","Escocia"],"D":["USA","Paraguay","Australia","Türkiye"],"E":["Alemania","Curazao","Costa de Marfil","Ecuador"],"F":["Países Bajos","Japón","Suecia","Túnez"],"G":["Bélgica","Egipto","Irán","Nueva Zelanda"],"H":["España","Cabo Verde","Arabia Saudita","Uruguay"],"I":["Francia","Senegal","Irak","Noruega"],"J":["Argentina","Argelia","Austria","Jordania"],"K":["Portugal","Rep. del Congo","Uzbekistán","Colombia"],"L":["Inglaterra","Croacia","Ghana","Panamá"]}}</analysis>
+**Debugging checklist for current issue**:
+Issue: World Cup R32 match-ups do not match official FIFA bracket.
+Frontend files to check:
+-  (Look for  or )
+-  
+- 
+1. Review the Wikipedia text to find the match-up rules (Match 73 to 88).
+2. Find the 15-combination allocation table for the 8 best 3rd-placed teams.
+3. Hardcode these exact mappings.
+4. Verify by seeding the final group standings provided by the user in the conversation and comparing the output bracket against the official bracket.</analysis>

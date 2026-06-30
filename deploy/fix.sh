@@ -52,6 +52,41 @@ cp -rf "$REPO/backend/utils/"*.py   "$PROD/utils/"   2>/dev/null || true
 cp -rf "$REPO/backend/models/"*.py  "$PROD/models/"  2>/dev/null || true
 cp -rf "$REPO/backend/tests/"*.py   "$PROD/tests/"   2>/dev/null || true
 
+# ----- 3b. Import OpenAI key from keys.txt, then DELETE it (security) -----
+echo "[3b] Syncing OpenAI key from keys.txt..."
+ENV_FILE="$PROD/.env"
+KEYS_FILE=""
+for f in "$WEB/keys.txt" "/home/$CPANEL_USER/keys.txt" "$REPO/keys.txt"; do
+    [ -f "$f" ] && { KEYS_FILE="$f"; break; }
+done
+if [ -n "$KEYS_FILE" ] && [ -f "$ENV_FILE" ]; then
+    OPENAI_VAL=$(grep -E '^[[:space:]]*OPENAI_API_KEY[[:space:]]*=' "$KEYS_FILE" | tail -n1 \
+        | sed -E 's/^[^=]*=[[:space:]]*//' | tr -d '\r' | sed -E 's/[[:space:]]*$//')
+    if [ -n "$OPENAI_VAL" ]; then
+        TXT_MODEL=$(grep -E '^[[:space:]]*OPENAI_TEXT_MODEL[[:space:]]*=' "$ENV_FILE" | tail -n1 | sed -E 's/^[^=]*=[[:space:]]*//')
+        IMG_MODEL=$(grep -E '^[[:space:]]*OPENAI_IMAGE_MODEL[[:space:]]*=' "$ENV_FILE" | tail -n1 | sed -E 's/^[^=]*=[[:space:]]*//')
+        [ -z "$TXT_MODEL" ] && TXT_MODEL="gpt-4o"
+        [ -z "$IMG_MODEL" ] && IMG_MODEL="gpt-image-1"
+        TMP_ENV=$(mktemp)
+        # Drop any existing OPENAI_* lines, then append the fresh values
+        grep -vE '^[[:space:]]*OPENAI_API_KEY[[:space:]]*=|^[[:space:]]*OPENAI_TEXT_MODEL[[:space:]]*=|^[[:space:]]*OPENAI_IMAGE_MODEL[[:space:]]*=' "$ENV_FILE" > "$TMP_ENV"
+        {
+            echo "OPENAI_API_KEY=$OPENAI_VAL"
+            echo "OPENAI_TEXT_MODEL=$TXT_MODEL"
+            echo "OPENAI_IMAGE_MODEL=$IMG_MODEL"
+        } >> "$TMP_ENV"
+        mv "$TMP_ENV" "$ENV_FILE"
+        chmod 600 "$ENV_FILE"
+        rm -f "$KEYS_FILE"
+        echo "    ✓ OpenAI key imported into .env and deleted $KEYS_FILE"
+    else
+        echo "    ⚠ $KEYS_FILE found but has no OPENAI_API_KEY line — skipped"
+    fi
+else
+    echo "    ✓ no keys.txt found — keeping existing .env"
+fi
+
+
 # ----- 4. Verify pre-built frontend (low-RAM VPS — never build on server) -----
 echo "[4/6] Verifying pre-built frontend at $REPO/frontend/build ..."
 DEPLOY_FRONTEND=1
